@@ -1,0 +1,61 @@
+{
+  "harnessCommit": "a49170c44dc59b0074008f10bc2b5cb75209a850",
+  "productionCommit": "ffa1efd2f86b9d92013aa0b9ebe7b7d4af73938a",
+  "compileCommand": "nice -n 19 dart compile exe benchmark/picker.dart -o build/tester_picker",
+  "binarySha256": "f21d191c1b3cb866e31089a0bc5207e040632e7f13fcba2b0e6e33cbd66b9c22",
+  "runs": [
+    {
+      "file": "aot-default-2000.json",
+      "command": "nice -n 19 build/tester_picker --count=2000 --kind=default --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.875,
+      "stderrFile": "aot-default-2000.json.stderr"
+    },
+    {
+      "file": "aot-default-10000.json",
+      "command": "nice -n 19 build/tester_picker --count=10000 --kind=default --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.328,
+      "stderrFile": "aot-default-10000.json.stderr"
+    },
+    {
+      "file": "aot-exact-2000.json",
+      "command": "nice -n 19 build/tester_picker --count=2000 --kind=exact --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.572,
+      "stderrFile": "aot-exact-2000.json.stderr"
+    },
+    {
+      "file": "aot-exact-10000.json",
+      "command": "nice -n 19 build/tester_picker --count=10000 --kind=exact --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 9.449,
+      "stderrFile": "aot-exact-10000.json.stderr"
+    },
+    {
+      "file": "aot-fallback-20.json",
+      "command": "nice -n 19 build/tester_picker --count=20 --kind=fallback --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.727,
+      "stderrFile": "aot-fallback-20.json.stderr"
+    }
+  ],
+  "limits": "Independent framework-only exact-commit archive under task checkout. Three repetitions at beginning/middle/end, 50 samples; 16 ms intentional scheduling wait included. First layout excludes AppHost/corpus creation. RSS is process observation, not retained heap proof. ItemExtents scalar allocation may retain one high-water capacity after shrink. No actual resume, disk, agent, PTY or physical display timing.",
+  "cleanup": "Every harness subprocess awaited; all 45 hosts disposed and 2250 timers awaited; no external processes started by harness. Tester scratch binary removed.",
+  "cleanupChecks": {
+    "ownedBenchmarkPidsAfterExit": [],
+    "scratchBinaryRemoved": true,
+    "allStderrEmpty": true,
+    "tmuxSessionsCreated": 0,
+    "ownedRootsCreated": 0,
+    "exactArchiveRemoved": true
+  },
+  "validation": {
+    "analyze": "No issues found",
+    "format": "680 files, 0 changed",
+    "reports": "5 reports; 9 hosts/report; 50 samples/host; all exit0 and stderr empty",
+    "stableExactOrDefault": "zero projection/filter calls; <=600 item reads per 50 inputs; exact <=400 custom builds/layouts per 50 inputs",
+    "coldExact": "exactly N scalar projections per cold-width stage",
+    "scope": "Framework benchmark measurement gate only; U54c1 fail-closed repair and actual ResumePicker gates remain separate."
+  }
+}

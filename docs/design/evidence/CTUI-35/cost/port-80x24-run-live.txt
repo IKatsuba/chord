@@ -1,0 +1,24 @@
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ › /cost
+   ⎿  Total cost:   $0.0375
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 36s
+
+      This session          Cost  Tokens
+      main               $0.0375   6,000
+      parser             $0.0125   2,000  agent
+      docs          not reported       —  agent
+      Total              $0.0500   8,000  docs not reported
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake  ◦ idle 31s
+    parser  fake  ◦ idle 31s        ✓ new reply
+    docs    fake  ● permission 31s  ← new message

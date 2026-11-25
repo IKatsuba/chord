@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0                                                            |    The session layer wraps the SDK so the interface never touches a process.
+ ▀██▄   fake · Fake Large with a 1M context window                               |    Start with src/session/session.ts, then see the ACP spec (https://
+ ▄██▀   /tmp/chord-qa.markdown                                                   |    agentclientprotocol.com) for the wire format.
+ █▀     ? for shortcuts · /help                                                  | 
+                                                                                 |    ┌───────────────┬───────────────────────────────┬────────────────────┐
+ › markdown                                                                      |    │ Module        │ Holds                         │ Tested by          │
+                                                                                 |    ├───────────────┼───────────────────────────────┼────────────────────┤
+ ⏺ Reading the session layer                                                     |    │ session.ts    │ opening, prompting            │ session_test.ts    │
+                                                                                 |    │               │ and closing a session         │                    │
+   The session layer wraps the SDK so the interface never touches a process.     |    │ processes.ts  │ the promise that a closed     │ processes_test.ts  │
+   Start with src/session/session.ts, then see the ACP spec (https://            |    │               │ agent is gone                 │                    │
+   agentclientprotocol.com) for the wire format.                                 |    │ transcript.ts │ the reducer from events       │ transcript_test.ts │
+                                                                                 |    │               │ to what is drawn              │                    │
+   What it does                                                                  |    └───────────────┴───────────────────────────────┴────────────────────┘
+                                                                                 | 
+   - opens one persistent session per chord session                              | 
+   - starts turns with startTurn and cancels them                                | 
+     1. a cancel stops the turn at once                                          | 
+ ── ↓ 40 lines below · end to jump to the bottom ──────────────────────────────  | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ | 
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   | 

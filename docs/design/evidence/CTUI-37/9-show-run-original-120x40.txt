@@ -1,0 +1,40 @@
+      Run: eb64c042 · saved definition: fixture (project)
+      lead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default
+      Changes from saved: model, mode
+      reviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+      default (unconfirmed)
+      Changes from saved: model, mode
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+ ← from chord
+   ⎿  The person closed team fixture: its lead (codex · fake-small, id eb64c042). It takes no more messages; run_team
+      starts it again.
+
+ ⏺ Received the message from chord.
+
+ › /team show eb64c042
+
+ Recorded Team receipt (fixture)
+   ⎿  Recorded by Chord · current state unknown · historical observation
+      Recorded: time unknown
+      selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual at recording: confirmed · session runtime codex · model fake-small · effort medium · mode plan
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual at recording: not opened · configuration unconfirmed
+      Run: eb64c042 · saved definition: fixture (project)
+      lead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default
+      Changes from saved: model, mode
+      reviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+      default (unconfirmed)
+      Changes from saved: model, mode
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,14 @@
+# What `dart pub publish` leaves out of chord_tui's archive. pub reads this
+# file instead of .gitignore, so what git ignores is repeated first.
+.dart_tool/
+build/
+*.exe
+.release/
+.DS_Store
+
+# The archive holds the framework alone: lib/, its examples, README.md,
+# CHANGELOG.md, LICENSE, pubspec.yaml and analysis_options.yaml.
+pubspec.lock
+/test/
+/benchmark/
+/dart_test.yaml

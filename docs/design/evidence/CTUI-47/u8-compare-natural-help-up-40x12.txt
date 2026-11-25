@@ -1,0 +1,14 @@
+Original | port; see u8-look.md for state/catalog/viewport limits
+
+ ──────────────────────────────────────  |  ──────────────────────────────────────
+  enter to send                          |   enter to send
+  tab to send the oldest queued now      |   shift or \ + enter for a newline
+  shift or \ + enter for a newline       |   ── ↓ 17 lines below ──────────────────
+  ctrl + g to edit in $EDITOR            | 
+  ctrl + v to paste an image             | ╭──────────────────────────────────────╮
+  ── ↓ 38 lines below ────────────────── | │ ↑ draft line 4                       │
+                                         | │   draft line 5                       │
+╭──────────────────────────────────────╮ | │   draft line 6                       │
+│ ›                                    │ | │   draft line 7                       │
+╰──────────────────────────────────────╯ | ╰──────────────────────────────────────╯
+  ? for shortcuts  Fake Lar… · 1% used   | 

@@ -1,0 +1,40 @@
+Key capture · disabled · actions 1 · pastes 2
+When enabled, v then c invokes the action before the editor.
+Other text edits normally; an unfinished chord drops a miss.
+xvcP
+[2mv then c captured action · F2 toggle capture · C-q quit[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

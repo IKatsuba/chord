@@ -1,0 +1,4 @@
+chord: /tmp/ctui29b-look/cfgC/chord/settings.json: "offeredAgents": no agent named nope-a-very-long-unknown-agent-name, left out
+chord: /tmp/ctui29b-look/cfgC/chord/settings.json: "offeredAgents": no agent named typo-another-long-name, left out
+chord: /tmp/ctui29b-look/cfgC/chord/settings.json: "offeredAgents": no agent named x1, left out
+chord: /tmp/ctui29b-look/cfgC/chord/settings.json: "offeredAgents": no agent named x2, left out

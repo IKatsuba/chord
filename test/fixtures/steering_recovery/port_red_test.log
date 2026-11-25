@@ -1,0 +1,25 @@
+00:00 +0: loading test/session/conversation_steer_test.dart
+00:00 +0: self-start recovery reserves queue ownership before closure observers send
+00:00 +0 -1: self-start recovery reserves queue ownership before closure observers send [E]
+  Expected: ['running']
+    Actual: MappedListIterable<ScriptedTurn, String>:['running', 'observer']
+     Which: at location [1] is MappedListIterable<ScriptedTurn, String>:['running', 'observer'] which longer than expected
+  
+  package:matcher                                  expect
+  test/session/conversation_steer_test.dart 544:9  main.<fn>.<fn>
+  package:fake_async/fake_async.dart 182:47        FakeAsync.run.<fn>.<fn>
+  dart:async                                       runZoned
+  package:clock/src/default.dart 52:10             withClock
+  package:fake_async/fake_async.dart 182:15        FakeAsync.run.<fn>
+  dart:async                                       runZoned
+  package:fake_async/fake_async.dart 181:52        FakeAsync.run
+  package:fake_async/fake_async.dart 41:41         fakeAsync
+  test/session/conversation_steer_test.dart 525:7  main.<fn>
+  
+00:00 +0 -1: Some tests failed.
+
+Failing tests:
+  test/session/conversation_steer_test.dart: self-start recovery reserves queue ownership before closure observers send
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

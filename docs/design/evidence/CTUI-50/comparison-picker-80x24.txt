@@ -1,0 +1,25 @@
+Original                                                                         | Port
+ █▄     chord v0.71.0                                                            |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                               |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.designer-ctui50                                            |  ▄██▀   <working directory>
+ █▀     ? for shortcuts · /help                                                  |  █▀     ? for shortcuts
+                                                                                 | 
+ › /sta/model                                                                    |  › /sta/model
+                                                                                 | 
+ ⏺ Hello, world. This reply came in chunks.                                      |  ⏺ Hello, world. This reply came in chunks.
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                 │ | │ Select model                                                                 │
+│ Switch fake's model for this session.                                        │ | │ Switch fake's model for this session.                                        │
+│                                                                              │ | │                                                                              │
+│ ❯ 1. Fake Large with a 1M context window ✔                                   │ | │ ❯ 1. Fake Large with a 1M context window ✔                                   │
+│   2. Fake Small                                                              │ | │   2. Fake Small                                                              │
+│                                                                              │ | │                                                                              │
+│ Medium effort  ←/→ to adjust                                                 │ | │ Medium effort  ←/→ to adjust                                                 │
+│                                                                              │ | │                                                                              │
+│ Enter to switch · ←/→ for effort · Esc to close                              │ | │ Enter to switch · ←/→ for effort · Esc to close                              │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |   ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,40 @@
+      [2m⎿[0m  Find the component that draws a tool call and the rule that folds its output.
+
+         [38;2;78;186;101m⏺[39m [1mSearch[0m(function Tool in src/ui)
+           [2m⎿[0m  [2mFound 1 file[0m
+
+         [38;2;255;107;128m⏺[39m [1mRead[0m(src/ui/App.tsx)
+           [2m⎿[0m  [38;2;255;107;128mError: File is too large to read whole.[39m
+
+         ⏺ Could not read the component.
+      [2m⎿[0m  [38;2;255;107;128mFailed[39m
+   [2m⎿[0m  [2mAllowed Write notes/routing.md · Allow[0m
+
+ ⏺ Now the tests, in the background.
+
+ [38;2;78;186;101m⏺[39m [1mAgent[0m(Run the whole test suite)
+   [2m⎿[0m  Run bun dev test and report what fails.
+
+      [38;2;78;186;101m⏺[39m [1mBash[0m(bun dev test)
+
+      ⏺ Every test passed.
+   [2m⎿[0m  [2mDone (1 tool use · 2s)[0m
+
+ ⏺ It is running; I will say when it ends.
+
+ [38;2;78;186;101m✓[39m Run bun dev test and report what fails.[2m · agent · [0m[38;2;78;186;101mdone in 2s[39m
+
+ [2m›[0m subagentcall
+
+ [38;2;78;186;101m⏺[39m [1mAgent[0m(sleeper)
+   [2m⎿[0m  Sleep a while
+
+      [38;2;78;186;101m⏺[39m [1mBash[0m(sleep 2)
+   [2m⎿[0m  [2mDone (1 tool use · 0s)[0m
+
+ ⏺ The sleeper is done.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

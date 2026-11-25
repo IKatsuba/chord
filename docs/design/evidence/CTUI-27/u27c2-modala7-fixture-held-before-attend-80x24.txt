@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts
+
+ › alpha reference
+
+ ⏺ Working
+   ⎿  Allowed Approve notes · Allow once
+
+ ››› Waiting for permission… (0s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                    │
+│ Approve notes                                                                │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow once                                                              │
+│   2. Deny                                                                    │
+│                                                                              │
+ ──────────────────────────────────────────────────────────────────────────────
+  search prompts: alpha
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › alpha reference                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission asked between turns · ctrl+x a to answer

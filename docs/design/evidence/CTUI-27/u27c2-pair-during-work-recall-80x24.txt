@@ -1,0 +1,25 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+      import { render } from 'ink';                                                                                          |       import { render } from 'ink';
+      import { App } from './ui/App.tsx';                                                                                    |       import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)                                                                                          |       … +4 lines (ctrl+o to expand)
+                                                                                                                             |
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run                                                         |  ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run
+   --allow-sys lint/ tests/ --filter "tool calls draw their status")                                                         |    --allow-sys lint/ tests/ --filter "tool calls draw their status")
+   ⎿  ok | 1 passed | 0 failed (12ms)                                                                                        |    ⎿  ok | 1 passed | 0 failed (12ms)
+                                                                                                                             |
+ ⏺ Read(src/missing.ts)                                                                                                      |  ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.                                                                                            |    ⎿  Error: File does not exist.
+                                                                                                                             |
+ ⏺ Two calls worked, one failed.                                                                                             |  ⏺ Two calls worked, one failed.
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › readsheld
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+                                                                                                                             |
+ ››› Working… (10s · esc to interrupt)                                                                                       |  ››› Working… (10s · esc to interrupt)
+ › queued stays                                                                                                              |  › queued stays
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────╮                                             | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › alpha first                                                                │                                             | │ › alpha first                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯                                             | ╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 2% context used                                               |          Fake Large with a 1M context window · medium effort · 2% context used

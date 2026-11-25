@@ -1,0 +1,26 @@
+{
+  "scope": "Original-only modal arrival lifecycle/design evidence; no port runtime fix pass.",
+  "originalCommit": "577b58167672e12c999aeaf4eed2a1a988513dc2",
+  "sourceReferences": [
+    "src/ui/app/state.ts:1105-1116",
+    "src/ui/app/state.ts:620-628",
+    "tests/fixtures/fake_agent/scenarios/permissions.ts:204-217"
+  ],
+  "scenario": "overlapask",
+  "stepMs": 500,
+  "attempts": 1,
+  "observed": "Search before arrival; no search and saved draft restored with intact permission cue/border at120/80; no reopen after reject.",
+  "cleanup": "Owned original app/fake/tmux exited; isolated state/config/cwd removed; no source archive/original edit.",
+  "sha256": {
+    "u27c2-original-modal-reference-after-reject-80x24.ansi": "91a0b409078ca1d409179cfd207d6ccadb0c00cf8483eaa3bd1fb7226f40b5c5",
+    "u27c2-original-modal-reference-after-reject-80x24.txt": "71d05ae44ff9d89d8b2a2b9c9048e4161ce18f3b975798051af817da72cb8009",
+    "u27c2-original-modal-reference-arrived-120x40.ansi": "d7adce6b919f78d5967047eb86132341ef489e0bfb641f1bde3c230403b1acab",
+    "u27c2-original-modal-reference-arrived-120x40.txt": "0e1c872d8fc4b1aeaa10aab09f39449de7984af9b2ecae72c80f3162f544753c",
+    "u27c2-original-modal-reference-arrived-80x24.ansi": "b2853a60704c0e4c581b2cedd3dbdbd8ff91190ce9d39e682c784a1c9bd21d79",
+    "u27c2-original-modal-reference-arrived-80x24.txt": "c0a4690219ac0c77dae6db5ba63cbaad978ae9ec3c2b9c262745044f9a8e69ee",
+    "u27c2-original-modal-reference-before-120x40.ansi": "448a62fbb881a68af69d40d2e5230eb6bbe0efbbf2037cb2305b88160f99083f",
+    "u27c2-original-modal-reference-before-120x40.txt": "2d48b5a2af5131d4ebda8ce4ac7c130d3acbf036748cccf2ab1e78d07d093c45",
+    "u27c2-original-modal-reference-look.md": "38e9e539b86fb6815c0e05e2f1155c4709af2de75eaceb5b896c8483b624091d",
+    "u27c2-original-modal-reference-timing.json": "15247bbe1f6b4bb1277748cd110955f2da3e1a09b1367b986b72372db3c6bfae"
+  }
+}

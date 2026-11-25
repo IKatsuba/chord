@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 29s
+
+      This session     Cost  Tokens
+      main          $0.0250   4,000
+      bugfix        $0.0500   8,000  team run: lead $0.0250 ·
+                                     tester not reported · coder $0.0250
+      Total         $0.0750  12,000  tester not reported
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake         ◦ idle 17s
+    bugfix     team · fake  ◦ idle 17s        ✓ new reply
+    ├─ tester  fake         ● permission 16s  ← new message
+    └─ coder   fake         ◦ idle 16s        ✓ new reply

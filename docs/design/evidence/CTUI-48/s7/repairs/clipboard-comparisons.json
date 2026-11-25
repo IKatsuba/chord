@@ -1,0 +1,62 @@
+[
+  {
+    "case": "dark-120x40",
+    "attempt_write_events": "identical",
+    "writes": [
+      "chord",
+      "chord",
+      "bun dev check",
+      "x"
+    ]
+  },
+  {
+    "case": "light-120x40",
+    "attempt_write_events": "identical",
+    "writes": [
+      "chord",
+      "chord",
+      "bun dev check",
+      "x"
+    ]
+  },
+  {
+    "case": "plain-120x40",
+    "attempt_write_events": "identical",
+    "writes": [
+      "chord",
+      "chord",
+      "bun dev check",
+      "x"
+    ]
+  },
+  {
+    "case": "dark-80x24",
+    "attempt_write_events": "identical",
+    "writes": [
+      "chord",
+      "chord",
+      "bun dev check",
+      "x"
+    ]
+  },
+  {
+    "case": "light-80x24",
+    "attempt_write_events": "identical",
+    "writes": [
+      "chord",
+      "chord",
+      "bun dev check",
+      "x"
+    ]
+  },
+  {
+    "case": "plain-80x24",
+    "attempt_write_events": "identical",
+    "writes": [
+      "chord",
+      "chord",
+      "bun dev check",
+      "x"
+    ]
+  }
+]

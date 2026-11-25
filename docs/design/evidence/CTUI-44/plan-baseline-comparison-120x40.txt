@@ -1,0 +1,41 @@
+ORIGINAL                                                                                                                 | PORT
+ ▀▄     chord v0.71.0                                                                                                    |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       |  ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-ctui44                                                                                    |  ▄▀▀▀   <task worktree>
+ ▀▀     ? for shortcuts · /help                                                                                          |  ▀▀     ? for shortcuts
+                                                                                                                         | 
+ › error                                                                                                                 |  › error
+                                                                                                                         | 
+ ⏺ About to fail.                                                                                                        |  ⏺ About to fail.
+                                                                                                                         | 
+ ⏺ The fake agent failed on purpose.                                                                                     |  ⏺ The fake agent failed on purpose.
+                                                                                                                         | 
+ › plan                                                                                                                  |  › plan
+                                                                                                                         | 
+ ⏺ Planned. Step 2 done. Step 3 done.                                                                                    |  ⏺ Planned. Step 2 done. Step 3 done.
+                                                                                                                         | 
+ ⏺ Plan                                                                                                                  |  ⏺ Plan
+   ⎿  ☒ Read the code                                                                                                    |    ⎿  ☒ Read the code
+      ☒ Write the change                                                                                                 |       ☒ Write the change
+      ☒ Run the tests                                                                                                    |       ☒ Run the tests
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |   ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

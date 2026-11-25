@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      Session time: 5s
+
+      This session           Cost  Tokens
+      main           not reported       —
+      before /clear       $0.0375   6,000
+      docs           not reported       —  agent, closed
+      parser              $0.0125   2,000  agent, closed
+      Total               $0.0500   8,000  fake not reported;
+                                           docs not reported
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

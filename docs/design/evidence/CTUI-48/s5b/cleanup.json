@@ -1,0 +1,9 @@
+{
+  "owned_tmux_server": "absent",
+  "owned_runtime_processes": [],
+  "isolated_original_config_state_and_fake_sessions": "removed after retaining journals",
+  "port_panes": "all 12 exited 0",
+  "original_panes": "all 6 final runs exited 0",
+  "private_path_violations": [],
+  "host_clipboard": "never constructed or called"
+}

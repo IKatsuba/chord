@@ -1,0 +1,40 @@
+ parser · codex · fake-small · opened by main 498652h ago
+
+ › /status
+   ⎿  Agent:     codex
+      Title:     not given
+      Model:     not reported by codex
+      Mode:      not reported by codex
+      Session:   s1
+      Directory: .
+
+ › /effort
+   ⎿  codex offers no effort for .
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake                ◦ idle 0s
+    parser  codex · fake-small  ◦ idle 52s
+    docs    codex               ◦ idle 52s

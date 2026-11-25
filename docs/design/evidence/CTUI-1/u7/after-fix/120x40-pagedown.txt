@@ -1,0 +1,40 @@
+ chorded-tui demo                                                              dark: the terminal did not say, no colour
+╭ log ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ 170 line 170, and more                                                                                               │
+│ 171 line 171, and more, and more                                                                                     │
+│ 172 line 172, and more, and more, and more                                                                           │
+│ 173 line 173, and more, and more, and more, and more                                                                 │
+│ 174 line 174, and more, and more, and more, and more, and more                                                       │
+│ 175 line 175, and more, and more, and more, and more, and more, and more                                             │
+│ 176 line 176, and more, and more, and more, and more, and more, and more, and more                                   │
+│ 177 line 177, and more, and more, and more, and more, and more, and more, and more, and more                         │
+│ 178 line 178, and more, and more, and more, and more, and more, and more, and more, and more, and more               │
+│ 179 line 179, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more     │
+│ 180 line 180, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more,    │
+│     and more                                                                                                         │
+│ 181 line 181                                                                                                         │
+│ 182 line 182, and more                                                                                               │
+│ 183 line 183, and more, and more                                                                                     │
+│ 184 line 184, and more, and more, and more                                                                           │
+│ 185 line 185, and more, and more, and more, and more                                                                 │
+│ 186 line 186, and more, and more, and more, and more, and more                                                       │
+│ 187 line 187, and more, and more, and more, and more, and more, and more                                             │
+│ 188 line 188, and more, and more, and more, and more, and more, and more, and more                                   │
+│ 189 line 189, and more, and more, and more, and more, and more, and more, and more, and more                         │
+│ 190 line 190, and more, and more, and more, and more, and more, and more, and more, and more, and more               │
+│ 191 line 191, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more     │
+│ 192 line 192, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more,    │
+│     and more                                                                                                         │
+│ 193 line 193                                                                                                         │
+│ 194 line 194, and more                                                                                               │
+│ 195 line 195, and more, and more                                                                                     │
+│ 196 line 196, and more, and more, and more                                                                           │
+│ 197 line 197, and more, and more, and more, and more                                                                 │
+│ 198 line 198, and more, and more, and more, and more, and more                                                       │
+│ 199 line 199, and more, and more, and more, and more, and more, and more                                             │
+│ 200 line 200, and more, and more, and more, and more, and more, and more, and more                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│>  Say something                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl+o Toggle details  ctrl+t Theme  ctrl+x b Toggle busy  ctrl+x c Clear  ctrl+x f Fill the log  ctrl+q Quit  pageup…

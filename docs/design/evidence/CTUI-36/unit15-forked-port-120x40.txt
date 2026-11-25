@@ -1,0 +1,40 @@
+ fork · fake · Fake Large with a 1M context window · forked from main 5s ago
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ── forked from main · 13:42 ──
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ fork ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main  fake · Fake Large with a 1M context window · medium         ◦ idle 13s
+    fork  fork · fake · Fake Large with a 1M context window · medium  ◦ idle 5s

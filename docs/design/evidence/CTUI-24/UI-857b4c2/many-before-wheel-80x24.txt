@@ -1,0 +1,24 @@
+ ⏺ Transcript record 70
+
+ ⏺ Transcript record 71
+
+ ⏺ Transcript record 72
+
+ ⏺ Transcript record 73
+
+ ⏺ Transcript record 74
+
+ ⏺ Transcript record 75
+
+ ──────────────────────────────────────────────────────────────────────────────
+  source/file_000.dart
+  source/file_001.dart
+  source/file_002.dart
+  source/file_003.dart
+  source/file_004.dart
+  source/file_005.dart
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › @                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

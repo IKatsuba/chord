@@ -1,0 +1,40 @@
+The transcript is here. Answer: none yet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Allow command?                                                                                                       │
+│ Run the requested command in this session.                                                                           │
+│ $ dart analyze                                                                                                       │
+│ $ dart format --output=none --set-exit-if-changed .                                                                  │
+│ $ dart test                                                                                                          │
+│                                                                                                                      │
+│   1. Allow once                                                                                                      │
+│ ❯ 2. Reject                                                                                                          │
+│                                                                                                                      │
+│ ↑↓ or j/k to move · Enter or 1–9 to select · Esc to close                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+> /permission
+up Previous choice  k Previous choice  down Next choice  j Next choice  enter Choose highlighted item  1 Choose item 1…

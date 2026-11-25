@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   …/CTUI-27/build/designer-u27c1-held/fixture-project
+ ▀▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run
+   --allow-sys lint/ tests/ --filter "tool calls draw their status")
+   ⎿  Interrupted by user
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › held personal                                                              │
+│   held draft                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

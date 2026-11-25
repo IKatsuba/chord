@@ -1,0 +1,116 @@
+[
+  {
+    "case": "dark-120x40-samebatch-picked",
+    "prompt_cells_and_top": "identical",
+    "cursor": "4,37"
+  },
+  {
+    "case": "dark-120x40-sta",
+    "prompt_cells_and_top": "identical",
+    "cursor": "8,37"
+  },
+  {
+    "case": "dark-120x40-status-completed",
+    "prompt_cells_and_top": "identical",
+    "cursor": "12,37"
+  },
+  {
+    "case": "dark-120x40-S5b-to-S6b",
+    "prompt_cells_and_top": "identical"
+  },
+  {
+    "case": "dark-80x24-samebatch-picked",
+    "prompt_cells_and_top": "identical",
+    "cursor": "4,21"
+  },
+  {
+    "case": "dark-80x24-sta",
+    "prompt_cells_and_top": "identical",
+    "cursor": "8,21"
+  },
+  {
+    "case": "dark-80x24-status-completed",
+    "prompt_cells_and_top": "identical",
+    "cursor": "12,21"
+  },
+  {
+    "case": "dark-80x24-S5b-to-S6b",
+    "prompt_cells_and_top": "identical"
+  },
+  {
+    "case": "light-120x40-samebatch-picked",
+    "prompt_cells_and_top": "identical",
+    "cursor": "4,37"
+  },
+  {
+    "case": "light-120x40-sta",
+    "prompt_cells_and_top": "identical",
+    "cursor": "8,37"
+  },
+  {
+    "case": "light-120x40-status-completed",
+    "prompt_cells_and_top": "identical",
+    "cursor": "12,37"
+  },
+  {
+    "case": "light-120x40-S5b-to-S6b",
+    "prompt_cells_and_top": "identical"
+  },
+  {
+    "case": "light-80x24-samebatch-picked",
+    "prompt_cells_and_top": "identical",
+    "cursor": "4,21"
+  },
+  {
+    "case": "light-80x24-sta",
+    "prompt_cells_and_top": "identical",
+    "cursor": "8,21"
+  },
+  {
+    "case": "light-80x24-status-completed",
+    "prompt_cells_and_top": "identical",
+    "cursor": "12,21"
+  },
+  {
+    "case": "light-80x24-S5b-to-S6b",
+    "prompt_cells_and_top": "identical"
+  },
+  {
+    "case": "plain-120x40-samebatch-picked",
+    "prompt_cells_and_top": "identical",
+    "cursor": "4,37"
+  },
+  {
+    "case": "plain-120x40-sta",
+    "prompt_cells_and_top": "identical",
+    "cursor": "8,37"
+  },
+  {
+    "case": "plain-120x40-status-completed",
+    "prompt_cells_and_top": "identical",
+    "cursor": "12,37"
+  },
+  {
+    "case": "plain-120x40-S5b-to-S6b",
+    "prompt_cells_and_top": "identical"
+  },
+  {
+    "case": "plain-80x24-samebatch-picked",
+    "prompt_cells_and_top": "identical",
+    "cursor": "4,21"
+  },
+  {
+    "case": "plain-80x24-sta",
+    "prompt_cells_and_top": "identical",
+    "cursor": "8,21"
+  },
+  {
+    "case": "plain-80x24-status-completed",
+    "prompt_cells_and_top": "identical",
+    "cursor": "12,21"
+  },
+  {
+    "case": "plain-80x24-S5b-to-S6b",
+    "prompt_cells_and_top": "identical"
+  }
+]

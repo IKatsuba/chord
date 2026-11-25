@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › shell
+
+ ⏺ Run(bun dev test)
+   ⎿  3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      … +2 lines (ctrl+t to expand)
+      Exit code 1
+
+ ⏺ The tests failed.
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

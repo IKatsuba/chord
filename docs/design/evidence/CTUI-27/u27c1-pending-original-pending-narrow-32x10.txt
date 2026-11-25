@@ -1,0 +1,10 @@
+
+ ›› Working (37s · esc to
+ ›  …       interrupt)
+ › into the running turn: f...g
+ › second unsent
+
+╭──────────────────────────────╮
+│ › draft remains              │
+╰──────────────────────────────╯
+  Fake Large with a 1M contex…

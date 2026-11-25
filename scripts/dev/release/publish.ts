@@ -14,7 +14,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { channelOf } from '../../../src/channel.ts';
+import { channelOf } from './channel.ts';
 import {
   die,
   mainName,

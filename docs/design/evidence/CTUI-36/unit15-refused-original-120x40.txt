@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /fork
+ ⏺ Could not fork: Resource not found: 15fb5a31-1b13-448f-9118-32b832a23b16
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

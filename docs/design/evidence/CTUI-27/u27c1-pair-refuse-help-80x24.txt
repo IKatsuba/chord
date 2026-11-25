@@ -1,0 +1,25 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+ ──────────────────────────────────────────────────────────────────────────────                                              |  ▀▄     chord v0.0.1
+  enter to send                           ! for bash mode                                                                    |  ▀▀▀▄   fake
+  tab to send the oldest queued now       backspace to leave bash mode                                                       |  ──────────────────────────────────────────────────────────────────────────────
+  shift or \ + enter for a newline        esc to interrupt or stop a command                                                 |   enter to send                         ctrl + o for verbose output
+  ctrl + g to edit in $EDITOR             shift + tab to cycle modes                                                         |   tab to send the oldest queued now     ctrl + c to copy
+  ctrl + v to paste an image              ctrl + o for verbose output                                                        |   shift or \ + enter for a newline      ctrl + x b to pick a code block
+  alt + ← → to move by word               ctrl + c to clear input                                                            |   alt + ← → to move by word             c r to copy or put in the prompt
+  cmd + ← → to line start or end          ctrl + d or ctrl + c twice to quit                                                 |   ↑ ↓ for prompts                       ctrl + c to clear input
+  ↑ ↓ for prompts, agents, background     ctrl + x a for what waits on you                                                   |   pgup pgdn to scroll                   ctrl + d or ctrl + c twice to quit
+  x to close an agent, stop background    ctrl + x b to pick a code block                                                    |   shift + ↑ ↓ to scroll a line          ctrl + x a for what waits on you
+  enter for background, details, a call   c r to copy or put in the prompt                                                   |   home end for the top and the bottom   1–9 to pick a choice
+  ctrl + r to search prompts              1–9 to pick a choice                                                               |   ↑ ↓ to pick a completion              ↑ ↓ j k ← → to move or change a value
+  tab enter to take a match               ↑ ↓ j k ← → to move or change a value                                              |   tab to complete a command             enter to pick the highlighted choice
+  esc to cancel a search                  enter to pick the highlighted choice                                               |   tab enter to add a file or agent      esc to reject a permission
+  pgup pgdn or wheel to scroll            esc to reject a permission                                                         |   esc to close completions              esc to leave a picker or shortcuts
+  shift + ↑ ↓ to scroll a line            esc ← to leave a picker or shortcuts                                               |   ! for bash mode                       ctrl + a to show all directories
+  home end for the top and the bottom     ctrl + a to show all directories                                                   |   backspace to leave bash mode          ? for shortcuts
+  ctrl + c to copy                        tab ← → ↑ ↓ space to answer forms                                                  |   esc to interrupt or stop a command    any key to quit the crash screen
+  ── ↓ 5 lines below · pagedown to scroll ──────────────────────────────────────                                             |   shift + tab to cycle modes
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────╮                                             | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │                                             | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯                                             | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used                                               |   ? for shortcuts

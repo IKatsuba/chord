@@ -1,0 +1,40 @@
+ chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+
+ › bash
+
+ ⏺ Bash(git status --short)
+   ⎿  ```console
+       M src/main.tsx
+      ?? notes.md
+      ```
+
+ ⏺ Two files changed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ›
+ ctrl+c or ctrl+d to quit

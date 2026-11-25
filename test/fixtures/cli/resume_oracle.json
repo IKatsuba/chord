@@ -1,0 +1,366 @@
+[
+  {
+    "argv": [],
+    "value": {}
+  },
+  {
+    "argv": [
+      "--resume"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "-r"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "fake",
+      "-r"
+    ],
+    "value": {
+      "agent": "fake",
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--resume",
+      "aaa"
+    ],
+    "value": {
+      "resume": "aaa"
+    }
+  },
+  {
+    "argv": [
+      "--resume=aaa"
+    ],
+    "value": {
+      "resume": "aaa"
+    }
+  },
+  {
+    "argv": [
+      "-raaa"
+    ],
+    "error": "Unknown option \"-a\". Did you mean option \"-h\"?"
+  },
+  {
+    "argv": [
+      "-r",
+      "aaa",
+      "fake"
+    ],
+    "value": {
+      "agent": "fake",
+      "resume": "aaa"
+    }
+  },
+  {
+    "argv": [
+      "fake",
+      "--resume",
+      "aaa"
+    ],
+    "value": {
+      "agent": "fake",
+      "resume": "aaa"
+    }
+  },
+  {
+    "argv": [
+      "--resume=-x"
+    ],
+    "value": {
+      "resume": "-x"
+    }
+  },
+  {
+    "argv": [
+      "--resume",
+      "-x"
+    ],
+    "value": {
+      "agent": "-x",
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--resume=c"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--resume",
+      "model"
+    ],
+    "value": {
+      "agent": "model",
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--resume=-r"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--resume",
+      "--resume"
+    ],
+    "error": "Option \"--resume\" can only occur once, but was found several times."
+  },
+  {
+    "argv": [
+      "-r",
+      "aaa",
+      "-r",
+      "bbb"
+    ],
+    "error": "Option \"-r\" can only occur once, but was found several times."
+  },
+  {
+    "argv": [
+      "--resume=a",
+      "--resume=b"
+    ],
+    "error": "Option \"--resume\" can only occur once, but was found several times."
+  },
+  {
+    "argv": [
+      "--continue",
+      "--resume"
+    ],
+    "error": "Option \"--continue\" conflicts with option \"--resume\"."
+  },
+  {
+    "argv": [
+      "-c",
+      "-r"
+    ],
+    "error": "Option \"--continue\" conflicts with option \"--resume\"."
+  },
+  {
+    "argv": [
+      "--",
+      "--resume"
+    ],
+    "value": {}
+  },
+  {
+    "argv": [
+      "--agent-command",
+      "--resume"
+    ],
+    "value": {
+      "agentCommand": "--resume"
+    }
+  },
+  {
+    "argv": [
+      "--resume="
+    ],
+    "value": {}
+  },
+  {
+    "argv": [
+      "--resume",
+      "--help"
+    ],
+    "error": "Option \"--help\" cannot be combined with other options."
+  },
+  {
+    "argv": [
+      "--resume=",
+      "--help"
+    ],
+    "value": "no action"
+  },
+  {
+    "argv": [
+      "--resume",
+      "--version"
+    ],
+    "error": "Option \"--version\" cannot be combined with other options."
+  },
+  {
+    "argv": [
+      "--resume=",
+      "--resume"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--continue",
+      "--continue"
+    ],
+    "error": "Option \"--continue\" can only occur once, but was found several times."
+  },
+  {
+    "argv": [
+      "--resume",
+      "cwd"
+    ],
+    "value": {
+      "agent": "cwd",
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--resume=mcp-servers"
+    ],
+    "value": {
+      "resume": "mcp-servers"
+    }
+  },
+  {
+    "argv": [
+      "--resume=no-mcp-servers"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--resume",
+      "-x",
+      "fake"
+    ],
+    "error": "Too many arguments: fake"
+  },
+  {
+    "argv": [
+      "--resume=--continue"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "--agent-command=--resume"
+    ],
+    "value": {
+      "agentCommand": "--resume"
+    }
+  },
+  {
+    "argv": [
+      "--resume",
+      "--agent-command",
+      "--resume"
+    ],
+    "value": {
+      "resume": true,
+      "agentCommand": "--resume"
+    }
+  },
+  {
+    "argv": [
+      "--resume",
+      "--",
+      "aaa"
+    ],
+    "value": {
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "-r=id"
+    ],
+    "value": {
+      "resume": "id"
+    }
+  },
+  {
+    "argv": [
+      "-r="
+    ],
+    "value": {}
+  },
+  {
+    "argv": [
+      "-rc"
+    ],
+    "error": "Option \"--continue\" conflicts with option \"--resume\"."
+  },
+  {
+    "argv": [
+      "-cr"
+    ],
+    "error": "Option \"--continue\" conflicts with option \"--resume\"."
+  },
+  {
+    "argv": [
+      "-rr"
+    ],
+    "error": "Option \"-r\" can only occur once, but was found several times."
+  },
+  {
+    "argv": [
+      "--resume",
+      "help"
+    ],
+    "value": {
+      "agent": "help",
+      "resume": true
+    }
+  },
+  {
+    "argv": [
+      "-cc"
+    ],
+    "error": "Option \"-c\" can only occur once, but was found several times."
+  },
+  {
+    "argv": [
+      "-hc"
+    ],
+    "error": "Option \"--help\" cannot be combined with other options."
+  },
+  {
+    "argv": [
+      "-ch"
+    ],
+    "error": "Option \"--help\" cannot be combined with other options."
+  },
+  {
+    "argv": [
+      "-Vc"
+    ],
+    "error": "Option \"--version\" cannot be combined with other options."
+  },
+  {
+    "argv": [
+      "-cV"
+    ],
+    "error": "Option \"--version\" cannot be combined with other options."
+  },
+  {
+    "argv": [
+      "-hhc"
+    ],
+    "error": "Option \"-h\" can only occur once, but was found several times."
+  }
+]

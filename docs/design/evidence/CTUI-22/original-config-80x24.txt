@@ -1,0 +1,24 @@
+   including 80 by 24.\n\n## Changes\n\n- Change 1: the prompt keeps its
+   draft\n- Change 2: a turn can be resumed\n- Change 3: headlines wrap\n-
+   Change 4: the box scrolls\n- Change 5: tests run in parallel\n- Change 6:
+   the prompt keeps its draft\n- Change 7: a turn can be resumed\n- Change 8:
+   headlines wrap\n- Change 9: the box scrolls\n- Change 10: tests run in
+   parallel\n- Change 11: the prompt keeps its draft\n- Change 12: a turn can
+   be resumed\n- Change 13: headlines wrap\n- Change 14: the box scrolls\n-
+   Change 15: tests run in parallel\n- Change 16: the prompt keeps its draft\n-
+   Change 17: a turn can be resumed\n- Change 18: headlines wrap\n- Change 19:
+   the box scrolls\n- Change 20: tests run in parallel\n- Change 21: the prompt
+   keeps its draft\n- Change 22: a turn can be resumed\n- Change 23: headlines
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Settings                                                                     │
+│ Change fake's settings for this session.                                     │
+│                                                                              │
+│ ❯ 1. Effort  Medium                                                          │
+│                                                                              │
+│ Enter to choose · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

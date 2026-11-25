@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › agentclear
+
+ → to @parser
+   ⎿  Queued before the clear.
+      No agent parser is open in this session; list_sessions names them
+
+ ⏺ Clear(parser)
+   ⎿  No agent parser is open in this session; list_sessions names them
+
+ → to @parser
+   ⎿  text
+      No agent parser is open in this session; list_sessions names them
+
+ ⏺ Clear(nobody)
+   ⎿  No agent nobody is open in this session; list_sessions names them
+
+ ⏺ parser was cleared.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

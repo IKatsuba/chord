@@ -1,0 +1,24 @@
+Choices enabled
+Filter:
+  1. Allow this command in the current folder and do not ask again
+  2. Allow this command in the current folder and do not ask again
+❯ 3. Allow this command in the current folder and do not ask again
+Answer: None
+up Previous choice  k Previous choice  down Next choice  j Next choice  enter C…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

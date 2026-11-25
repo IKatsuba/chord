@@ -1,0 +1,24 @@
+   [2m⎿[0m  [2mcostwait[0m
+
+ [38;2;71;231;165m⏺[39m [1mAgent[0m(Count the cost)[2m · fake[0m
+   [2m⎿[0m  [2mInitializing…[0m
+
+ ⏺ The cost is being counted.
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:[0m   $0.0125
+   [2m [0m  [2mTokens in:[0m    1,000
+   [2m [0m  [2mTokens out:[0m   200
+   [2m [0m  [2mCache read:[0m   800
+   [2m [0m  [2mSession time:[0m 22s
+   [2m [0m
+   [2m [0m  This session         Cost  Tokens
+   [2m [0m  main              $0.0125   2,000
+   [2m [0m    Count the cost        —       —  task agent, running: counted when it
+   [2m [0m                                     ends
+   [2m [0m  Total             $0.0125   2,000  1 running
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m1 agent still running[0m          [2mFake Large with a 1M context window · 1% used[0m

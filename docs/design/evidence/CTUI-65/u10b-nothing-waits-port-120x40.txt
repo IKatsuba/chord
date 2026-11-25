@@ -1,0 +1,41 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <scratch>/d/proj
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › draft text                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Nothing waits on you                                             Fake Large with a 1M context window · medium effort
+-- cursor (tmux cursor_flag x y): 1 14 37

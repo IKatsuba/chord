@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › running
+
+ ⏺ Working
+
+
+
+
+
+
+
+
+ ››› Working… (17s · esc to interrupt)
+ › into the running turn: first pending
+ › second unsent
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft remains                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

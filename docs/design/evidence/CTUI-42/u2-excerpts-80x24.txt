@@ -1,0 +1,15 @@
+Original | port; same source excerpt, equal content width
+
+   The session layer wraps the SDK so the interface never touches a process.     |    The session layer wraps the SDK so the interface never touches a process.
+   Start with src/session/session.ts, then see the ACP spec (https://            |    Start with src/session/session.ts, then see the ACP spec (https://
+   agentclientprotocol.com) for the wire format.                                 |    agentclientprotocol.com) for the wire format.
+
+   ┌───────────────┬───────────────────────────────┬────────────────────┐        |    ┌───────────────┬───────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                         │ Tested by          │        |    │ Module        │ Holds                         │ Tested by          │
+   ├───────────────┼───────────────────────────────┼────────────────────┤        |    ├───────────────┼───────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting            │ session_test.ts    │        |    │ session.ts    │ opening, prompting            │ session_test.ts    │
+   │               │ and closing a session         │                    │        |    │               │ and closing a session         │                    │
+   │ processes.ts  │ the promise that a closed     │ processes_test.ts  │        |    │ processes.ts  │ the promise that a closed     │ processes_test.ts  │
+   │               │ agent is gone                 │                    │        |    │               │ agent is gone                 │                    │
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │        |    │ transcript.ts │ the reducer from events       │ transcript_test.ts │
+   │               │ to what is drawn              │                    │        |    │               │ to what is drawn              │                    │

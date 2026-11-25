@@ -1,0 +1,35 @@
+{
+  "purpose": "CTUI-53 direct-public-API capability rejection evidence, not a production fix.",
+  "versions": {
+    "cancellation_token": "2.0.1",
+    "worker_manager": "7.2.9"
+  },
+  "commands": [
+    "dart pub get",
+    "nice -n 19 dart run main.dart jit",
+    "nice -n 19 dart compile exe main.dart -o build/probe",
+    "nice -n 19 build/probe aot"
+  ],
+  "environment": {
+    "TMPDIR": "owned empty directory",
+    "XDG_STATE_HOME": "owned empty directory"
+  },
+  "reproduction": "Copy .txt sources to their original names in an owned temporary package and resolve the retained lock. Executable path is normalized; all runs were sequential in an exclusive reserved slot.",
+  "observations": "In both JIT and AOT the current-package public cancellation Future completes without cleanup ack; a REG current.data descriptor remains even after observed worker exit notification. Direct worker_manager gentle cancellation completes with gentle.data still open; only after the deterministic test processing gate is released does cleanup ack arrive and that descriptor disappear. The current.data descriptor remains until the isolated probe process exits.",
+  "interpretation": "Neither direct API provides the required awaited file-cleanup barrier. Exit-notification ordering is callback ordering, not a measured physical exit time. No sleeps or polling establish the verdict; a 15-second watchdog bounds a hung probe only. Exit code zero means the expected capability-gap observations were verified, not package acceptance.",
+  "currentPackageSource": "CancellableCompleter.onCancel completes its internal Future with error before invoking onCancel; CancellableIsolate.run then kills its private isolate, with no exposed async cleanup/join hook.",
+  "workerManagerSource": "Task.cancel completes the task Future immediately; executeGentle sends cancel after that. dispose/kill does not wait for cooperative body cleanup.",
+  "sourceInspectedOnly": {
+    "squadron7.4.5": "Worker.send(token) fails its ForwardCompleter immediately on token cancellation; token.wrap is internal. No runtime/AOT probe claimed.",
+    "isolate_manager6.3.2": "stop delegates to dispose, which sends disposal, closes the controller and kills. Native onDispose is a void callback and is not awaited. No runtime/AOT probe claimed."
+  },
+  "primarySources": [
+    "https://pub.dev/packages/cancellation_token",
+    "https://pub.dev/packages/worker_manager",
+    "https://pub.dev/packages/squadron",
+    "https://pub.dev/packages/isolate_manager"
+  ],
+  "cleanup": "Every owned probe root was removed; both isolated probe processes exited, worker processes/isolates did not keep either program alive, outer TMPDIR/XDG and executable were removed. Open current.data before probe-process exit is intentionally retained as failure evidence; no per-operation all-zero handle claim.",
+  "dependencyScope": "Separate ignored probe package only. Production pubspec/lock/source unchanged. Other candidates were downloaded/source-inspected only.",
+  "conditionalOwnerDirection": "If these direct APIs cannot supply the barrier, main conditionally authorized a port-only cooperative SDK isolate worker with explicit file cleanup/acknowledgment. Short design and lead go-ahead are still required before production implementation."
+}

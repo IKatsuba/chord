@@ -1,0 +1,2 @@
+ ESC[38;5;244m│ESC[39m ESC[48;5;66malpha beta gammaESC[49m                                                                                                   ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m ESC[48;5;66mdelta epsilon zetaESC[49m                                                                                                 ESC[38;5;244m│ESC[39m

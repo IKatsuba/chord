@@ -1,0 +1,92 @@
+The plan box Note, the fake's cursorplan, j j to the Note row, 120x40.
+Each case: the Note cleared, "alpha beta gamma" typed, left twice, the key,
+then "|" typed. The original's Note is cleared with ctrl+u; the port's
+with ctrl+e then ctrl+u, as its ctrl+u deletes only to the line start.
+
+#### original (bun dev chord --fake)
+== none
+│ ❯ Note  alpha beta gamma|
+== left
+│ ❯ Note  alpha beta gamma|
+== right
+│ ❯ Note  alpha beta gamma|
+== alt+left
+│ ❯ Note  alpha beta gamma|
+== super+left
+│ ❯ Note  alpha beta gamma|
+== ctrl+a
+│ ❯ Note  alpha beta gamma|
+== ctrl+e
+│ ❯ Note  alpha beta gamma|
+== alt+b
+│ ❯ Note  alpha beta gamma|
+== ctrl+f
+│ ❯ Note  alpha beta gamma|
+== backspace
+│ ❯ Note  alpha beta gamm|
+== shift+backspace
+│ ❯ Note  alpha beta gamm|
+== delete
+│ ❯ Note  alpha beta gamma|
+== ctrl+w
+│ ❯ Note  alpha beta |
+== alt+backspace
+│ ❯ Note  alpha beta gamm|
+== ctrl+k
+│ ❯ Note  alpha beta gamma|
+== alt+d
+│ ❯ Note  alpha beta gamma|
+== ctrl+z
+│ ❯ Note  alpha beta gamma|
+== super+z
+│ ❯ Note  alpha beta gammaz|
+== super+shift+z
+│ ❯ Note  alpha beta gammaZ|
+== super+a
+│ ❯ Note  alpha beta gammaa|
+== shift+left
+│ ❯ Note  alpha beta gamma|
+
+#### port at 6d72d7aa (the hold), dart run tool/dev.dart chord --fake
+== none
+│ ❯ Note  alpha beta gam|ma
+== left
+│ ❯ Note  alpha beta ga|mma
+== right
+│ ❯ Note  alpha beta gamm|a
+== alt+left
+│ ❯ Note  alpha beta |gamma
+== super+left
+│ ❯ Note  |alpha beta gamma
+== ctrl+a
+│ ❯ Note  |alpha beta gamma
+== ctrl+e
+│ ❯ Note  alpha beta gamma|
+== alt+b
+│ ❯ Note  alpha beta |gamma
+== ctrl+f
+│ ❯ Note  alpha beta gam|ma
+== backspace
+│ ❯ Note  alpha beta ga|ma
+== shift+backspace
+│ ❯ Note  alpha beta ga|ma
+== delete
+│ ❯ Note  alpha beta gam|a
+== ctrl+w
+│ ❯ Note  alpha beta |ma
+== alt+backspace
+│ ❯ Note  alpha beta |ma
+== ctrl+k
+│ ❯ Note  alpha beta gam|
+== alt+d
+│ ❯ Note  alpha beta gam|ma
+== ctrl+z
+│ ❯ Note  alpha beta gamm|
+== super+z
+│ ❯ Note  alpha beta gam|ma
+== super+shift+z
+│ ❯ Note  alpha beta gam|ma
+== super+a
+│ ❯ Note  alpha beta gam|ma
+== shift+left
+│ ❯ Note  alpha beta gam|ma

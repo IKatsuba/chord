@@ -1,0 +1,44 @@
+{"event":"attempt","text":"chord","cancelled":false}
+{"event":"write","text":"chord"}
+{"event":"attempt","text":"chord","cancelled":false}
+{"event":"write","text":"chord"}
+{"event":"attempt","text":"draft","cancelled":false}
+{"event":"write","text":"draft"}
+{"event":"attempt","text":"draft","cancelled":false}
+{"event":"write","text":"draft"}
+{"event":"attempt","text":"draft","cancelled":false}
+{"event":"write","text":"draft"}
+{"event":"attempt","text":"draft","cancelled":false}
+{"event":"write","text":"draft"}
+{"event":"attempt","text":"bun dev check","cancelled":false}
+{"event":"write","text":"bun dev check"}
+{"event":"attempt","text":"bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt\n\necho done","cancelled":false}
+{"event":"write","text":"bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt\n\necho done"}
+{"event":"attempt","text":"x","cancelled":false}
+{"event":"write","text":"x"}
+{"event":"attempt","text":"A paragraph before the code.","cancelled":false}
+{"event":"write","text":"A paragraph before the code."}
+{"event":"attempt","text":"A paragraph before the code.","cancelled":false}
+{"event":"write","text":"A paragraph before the code."}
+{"event":"attempt","text":"A paragraph before the code.","cancelled":false}
+{"event":"write","text":"A paragraph before the code."}
+{"event":"attempt","text":"A paragraph before the code.","cancelled":false}
+{"event":"write","text":"A paragraph before the code."}
+{"event":"attempt","text":"const","cancelled":false}
+{"event":"write","text":"const"}
+{"event":"attempt","text":"const","cancelled":false}
+{"event":"write","text":"const"}
+{"event":"attempt","text":"bun dev compile --all\nfor bin in dist/*/chord; do echo \"built $bin\"; done","cancelled":false}
+{"event":"write","text":"bun dev compile --all\nfor bin in dist/*/chord; do echo \"built $bin\"; done"}
+{"event":"attempt","text":"closed agent","cancelled":false}
+{"event":"write","text":"closed agent"}
+{"event":"attempt","text":"closed agent","cancelled":false}
+{"event":"write","text":"closed agent"}
+{"event":"attempt","text":"session.ts","cancelled":false}
+{"event":"write","text":"session.ts"}
+{"event":"attempt","text":"session.ts","cancelled":false}
+{"event":"write","text":"session.ts"}
+{"event":"attempt","text":"notes","cancelled":false}
+{"event":"write","text":"notes"}
+{"event":"attempt","text":"notes","cancelled":false}
+{"event":"write","text":"notes"}

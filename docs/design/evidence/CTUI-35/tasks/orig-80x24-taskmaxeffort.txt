@@ -1,0 +1,24 @@
+
+ ⏺ The build and the deploy are being watched.
+
+ › taskmaxeffort
+
+ ⏺ Agent(Tune the parser) · fake · fake-small · medium
+   ⎿  Done (0 tool uses · 2.0k tokens · $0.0125 · 0s)
+
+ ⏺ Tune the parser: Could not start on max effort, asked by spawn_task: the
+   agent offers low, medium, high
+
+ ⏺ Started on medium. Could not start on max effort, asked by spawn_task: the
+   agent offers low, medium, high.
+
+ ← from Tune the parser · fake · report
+   ⎿  Hello, world. This reply came in chunks.
+
+ ⏺ Received the message from Tune the parser · fake · report.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running         Fake Large with a 1M context window · 2% used
+    background  2 tasks running

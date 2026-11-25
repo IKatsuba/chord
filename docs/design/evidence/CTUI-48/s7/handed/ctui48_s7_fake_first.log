@@ -1,0 +1,66 @@
+00:00 +0: loading test/ui/app/selection_fake_test.dart
+00:00 +0: selection and code copying through the original fake markdowncode nested, wrapped, blank and range payloads stay exact Size(120, 40)
+00:01 +1: selection and code copying through the original fake streaming open fence never enters current pick until closed Size(120, 40)
+00:02 +2: selection and code copying through the original fake markdowncode nested, wrapped, blank and range payloads stay exact Size(80, 24)
+00:03 +2 -1: selection and code copying through the original fake markdowncode nested, wrapped, blank and range payloads stay exact Size(80, 24) [E]
+  Expected: a value greater than or equal to <0>
+    Actual: <-1>
+     Which: is not a value greater than or equal to <0>
+     ┌ typescript ──[copy]─┐
+     │   x                 │
+     └─────────────────────┘
+  
+     ┌ sh ───────────────────────────────────────────────────────────────[copy]─┐
+     │   bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p  │
+     │ ↪ > /tmp/screen.txt                                                      │
+     │                                                                          │
+     │   echo done                                                              │
+     └──────────────────────────────────────────────────────────────────────────┘
+  
+     - a loose item
+  
+     - a loose item with a box:
+  
+       ┌ sh ──────[copy]─┐
+       │   bun dev check │
+       └─────────────────┘
+   ── ↓ 2 lines below · end to jump to the bottom ───────────────────────────────
+  
+  ╭──────────────────────────────────────────────────────────────────────────────╮
+  │ ›                                                                            │
+  ╰──────────────────────────────────────────────────────────────────────────────╯
+    sent 1 chars to the terminal's clipboard
+  
+  package:matcher                               expect
+  test/ui/app/selection_window_test.dart 46:3   cellOf
+  test/ui/app/selection_window_test.dart 55:17  select
+  test/ui/app/selection_fake_test.dart 53:19    main.<fn>.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7        testWidgets.<fn>
+  
+00:03 +2 -1: selection and code copying through the original fake streaming open fence never enters current pick until closed Size(80, 24)
+00:04 +2 -2: selection and code copying through the original fake streaming open fence never enters current pick until closed Size(80, 24) [E]
+  Expected: 'bun dev compile --all\n'
+              'for bin in dist/*/chord; do echo "built $bin"; done'
+    Actual: 'const session = await openSession({ agent: \'claude\', cwd });\n'
+              'const turn = session.prompt(\'hello\');\n'
+              'await turn.result;'
+     Which: is different.
+            Expected: bun dev co ...
+              Actual: const sess ...
+                      ^
+             Differ at offset 0
+  
+  package:matcher                              expect
+  test/ui/app/selection_fake_test.dart 118:13  main.<fn>.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7       testWidgets.<fn>
+  
+00:04 +2 -2: Some tests failed.
+
+Failing tests:
+  test/ui/app/selection_fake_test.dart: selection and code copying through the original fake markdowncode nested, wrapped, blank and range payloads stay exact Size(80, 24)
+  test/ui/app/selection_fake_test.dart: selection and code copying through the original fake streaming open fence never enters current pick until closed Size(80, 24)
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

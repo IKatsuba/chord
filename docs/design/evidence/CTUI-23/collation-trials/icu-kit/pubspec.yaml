@@ -1,0 +1,5 @@
+name: ctui22_icu_kit_trial
+environment:
+  sdk: ^3.10.0
+dependencies:
+  icu_kit: 0.2.0

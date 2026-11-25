@@ -1,0 +1,24 @@
+   [2m [0m
+   [2m [0m  coder's instructions
+   [2m [0m  Make the failing test pass with the smallest change that fixes the
+   [2m [0m  cause. Do not touch tests.
+
+   [2m [0m  [1;4mHow bugfix works[0m
+
+      [2m1. [0mThe lead reads the job and names who may edit which files.
+      [2m2. [0mtester writes a test that fails for the bug's own reason, in [38;2;177;185;249mtests/[39m.
+      [2m3. [0mcoder fixes the code so that test passes, and never edits [38;2;177;185;249mtests/[39m.
+
+      [1mWho edits what[0m
+
+      [2m- [0mOne writer per file at a time; a member asks a file's owner directly.
+      [2m- [0mAnother run of a team may be working here: the leads agree on files.
+
+      [1mReporting[0m
+
+      The lead writes to main when the job is done or cannot be done.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

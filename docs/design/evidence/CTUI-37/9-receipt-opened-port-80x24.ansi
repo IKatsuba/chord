@@ -1,0 +1,24 @@
+   [2m [0m  Planned for this run:
+   [2m [0m  lead (lead): fake · model agent default (unconfirmed) · effort agent
+   [2m [0m  default (unconfirmed) · mode agent default (unconfirmed)
+   [2m [0m  Actual at recording: refused · session runtime unknown · model unknown
+   [2m [0m  · effort unknown · mode unknown
+   [2m [0m  lead: Initialization failed before the first job; the attempted agent
+   [2m [0m  is closing.
+   [2m [0m  reviewer: fake · model agent default (unconfirmed) · effort agent
+   [2m [0m  default (unconfirmed) · mode agent default (unconfirmed)
+   [2m [0m  Actual at recording: not opened · configuration unconfirmed
+   [2m [0m  [2mRun: ade54cc8 · saved definition: fixture (project)[0m
+   [2m [0m  lead saved: fake · model agent default (unconfirmed) · effort agent
+   [2m [0m  default (unconfirmed) · mode agent default (unconfirmed)
+   [2m [0m  Changes from saved: none
+   [2m [0m  reviewer saved: fake · model agent default (unconfirmed) · effort agent
+   [2m [0m  default (unconfirmed) · mode agent default (unconfirmed)
+   [2m [0m  Changes from saved: none
+   [2m [0m  [38;2;255;107;128mRecorded failure: Team launch ade54cc8 was refused before its first[39m
+   [2m [0m  [38;2;255;107;128mjob; the attempted lead is closing.[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

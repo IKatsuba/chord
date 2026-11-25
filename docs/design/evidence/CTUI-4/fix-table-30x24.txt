@@ -1,0 +1,24 @@
+ Markdown  light, 100%
+│   }                        │
+└────────────────────────────┘
+
+┌──────────────┐
+│   unlabelled │
+└──────────────┘
+
+┌ nolanguage ────────────┐
+│   unknown label, plain │
+└────────────────────────┘
+
+┌──────┬───────┬───────┐
+│ Name │ Stat… │ Count │
+├──────┼───────┼───────┤
+│ ren… │ ready │     2 │
+│ a c… │ wait… │    10 │
+└──────┴───────┴───────┘
+
+——————————————————————————————
+
+[ref]: https://ref.example "A
+definition, shown as written"
+ctrl+s Stream again  ctrl+t T…

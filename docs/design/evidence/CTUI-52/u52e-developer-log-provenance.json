@@ -1,0 +1,15 @@
+{
+  "reportedPreFixSource": "ef1d313",
+  "reportedFixSource": "0f823adbc576a4696e128afefef0e188b22d31b3",
+  "limits": "Developer-handed three-case red/green logs; designer retains bytes without rerunning headless tests. Full127 reached test result is a separate developer handoff claim.",
+  "logs": {
+    "before": {
+      "source": "build/ctui52-escape/before.log",
+      "sha256": "10110fcb1f3fad5ca4ab2ef092b6fc94f818b7ef1a74a466d9a58b523746df2c"
+    },
+    "after": {
+      "source": "build/ctui52-escape/after.log",
+      "sha256": "164489ea0f9ae6095dcb81dfbab6999777952b6dad20ef8f20ae3dd5bbdd8599"
+    }
+  }
+}

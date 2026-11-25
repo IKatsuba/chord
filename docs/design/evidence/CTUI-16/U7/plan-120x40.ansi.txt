@@ -1,0 +1,40 @@
+ [1mchord[0;2m v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7[0m
+
+ [2m›[0m plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ [2m⏺[0m [2mPlan[0m
+   [2m⎿[0m  [2m☒ [9mRead the code[0m
+   [2m [0m  [2m☒ [9mWrite the change[0m
+   [2m [0m  [2m☒ [9mRun the tests[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m› [0;7m [0m
+ [2mctrl+c or ctrl+d to quit[0m

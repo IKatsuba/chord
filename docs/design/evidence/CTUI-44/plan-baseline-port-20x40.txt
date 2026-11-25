@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0…
+ ▀▀▀▄   fake · Fak…
+ ▄▀▀▀   …/CTUI-45
+ ▀▀     ? for shor…
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent
+   failed on
+   purpose.
+
+ › plan
+
+ ⏺ Planned. Step 2
+   done. Step 3
+   done.
+
+ ⏺ Plan
+   ⎿  ☒ Read...code
+      ☒ Writ...ange
+      ☒ Run ...ests
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+  ? for shortcuts

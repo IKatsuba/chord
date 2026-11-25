@@ -1,0 +1,40 @@
+   The [1msession layer[0m wraps [3mthe SDK[0m so the interface never touches a process. Start with src/session/session.ts, then
+   see the [4mACP spec[0;2m (https://agentclientprotocol.com)[0m for the wire format.
+
+   [2m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m
+   [2m│[0m session.ts    [2m│[0m opening, prompting and closing         [2m│[0m session_test.ts    [2m│[0m
+   [2m│[0m               [2m│[0m a session                              [2m│[0m                    [2m│[0m
+   [2m│[0m processes.ts  [2m│[0m the promise that a closed agent is     [2m│[0m processes_test.ts  [2m│[0m
+   [2m│[0m               [2m│[0m gone                                   [2m│[0m                    [2m│[0m
+   [2m│[0m transcript.ts [2m│[0m the reducer from events to what is     [2m│[0m transcript_test.ts [2m│[0m
+   [2m│[0m               [2m│[0m drawn                                  [2m│[0m                    [2m│[0m
+   [2m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

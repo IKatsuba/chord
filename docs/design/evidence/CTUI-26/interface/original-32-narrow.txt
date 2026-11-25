@@ -1,0 +1,10 @@
+
+ ╭────────────────────────────╮
+ │ Resume a session           │
+ │ Pick one of...ons to open. │
+ │                            │
+ │ No earlier sessions in     │
+ │ this directory.            │
+ │                            │
+ │ Ctrl+a for all directories │
+ │ · Esc to quit              │

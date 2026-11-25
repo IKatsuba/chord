@@ -1,0 +1,64 @@
+{
+  "sourceCommit": "c784f3d1f4c745165b100078c4d151ee77163c51",
+  "productionCommit": "c784f3d1f4c745165b100078c4d151ee77163c51",
+  "harnessCommit": "5674e39d8de00ab936ebbc6a71796493624a5c25",
+  "compileCommand": "nice -n 19 dart compile exe example/chord/benchmark/picker.dart -o build/ctui54_resume_picker",
+  "binarySha256": "534828e6ad5e9b09ba2bc04094936d5d6956a003eb461cabca4710733b36bbe2",
+  "runs": [
+    {
+      "file": "aot-baseline-20.json",
+      "stderrFile": "aot-baseline-20.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=20 --corpus=baseline --runtime=aot-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 9.669
+    },
+    {
+      "file": "aot-baseline-2000.json",
+      "stderrFile": "aot-baseline-2000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=2000 --corpus=baseline --runtime=aot-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 9.561
+    },
+    {
+      "file": "aot-baseline-10000.json",
+      "stderrFile": "aot-baseline-10000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=10000 --corpus=baseline --runtime=aot-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 11.334
+    },
+    {
+      "file": "aot-wrapped-2000.json",
+      "stderrFile": "aot-wrapped-2000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=2000 --corpus=wrapped --runtime=aot-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 9.714
+    },
+    {
+      "file": "aot-wrapped-10000.json",
+      "stderrFile": "aot-wrapped-10000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=10000 --corpus=wrapped --runtime=aot-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 12.44
+    }
+  ],
+  "preCapManifest": {
+    "file": "example/chord/test/fixtures/picker_scale/ctui54/manifest.json",
+    "sha256": "a0669e5f81e8e89eaef73e63099072561cb91f6861bbda614966599025f7273b",
+    "evidenceCommit": "921684b"
+  },
+  "originalReference": {
+    "file": "example/chord/test/fixtures/records/scale/aot-picker-2000.json",
+    "sha256": "ba2868172e488bd267d1e212d754b76774f7802db34e26a2f285f9dffa3675a0",
+    "sourceCommit": "2b550b7fd9299b30c9f843967aaf4d82972db441"
+  },
+  "assertions": "Every first/cold stage performs exactly N shared row shapes, zero no-edge/edge capped sizing passes. Every stable input group performs zero choice/line/shaping work. All current surface counts retained.",
+  "limits": "Same harness/corpora/repetitions as pre-cap. Construction included and separately timed. Scheduled stage delay reports total and minus requested16ms; stable navigation includes requested16ms. AOT-active integer instrumentation overhead remains. Cold exact N projection is O(N), not total visible-only resize. RSS is process-only, no heap/display/agent/IO latency claim. Designer/tester confirmed idle and held execution.",
+  "cleanup": "All15 hosts disposed and input timers awaited; no fixture roots or external processes in harness; runner joined all5processes. Owned PID/binary cleanup recorded separately.",
+  "cleanupChecks": {
+    "ownedBenchmarkPidsAfterExit": [],
+    "scratchBinaryRemoved": true,
+    "allStderrEmpty": true,
+    "ownedRootsCreated": 0,
+    "tmuxSessionsCreated": 0
+  }
+}

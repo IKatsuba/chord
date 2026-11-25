@@ -1,0 +1,24 @@
+ [38;2;78;186;101m⏺[39m [1mList teams[0m
+   [2m⎿[0m  [2m1 team · bugfix[0m
+
+ [38;2;78;186;101m⏺[39m [1mTeam[0m(bugfix 2)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mIssue 219: parseDate in src/parse/date.ts reads "2026-02-30" as March[0m
+      [2m2. Add a test that fails for that reason, fix it, and have the diff[0m
+      [2mreviewed. Report to me when it is done.[0m
+
+ ⏺ bugfix 2 has the job. Its lead will report here; you can look in with ↓.
+
+ [38;2;124;207;127m←[39m [2mfrom [0;1m[38;2;124;207;127m@bugfix 2[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts;[0m
+      [2mcoder waits for it and will edit src/parse/tokenize.ts only. I will[0m
+      [2mreport when the test fails for the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;255;193;7m● 2 agents wait · ctrl+x a[39m     [2mFake Large with a 1M context window · 1% used[0m
+    [1mmain     [0;2m  fake                    ◦ idle 13s[0m
+    [38;2;108;182;255mbugfix   [2m[39m  team · fake · 3 agents[0m[38;2;255;193;7m  ● tester: permission 27s[2m[39m  ✓ new reply[0m
+    [38;2;124;207;127mbugfix 2 [2m[39m  team · fake · 3 agents[0m[38;2;255;193;7m  ● tester: permission 12s[2m[39m  ✓ new reply[0m

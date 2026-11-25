@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help
+
+ › alpha reference
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › overlapask
+
+ ⏺ Bash(sleep 2)
+   ⎿  Running…
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+
+ ››› Waiting for permission… (11s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│   1 + notes                                                                                                          │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › saved modal                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                 Fake Large with a 1M context window · medium effort · 1% context used

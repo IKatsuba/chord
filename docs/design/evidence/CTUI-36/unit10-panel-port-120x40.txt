@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › monitors
+
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')"; echo "
+      at validate (src/routes/login.tsx:41:22)"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 600
+      m2 · times out after 10m
+
+ ⏺ Two monitors are running.
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                           shift + ↑ ↓ to scroll a line          c r to copy or put in the prompt
+  tab to send the oldest queued now       home end for the top and the bottom   ctrl + c to clear input
+  shift or \ + enter for a newline        ↑ ↓ to pick a completion              ctrl + d or ctrl + c twice to quit
+  ctrl + g to edit in $EDITOR             tab to complete a command             ctrl + x a for what waits on you
+  ctrl + v to paste an image              tab enter to add a file or agent      1–9 to pick a choice
+  alt + ← → to move by word               esc to close completions              ↑ ↓ j k ← → to move or change a value
+  ↑ ↓ for prompts, agents, background     ! for bash mode                       enter to pick the highlighted choice
+  x to close an agent, stop background    backspace to leave bash mode          esc to reject a permission
+  enter for background, details, a call   esc to interrupt or stop a command    esc to leave a picker or shortcuts
+  ctrl + r to search prompts              shift + tab to cycle modes            ctrl + a to show all directories
+  tab enter to take a match               ctrl + o for verbose output           ? for shortcuts
+  esc to cancel a search                  ctrl + c to copy                      any key to quit the crash screen
+  pgup pgdn or wheel to scroll            ctrl + x b to pick a code block
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  1 monitor running

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › /new --name code review
+ ⏺ No agent named fake; chord knows agoragentic-acp, auggie, bob, claude,
+   cline, codebuddy-code, codex, cursor-cloud, deepagents, dimcode, dirac,
+   factory-droid, fast-agent, gemini, github-copilot-cli, glm-acp-agent, grok-
+   build, kilo, kimi, minimax-code, minion-code, nova, pi-acp, qoder, qwen-
+   code, sigit, autohand, cursor, devin, fx, goose, junie, kiro, openclaw,
+   opencode, poolside, zeroclaw
+ ──────────────────────────────────────────────────────────────────────────────
+  agoragentic-acp
+  auggie
+  bob
+  claude
+  cline
+  codebuddy-code
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

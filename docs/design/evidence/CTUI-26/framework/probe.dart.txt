@@ -1,0 +1,13 @@
+import 'package:uuid/uuid.dart';
+import 'package:xdg_directories/xdg_directories.dart' as xdg;
+import 'package:path/path.dart' as p;
+void main() {
+ final ids = {for(var i=0;i<10000;i++) const Uuid().v4()};
+ final pattern = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$');
+ if(ids.length != 10000 || ids.any((id)=>!pattern.hasMatch(id))) throw StateError('uuid');
+ print('PASS uuid: 10000 distinct v4 values');
+ try {
+ final state = xdg.stateHome.path;
+ print('xdg absolute=${p.isAbsolute(state)} override=${state == '/state-test'} relative=${state == 'relative-state'} defaultSuffix=${state.endsWith('/.local/state')}');
+ } catch(e) { print('xdg failure: ${e.runtimeType}'); }
+}

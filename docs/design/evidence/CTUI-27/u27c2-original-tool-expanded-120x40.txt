@@ -1,0 +1,40 @@
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › alpha first
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle crosses
+   終わり 😀 é needle crosses
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › thought
+
+ ∴ Thinking…
+   Considering the question.
+
+ ⏺ Here is the answer.
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+
+      await new Command()
+        .name('chord')
+        .parse(Deno.args);
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw
+   their status")
+   ⎿  Running…
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

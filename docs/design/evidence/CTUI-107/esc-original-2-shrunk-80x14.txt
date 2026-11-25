@@ -1,0 +1,14 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Theme                                                                        │
+│ Choose the colours that read best on this terminal.                          │
+│                                                                              │
+│ ❯ ↓ 1. Auto (dark: the terminal did not say) ✔                               │
+│     … +6 more                                                                │
+│                                                                              │
+│ ↑↓ to preview · Enter to keep · Esc to go back to Auto                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

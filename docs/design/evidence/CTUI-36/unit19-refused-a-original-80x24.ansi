@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mhand[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mSettings[0m(mcpServers.linear)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mchord does not write mcpServers.linear; edit the settings file by hand[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mSettings[0m(agents.codex)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128magents.codex is not one setting; name agents.codex.model or[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128magents.codex.effort[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mSettings[0m(teamSelection)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mteamSelection is not one setting; name teamSelection.intent,[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mteamSelection.prefer.agent or teamSelection.prefer.model[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mSettings[0m(editorMode)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128meditorMode cannot be "emacs": Invalid option: expected one of[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128m"normal"|"vim"[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mSettings[0m(agents.nope.model)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mchord knows no agent named "nope"; list_agents names every one[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts · /help
+
+ › /model
+   ⎿  Effort set to High
+
+ › /model
+   ⎿  Effort set to Medium
+
+ › /model
+   ⎿  Switched to Fake Small · High effort
+
+ › /model
+   ⎿  Switched to Fake Large with a 1M context window · Medium effort
+
+ › /model
+ ⏺ Could not switch to Fake Small: The agent exited.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

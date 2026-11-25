@@ -1,0 +1,10 @@
+The transcript is here. Answer: closed
+
+
+
+
+
+
+
+> /permission
+ctrl+o Open the dialog  ctrl+q Quit

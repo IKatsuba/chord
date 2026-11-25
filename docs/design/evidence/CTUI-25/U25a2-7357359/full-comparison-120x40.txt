@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0                                                                                                    |
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       | ! printf "line 01\nline 02\nline 03\nline 04\nline 05\nline 06\nline 07\nline 08\nline 09\nline 10\nline 11\nline 12\n";
+ ▄▀▀▀   /tmp/chord-qa.ctui-designer-u25a2-color                                                                          |   printf "warning\n" >&2; exit 3
+ ▀▀     ? for shortcuts · /help                                                                                          |   ⎿  line 01
+                                                                                                                         |      line 02
+ ! printf "line 01\nline 02\nline 03\nline 04\nline 05\nline 06\nline 07\nline 08\nline 09\nline 10\nline 11\nline 12\   |      line 03
+   n"; printf "warning\n" >&2; exit 3                                                                                    |      line 04
+   ⎿  line 01                                                                                                            |      line 05
+      line 02                                                                                                            |      line 06
+      line 03                                                                                                            |      line 07
+      line 04                                                                                                            |      line 08
+      line 05                                                                                                            |      line 09
+      line 06                                                                                                            |      line 10
+      line 07                                                                                                            |      line 11
+      line 08                                                                                                            |      line 12
+      line 09                                                                                                            |      warning
+      line 10                                                                                                            |      Exit code 3
+      line 11                                                                                                            |
+      line 12                                                                                                            |
+      warning                                                                                                            |
+      Exit code 3                                                                                                        |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ |
+│ ›                                                                                                                    │ |
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ── ↓ 1 line below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────────
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort   | 1 full · 2 running · 3 empty · 4 success · 5 stopped · 6 error · 7 blank · 8 cut · esc stop · ctrl+q quit

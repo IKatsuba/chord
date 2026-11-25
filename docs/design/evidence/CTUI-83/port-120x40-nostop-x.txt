@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <port checkout>
+ ▀▀     ? for shortcuts · /help
+
+ › claudenostop
+
+ → to Agent(Run the test suite)
+   ⎿  Run bun test and report what fails.
+
+ ⏺ Agent(Run the test suite)
+   ⎿  Initializing…
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 in this session                                                                                       │
+│                                                                                                                      │
+│ ❯ Run the test suite  agent  running 1s  main                                                                        │
+│                                                                                                                      │
+│ this agent offers no stop                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    background  main's agent running

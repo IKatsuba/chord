@@ -1,0 +1,24 @@
+      Move
+      ◐ Move the routing
+      ☐ Run the tests
+
+      Todos
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ ⏺ Plan answer: {"outcome":"rejected","reason":"use 2 queues and keep the old
+   routing behind a flag until the tests pass on every platform we support"}
+
+ › grokplanempty
+
+ ⏺ Plan
+   ⎿  Left plan mode
+      fake has written no plan.
+
+ ⏺ Plan answer: {"outcome":"abandoned"}
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

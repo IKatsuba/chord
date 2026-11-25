@@ -1,0 +1,14 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Allow command?                                                               │
+│ Run the requested command in this session.                                   │
+│ $ dart analyze                                                               │
+│   … 2 more lines                                                             │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Reject                                                                  │
+│                                                                              │
+│ ↑↓ or j/k to move · Enter or 1–9 to select · Esc to close                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+> /permission
+up Previous choice  k Previous choice  down Next choice  j Next choice  enter C…

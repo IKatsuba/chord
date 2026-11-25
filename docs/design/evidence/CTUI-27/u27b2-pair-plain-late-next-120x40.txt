@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact cbe93dc)
+ █▄     chord v0.71.0                                                                                                        |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                                                                           |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   fixture-project                                                                                                      |  ▄██▀   fixture-project
+ █▀     ? for shortcuts · /help                                                                                              |  █▀     ? for shortcuts
+        resumed · 56 years ago · Earlier request                                                                             |         resumed · 56 years ago · Earlier request
+                                                                                                                             |
+ › Earlier request                                                                                                           |  › Earlier request
+                                                                                                                             |
+ ⏺ Earlier answer.                                                                                                           |  ⏺ Earlier answer.
+                                                                                                                             |
+ › Personal message accepted into this turn                                                                                  |  › Personal message accepted into this turn
+                                                                                                                             |
+ ⏺ Visible self-started work 界😀 é 👩‍💻. Late work 1.                                                                         |  ⏺ Visible self-started work 界😀 é 👩‍💻. Late work 1.
+   ⎿  Interrupted · the agent started this on its own; your message goes as the next turn                                    |    ⎿  Interrupted · the agent started this on its own; your message goes as the next turn
+                                                                                                                             |
+ › Queued message goes as the next turn                                                                                      |  › Queued message goes as the next turn
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │     | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort       |   ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

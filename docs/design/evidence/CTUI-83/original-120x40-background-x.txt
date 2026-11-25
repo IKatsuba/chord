@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <../chord>
+ ▀▀     ? for shortcuts · /help
+
+ › claudebackground
+
+ ⏺ The tests run in the background while I look.
+
+ → to Agent(Run the test suite)
+   ⎿  Run bun test in the background and report what fails.
+
+ → to Agent(Find the cancel path)
+   ⎿  Find where chord ends a turn on Esc.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Run the test suite) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(Find the cancel path) · 1 tool use
+      ⎿  Search(cancelled in src/session)
+
+
+
+
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 in this session                                                                                       │
+│                                                                                                                      │
+│ ❯ Find the cancel path  agent  running 0s  main                                                                      │
+│                                                                                                                      │
+│ Enter for details · x to stop · Esc to close                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    background  main's agent running

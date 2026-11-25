@@ -1,0 +1,7 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Allow command?                                                               │
+│ ❯ 1. Allow once                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+> /permission
+up Previous choice  k Previous choice  down Next choice  j Next choice  enter C…

@@ -1,0 +1,24 @@
+ [1mchord[0;2m v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7[0m
+
+ [2m›[0m error
+
+ ⏺ About to fail.
+
+ [38;2;255;107;128m⏺[39m [38;2;255;107;128mThe fake agent failed on purpose.[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m› [0;7m [0m
+ [2mctrl+c or ctrl+d to quit[0m

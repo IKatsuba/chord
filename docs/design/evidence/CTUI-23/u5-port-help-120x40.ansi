@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m[fixture directory][0m
+ █▀     [2m? for shortcuts[0m
+
+ [2m›[0m /sta
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m /echo hello
+
+ ⏺ hello
+
+ [2m›[0m /status
+   [2m⎿[0m  [2mAgent:[0m     fake
+   [2m [0m  [2mModel:[0m     Fake Large with a 1M context window
+   [2m [0m  [2mMode:[0m      Default
+   [2m [0m  [2mSession:[0m   a191bf49-a717-47f6-98ee-04ed48bbde53
+   [2m [0m  [2mDirectory:[0m [fixture directory]
+
+
+
+
+
+
+
+ [2m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [2menter to send                         tab to complete a command            1–9 to pick a choice[0m
+  [2mshift or \ + enter for a newline      esc to close completions             ↑ ↓ j k ← → to move or change a value[0m
+  [2malt + ← → to move by word             esc to interrupt                     enter to pick the highlighted choice[0m
+  [2m↑ ↓ for prompts                       shift + tab to cycle modes           esc to reject a permission[0m
+  [2mpgup pgdn to scroll                   ctrl + o for verbose output          esc to leave a picker or shortcuts[0m
+  [2mshift + ↑ ↓ to scroll a line          ctrl + c to clear input              ? for shortcuts[0m
+  [2mhome end for the top and the bottom   ctrl + d or ctrl + c twice to quit   any key to quit the crash screen[0m
+  [2m↑ ↓ to pick a completion              ctrl + x a for what waits on you[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

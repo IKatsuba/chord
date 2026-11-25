@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   .
+ ▀▀     ? for shortcuts · /help
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+
+      This session          Cost  Tokens
+      main          not reported       —
+      parser        not reported   1,200  agent
+      docs          not reported       —  agent, closed
+      Total         not reported   1,200  fake not reported;
+                                          parser not reported;
+                                          docs not reported
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

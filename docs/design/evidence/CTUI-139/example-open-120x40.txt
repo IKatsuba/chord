@@ -1,0 +1,40 @@
+▾ Run checks
+  $ dart analyze
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ctrl+o Toggle tool details  ctrl+q Quit

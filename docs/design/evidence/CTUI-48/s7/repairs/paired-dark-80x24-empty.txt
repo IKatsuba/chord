@@ -1,0 +1,25 @@
+ORIGINAL + STUB | PORT + RECORDER
+ ▀▄     chord v0.71.0                                                            |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               |  ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   build/ctui48-s7-project                                                  |  ▄▀▀▀   build/ctui48-s7-project
+ ▀▀     ? for shortcuts · /help                                                  |  ▀▀     ? for shortcuts
+                                                                                 | 
+ ⏺ --no-mcp-servers held back 1 MCP server from fake: chord (chord's own).       | 
+   Without it, fake cannot start other agents or use chord's tools. /mcp lists   | 
+   it.                                                                           | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |   ? for shortcuts          Fake Large with a 1M context window · medium effort

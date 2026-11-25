@@ -1,0 +1,24 @@
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+ › plan
+
+ ⏺ Planned.
+   ⎿  Interrupted by user
+
+ › plan
+
+ ⏺ Planned.
+   ⎿  Interrupted by user
+
+  Plan · 1 of 3 done
+  ⎿  ☒ Read the code
+     ◐ Write the change
+     ☐ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

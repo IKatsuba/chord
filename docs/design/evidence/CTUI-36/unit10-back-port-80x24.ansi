@@ -1,0 +1,24 @@
+
+ ⏺ Two monitors are running.
+
+ ← [2mfrom [0;1mdev server errors[0;2m · monitor[0m
+   [2m⎿[0m  [2mERROR [router] POST /login 500: Cannot read properties of undefined[0m
+      [2m(reading 'trim')[0m
+      [2m    at validate (src/routes/login.tsx:41:22)[0m
+
+ ⏺ Received the message from dev server errors · monitor.
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mBackground[0;2m · 2 in this session[0m                                               [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m  [39mdev server errors[2m  monitor · m1  running 16s · 1 event    main[0m             [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯ [1m[39mCI run 4812      [0;2m  monitor · m2  running 16s · no events  main[0m             [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [2mEnter for details · x to stop · Esc to close[0m                                 [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m
+  [38;2;177;185;249m  [2m[39mbackground  2 monitors running[0m

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Answered · 6 fields
+
+ ⏺ Elicitation answer: accept
+   {"name":"abc","email":"ops@example.com","replicas":2,"public":false,"region":"us","tags":["web"]}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAllowed Write notes.txt · Allow once in this folder[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: allow-here.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mpermissionmeta[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected the tool call[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mreviewpermission[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mRun[0m(a reviewed action)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mReviewed: caution[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected Run a reviewed action[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReview permission: deny.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mbigaskleft[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mfiles - write_file[0;2m (MCP)[0m(path: "docs/release.md", content: "# Release 0.56.0\n\nThis release changes how chord draws[38;2;255;255;255m
+   [39mlong requests: the permission box now caps its height, keeps its options on screen and lets the person scroll[38;2;255;255;255m
+   [39mthrough the whole argument before answering, at any window size, including 80 by 24.\n\n## Changes\n\n- Change 1:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 2: a turn can be resumed\n- Change 3: headlines wrap\n- Change 4: the box[38;2;255;255;255m
+   [39mscrolls\n- Change 5: tests run in parallel\n- Change 6: the prompt keeps its draft\n- Change 7: a turn can be[38;2;255;255;255m
+   [39mresumed\n- Change 8: headlines wrap\n- Change 9: the box scrolls\n- Change 10: tests run in parallel\n- Change 11:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 12: a turn can be resumed\n- Change 13: headlines wrap\n- Change 14: the box[38;2;255;255;255m
+   [39mscrolls\n- Change 15: tests run in parallel\n- Change 16: the prompt keeps its draft\n- Change 17: a turn can be[38;2;255;255;255m
+   [39mresumed\n- Change 18: headlines wrap\n- Change 19: the box scrolls\n- Change 20: tests run in parallel\n- Change 21:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 22: a turn can be resumed\n- Change 23: headlines wrap\n- Change 24: the box[38;2;255;255;255m
+   [39mscrolls\n- Change 25: tests run in parallel\n- Change 26: the prompt keeps its draft\n- Change 27: a turn can be[38;2;255;255;255m
+   [39mresumed\n- Change 28: headlines wrap\n- Change 29: the box scrolls\n- Change 30: tests run in parallel\n", mode:[38;2;255;255;255m
+   [39m"overwrite")[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mI asked; the turn ends with it open.[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected mcp__files__write_file[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: deny.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m [39mkept draft restored[38;2;255;255;255m                                                                                                [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m                                                 [2m[39mFake Large with a 1M context window · medium effort · 2% context used[0m[38;2;255;255;255m

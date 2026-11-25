@@ -1,0 +1,25 @@
+Original held | Port held (80x24; scenario data differs)
+                                                                                 | Permission fixture: held
+ ››› Waiting for permission… (18s)                                               | Transcript
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                    │ | │ main asks · between turns                                                    │
+│ mcp__files__write_file                                                       │ | │ Write notes.txt                                                              │
+│   path: docs/release.md                                                      │ | │                                                                              │
+│   content: # Release 0.56.0                                                  │ | │    1 - old                                                                   │
+│                                                                              │ | │    1 + proposed line 1                                                       │
+│   This release changes how chord draws long requests: the permission box now │ | │    2 + proposed line 2                                                       │
+│   caps its height, keeps its options on screen and lets the person scroll    │ | │    3 + proposed line 3                                                       │
+│ ── ↓ 37 lines below ──────────────────────────────────────────────────────── │ | │ ── ↓ 57 lines below ──────────────────────────────────────────────────────── │
+│                                                                              │ | │                                                                              │
+│ Do you want to proceed?                                                      │ | │ The safety review held this:                                                 │
+│   1. Yes                                                                     │ | │ This command could overwrite files outside the project. Review the proposed  │
+│   2. No                                                                      │ | │ changes before allowing it.                                                  │
+│                                                                              │ | │                                                                              │
+│ ctrl+x a to answer                                                           │ | │   1. Allow once                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯ | │   2. Always allow                                                            │
+                                                                                 | │   3. Deny                                                                    │
+╭──────────────────────────────────────────────────────────────────────────────╮ | │                                                                              │
+│ ›                                                                            │ | │ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 1% used   | Answer:

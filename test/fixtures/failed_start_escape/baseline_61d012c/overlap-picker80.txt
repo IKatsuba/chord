@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ ⏺ fake did not start: it cannot resume session
+   00000000-0000-0000-0000-000000000002: Resource not found:
+   00000000-0000-0000-0000-000000000002
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯ 1. 1 hour ago  Saved reopen refusal reference                              │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

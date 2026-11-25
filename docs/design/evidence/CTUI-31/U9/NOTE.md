@@ -1,0 +1,1 @@
+Paths are relabelled: the port ran in ~/project, the original in ../chord, each with an empty XDG_CONFIG_HOME shown as ~/.config. Keys: /vim Enter, "hello big world", Esc, b, d, w, u, Esc, Esc, Enter. *-settings.json is what /vim wrote. Port at 0557f658.

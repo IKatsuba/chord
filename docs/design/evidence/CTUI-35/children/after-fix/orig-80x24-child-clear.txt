@@ -1,0 +1,24 @@
+ parser · fake · Fake Small · opened by main 26s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts   Fake Small
+    main    fake  ◦ idle 8s         ✓ new reply
+    parser  fake  ◦ idle 8s
+    docs    fake  ● permission 25s  ← new message

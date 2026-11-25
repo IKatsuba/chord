@@ -1,0 +1,22 @@
+{
+  "unit": "C1 zero-area fix",
+  "sourceCommit": "82b23eb0f7d0082e5bdf30baea68faba250e81ac",
+  "designerScope": "Live positive8x3 dispatch plus normal120/80 controls only; zero-area/axis proof delegated explicitly to named tester147 gate.",
+  "command": "dart run <exact82archive>/example/chord/tool/steering.dart",
+  "developerRedLogSha256": "351e55e87fe0fcd18c96b1d7bf4d1ea5d1cf38902931fd175ebdf5709a1f6ffe",
+  "sha256": {
+    "u27c1-zero82-developer-red.log": "351e55e87fe0fcd18c96b1d7bf4d1ea5d1cf38902931fd175ebdf5709a1f6ffe",
+    "u27c1-zero82-final-accepted-120x40.ansi": "70ccb4bcaa11ddfc8256a261b53396eb2393da3240203c8c27d8fd7b052a20ed",
+    "u27c1-zero82-final-accepted-120x40.txt": "9af46c2c48aca9db59ddb96f2781c053ad0e8016fd8f0aeb1b6cd764aaccd509",
+    "u27c1-zero82-look.md": "6b3dc7e73639ac48af2714a183408bdb0e7d1f9f4b58ab7df34dbc087999aa77",
+    "u27c1-zero82-normal-first-pending-120x40.ansi": "c32e710947fc42597f33042960e9e2b61d92636dfc98eae3784b8793783e55d5",
+    "u27c1-zero82-normal-first-pending-120x40.txt": "815f82262e89dc716754cfb0634dd589ce1fc3caec17ca8b51a0b8c9853be48f",
+    "u27c1-zero82-normal-third-pending-80x24.ansi": "7272ecbfe8ee75dd9fa35e3ab6fa3549766b31bec3e84bf769c12fb260bae6b2",
+    "u27c1-zero82-normal-third-pending-80x24.txt": "d44e89b700876c8cac8652007fa7fdbde870fb577d539ddecbc1d5bbbfdb98a2",
+    "u27c1-zero82-second-dispatch-8x3.ansi": "36ac8b6f57bc1365a17f171f79e30edb04c540842a2a0b8b6032e6d1173948ab",
+    "u27c1-zero82-second-dispatch-8x3.txt": "bfd783a03269f4a2ffac05624cad53091deb1b3b361daa7ed613403bd7b11cc4",
+    "u27c1-zero82-tiny-dispatch-confirmed-80x24.ansi": "8042988614042a99046d23d421a5616046ee6a47e4ced20863ecd8bc7bef529a",
+    "u27c1-zero82-tiny-dispatch-confirmed-80x24.txt": "619be56ab50cfab14cd4650cec1809fda0c8fd9ffef559cc1f2203e2188086b1"
+  },
+  "rawLogWhitespace": "Whitespace-only formatter lines retained byte-exact; only this raw log excluded from diff whitespace cleanup."
+}

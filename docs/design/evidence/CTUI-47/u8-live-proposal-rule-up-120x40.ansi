@@ -1,0 +1,40 @@
+   resumed\n- Change 28: headlines wrap\n- Change 29: the box scrolls\n- Change 30: tests run in parallel\n", mode:
+ [2m── ↓ 2 lines below · end to jump to the bottom ───────────────────────────────────────────────────────────────────────[0m
+
+ [2m››[0m› Waiting for permission… [2m(1m 12s)[0m
+
+[1m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mmcp__files__write_file[0m                                                                                               [1m│
+│[0m   path: docs/release.md                                                                                              [1m│
+│[0m   content: # Release 0.56.0                                                                                          [1m│
+│[0m                                                                                                                      [1m│
+│[0m   This release changes how chord draws long requests: the permission box now caps its height, keeps its options on   [1m│
+│[0m   screen and lets the person scroll through the whole argument before answering, at any window size, including 80 by [1m│
+│[0m   24.                                                                                                                [1m│
+│[0m                                                                                                                      [1m│
+│[0m   ## Changes                                                                                                         [1m│
+│[0m                                                                                                                      [1m│
+│[0m   - Change 1: the prompt keeps its draft                                                                             [1m│
+│[0m   - Change 2: a turn can be resumed                                                                                  [1m│
+│[0m   - Change 3: headlines wrap                                                                                         [1m│
+│[0m   - Change 4: the box scrolls                                                                                        [1m│
+│[0m   - Change 5: tests run in parallel                                                                                  [1m│
+│[0m   - Change 6: the prompt keeps its draft                                                                             [1m│
+│[0m   - Change 7: a turn can be resumed                                                                                  [1m│
+│[0m   - Change 8: headlines wrap                                                                                         [1m│
+│[0m   - Change 9: the box scrolls                                                                                        [1m│
+│[0m   - Change 10: tests run in parallel                                                                                 [1m│
+│[0m [2m── ↓ 22 lines below · pagedown to scroll ───────────────────────────────────────────────────────────────────────────[0m [1m│
+│[0m                                                                                                                      [1m│
+│[0m Do you want to proceed?                                                                                              [1m│
+│[0m [1m [0m 1. Yes                                                                                                             [1m│
+│[0m [1m❯[0m [1m2. Yes, and don't ask again for files - write_file commands[0m                                                        [1m│
+│[0m [1m [0m 3. No, and tell Claude what to do differently                                                                      [1m│
+│[0m                                                                                                                      [1m│
+│[0m [2mEsc to reject[0m                                                                                                        [1m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

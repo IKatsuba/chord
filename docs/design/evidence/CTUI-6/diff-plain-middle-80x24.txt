@@ -1,0 +1,24 @@
+ Diff  plain
+   …
+45   more45();
+46   more46();
+47   save();
+48 -   indented();
+48 +   indented(again);
+
+ unified patch
+lib/app.dart
+ 3     /* A comment the hunk opens
+ 4        and closes. */
+ 5 -   final int count = 1;
+ 5 +   final int count = 2;
+ 6     final String name;
+   …
+20     void run() {}
+21 +   void stop() {}
+22   }
+
+ new file
+notes.md
+1 + line one
+ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedown Scroll down a page…

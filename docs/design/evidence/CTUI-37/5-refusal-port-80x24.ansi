@@ -1,0 +1,24 @@
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2m~/project[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m /team show bugfix
+   [2m⎿[0m  bugfix · .chord/teams/bugfix.md
+   [2m [0m  [2mFixes a bug end to end — a failing test first, then the fix.[0m
+
+   [2m [0m  lead    fake · fake-large  default      Splits the job, says who edits
+   [2m [0m                                          which files, reports to main
+   [2m [0m  tester  fake · fake-small  acceptEdits  Writes the failing test, then
+   [2m [0m                                          proves the fix
+   [2m [0m  coder   fake · fake-large  plan         Writes the fix, in the files
+   [2m [0m                                          the lead names
+
+   [2m [0m  [1;4mHow bugfix works[0m
+      [2m… +27 lines (ctrl+o to expand)[0m
+
+ [2m›[0m /team edit x
+   [2m⎿[0m  [38;2;255;107;128m/team has no edit; it takes list, new, show, run or stop[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

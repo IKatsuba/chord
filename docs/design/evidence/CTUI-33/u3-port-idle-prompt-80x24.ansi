@@ -1,0 +1,24 @@
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2m~/project[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m idlecompact
+
+ ⏺ Done: three tests merged into one table, all green.
+   [2m⎿[0m  [2mConversation compacted while idle (ctrl+o for history)[0m
+
+ [2m›[0m hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m idlecompact
+
+ ⏺ Done: three tests merged into one table, all green.
+
+ [2m›[0m hello
+
+ [38;2;10;116;112m›[38;2;210;255;228m›[38;2;10;116;112m›[39m [38;2;71;231;165mCompacting conversation…[39m [2m(0s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

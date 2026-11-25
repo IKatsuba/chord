@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  enter to send
+  tab to send the oldest queued now
+  shift or \ + enter for a newline
+  ctrl + g to edit in $EDITOR
+  ctrl + v to paste an image
+  ── ↓ 38 lines below ──────────────────
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts  Fake Lar… · 1% used

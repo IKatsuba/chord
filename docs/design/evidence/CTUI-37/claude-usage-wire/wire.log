@@ -1,0 +1,4 @@
+{"argv":["--output-format","stream-json","--verbose","--input-format","stream-json","--tools=","--setting-sources=","--strict-mcp-config","--no-session-persistence","--settings","{\"disableAllHooks\":true}"],"env":{"CLAUDE_CODE_ENTRYPOINT":"sdk-ts","CLAUDE_AGENT_SDK_VERSION":"0.3.325","CLAUDE_CODE_SDK_READS_SESSION_STATE":"1"}}
+{"request_id":"n07ghsmpt","type":"control_request","request":{"subtype":"initialize","systemPrompt":[""]}}
+{"request_id":"3mqjlafz4cs","type":"control_request","request":{"subtype":"get_usage","skip_behaviors":true}}
+EOF

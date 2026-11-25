@@ -1,0 +1,24 @@
+ chorded-tui demo                      dark: the terminal did not say, no colour
+╭ log ─────────────────────────────────────────────────────────────────────────╮
+│ 189 line 189, and more, and more, and more, and more, and more, and more,    │
+│     and more, and more                                                       │
+│ 190 line 190, and more, and more, and more, and more, and more, and more,    │
+│     and more, and more, and more                                             │
+│ 191 line 191, and more, and more, and more, and more, and more, and more,    │
+│     and more, and more, and more, and more                                   │
+│ 192 line 192, and more, and more, and more, and more, and more, and more,    │
+│     and more, and more, and more, and more, and more                         │
+│ 193 line 193                                                                 │
+│ 194 line 194, and more                                                       │
+│ 195 line 195, and more, and more                                             │
+│ 196 line 196, and more, and more, and more                                   │
+│ 197 line 197, and more, and more, and more, and more                         │
+│ 198 line 198, and more, and more, and more, and more, and more               │
+│ 199 line 199, and more, and more, and more, and more, and more, and more     │
+│ 200 line 200, and more, and more, and more, and more, and more, and more,    │
+│     and more                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│>  Say something                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl+o Toggle details  ctrl+t Theme  ctrl+x b Toggle busy  ctrl+x c Clear  ct…

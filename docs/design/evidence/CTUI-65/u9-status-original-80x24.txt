@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake
+ ▄▀▀▀   <scratch>/c/proj
+ ▀▀     ? for shortcuts · /help
+
+ › /status
+   ⎿  Agent:     fake
+      Title:     not given
+      Model:     not reported by fake
+      Mode:      not reported by fake
+      Session:   starting…
+      Directory: <scratch>/c/proj
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Starting fake…

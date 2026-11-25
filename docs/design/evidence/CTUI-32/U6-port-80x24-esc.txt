@@ -1,0 +1,24 @@
+ Starting fake…
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ? for shortcuts

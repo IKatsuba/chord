@@ -1,0 +1,40 @@
+ [1m[38;2;71;231;165m New deployment[0m
+
+ [38;2;177;185;249m [39m [2m✔[0m Project name   abc
+ [38;2;177;185;249m [39m [2m✔[0m Contact email  ops@example.com
+ [38;2;177;185;249m [39m [2m✔[0m Replicas       2
+ [38;2;177;185;249m [39m [38;2;255;107;128m [39m Traffic share  [2mnot set[0m
+ [38;2;177;185;249m [39m [2m✔[0m Public         ☐ No
+ [38;2;177;185;249m [39m [2m✔[0m Region         United States
+ [38;2;177;185;249m [39m [2m✔[0m Tags           web
+
+ [38;2;177;185;249m❯[39m [1m[38;2;78;186;101mAccept[0m [38;2;177;185;249m [39m Decline
+
+ [2m←→ to switch · Enter to accept · Esc to cancel[0m
+
+ [2mGave: {name: abc, email: ops@example.com, replicas: 2, public: false, region: us, tags: [web]}[0m
+ [2mCtrl+Q quits[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

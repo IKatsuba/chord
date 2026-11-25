@@ -1,0 +1,40 @@
+Text area
+
+A long message wraps by cells; wide characters 界🙂 stay together. A long message wraps by cells; wide characters 界🙂
+stay together. The final words remain editable.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[0m
+ [2m│[0m line 3                                                                                                             [2m│[0m
+ [2m│[0m line 4                                                                                                             [2m│[0m
+ [2m│[0m line 5                                                                                                             [2m│[0m
+ [2m│[0m line 6[7m [0m                                                                                                            [2m│[0m
+ [2m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[0m
+[2mline 6, column 7 · rows 3–6 of 6[0m
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+[1menter[0;2m Submit[0m  [1mshift+enter[0;2m Insert newline[0m  [1malt+enter[0;2m Insert newline[0m  [1mctrl+enter[0;2m Insert newline[0m  [1mctrl+j[0;2m Insert newline[0m  [1ml…

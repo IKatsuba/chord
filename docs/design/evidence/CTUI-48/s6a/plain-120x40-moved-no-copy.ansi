@@ -1,0 +1,40 @@
+[1mMarkdown controls · recording only[0m
+F2 close/open · F3 cover · ctrl+b emphasize · ctrl+y copy
+ctrl+s range · ctrl+q quit
+[2m┌ ts ────[0m[copy][2m─┐[0m
+[2m│[0m     copy body [2m│[0m
+[2m│[0m               [2m│[0m
+[2m│[0m   tail        [2m│[0m
+[2m└───────────────┘[0m
+
+[2m│ ┌ console ──────┐[0m
+[2m│ │[0m   quoted body [2m│[0m
+[2m│ └───────────────┘[0m
+
+┌ dart ─────[1m[copy][0m─┐
+│   streaming body │
+└──────────────────┘
+draft
+Copies 2: quoted body
+Range:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

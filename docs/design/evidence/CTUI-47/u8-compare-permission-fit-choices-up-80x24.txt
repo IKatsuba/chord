@@ -1,0 +1,26 @@
+Original | port; see u8-look.md for state/catalog/viewport limits
+
+                                                                                 | 
+ › permission                                                                    |  › permission
+                                                                                 | 
+ ── ↓ 2 lines below · end to jump to the bottom ───────────────────────────────  |  ── ↓ 2 lines below · end to jump to the bottom ───────────────────────────────
+                                                                                 | 
+ ››› Waiting for permission… (1m 1s)                                             |  ››› Waiting for permission… (1m 2s)
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │ | │ Write notes.txt                                                              │
+│                                                                              │ | │                                                                              │
+│   1 + notes                                                                  │ | │   1 + notes                                                                  │
+│                                                                              │ | │                                                                              │
+│ Do you want to proceed?                                                      │ | │ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │ | │   1. Allow                                                                   │
+│ ❯ 2. Always allow                                                            │ | │ ❯ 2. Always allow                                                            │
+│   3. Deny                                                                    │ | │   3. Deny                                                                    │
+│                                                                              │ | │                                                                              │
+│ Esc to reject                                                                │ | │ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |   ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

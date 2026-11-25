@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   stub
+ ▄▀▀▀   /tmp/ctui57-u3/wd
+ ▀▀     ? for shortcuts
+
+ ⏺ stub did not start: Authentication required
+   ⎿  stub offers these sign-ins:
+        Log in with a browser · Opens the provider's sign-in page
+        API key · Set STUB_API_KEY before starting
+      chord does not sign agents in. Sign in with stub's own CLI in a terminal, or set its API key where it offers one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

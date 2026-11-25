@@ -1,0 +1,40 @@
+      Todos
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ ››› Waiting for your answer to the plan… (8s)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note   step 1 keeps the old routing behind a flag until the tests pass; step 2 keeps the old routing behind a flag │
+│          until the tests pass; step 3 keeps the old routing behind a flag until the tests pass; step 4 keeps the old │
+│          routing behind a flag until the tests pass; step 5 keeps the old routing behind a flag until the tests pass │
+│         ; step 6 keeps the old routing behind a flag until the tests pass; step 7 keeps the old routing behind a fla │
+│         g until the tests pass; step 8 keeps the old routing behind a flag until the tests pass; step 9 keeps the ol │
+│         d routing behind a flag until the tests pass; step 10 keeps the old routing behind a flag until the tests pa │
+│         ss; step 11 keeps the old routing behind a flag until the tests pass; step 12 keeps the old routing behind a │
+│          flag until the tests pass; step 13 keeps the old routing behind a flag until the tests pass; step 14 keeps  │
+│         the old routing behind a flag until the tests pass; step 15 keeps the old routing behind a flag until the te │
+│         sts pass; step 16 keeps the old routing behind a flag until the tests pass; step 17 keeps the old routing be │
+│         hind a flag until the tests pass; step 18 keeps the old routing behind a flag until the tests pass; step 19  │
+│         keeps the old routing behind a flag until the tests pass; step 20 keeps the old routing behind a flag until  │
+│         the tests pass; step 21 keeps the old routing behind a flag until the tests pass; step 22 keeps the old rout │
+│         ing behind a flag until the tests pass; step 23 keeps the old routing behind a flag until the tests pass; st │
+│         ep 24 keeps the old routing behind a flag until the tests pass; step 25 keeps the old routing behind a flag  │
+│         until the tests pass; step 26 keeps the old routing behind a flag until the tests pass; step 27 keeps the ol │
+│         d routing behind a flag until the tests pass; step 28 keeps the old routing behind a flag until the tests pa │
+│         ss; step 29 keeps the old routing behind a flag until the tests pass; step 30 keeps the old routing behind a │
+│          flag until the tests pass                                                                                   │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

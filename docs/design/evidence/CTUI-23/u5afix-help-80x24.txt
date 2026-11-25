@@ -1,0 +1,24 @@
+Resize to five rows to hide the completion.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  status  Complete the word
+sta
+Draft: sta
+Last Tab: not pressed
+tab Complete visible word  ctrl+r Reset draft  ctrl+q Quit
+Typing keeps focus; Ctrl+R resets the seed.

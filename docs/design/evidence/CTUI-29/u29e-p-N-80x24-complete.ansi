@@ -1,0 +1,24 @@
+ [38;2;190;250;218m[48;2;164;244;206m▀[38;2;150;241;199m[49m▄[39m     [1mchord[0;2m v0.0.1[0m
+ [38;2;139;238;193m▀[38;2;124;235;186m[48;2;99;229;173m▀[38;2;110;231;179m[48;2;85;225;167m▀[38;2;71;222;160m[49m▄[39m   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2m/private/tmp/ctui29e-look/wN[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts[0m
+
+ [2m›[0m /cost
+   [2m⎿[0m  fake has not reported what this session has used.
+   [2m [0m  [2mSession time:[0m 7s
+
+
+
+
+
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;177;185;249m/clear[39m    [38;2;177;185;249mStart a new session with an empty transcript[39m
+  [2m/config[0m   [2mChange the agent's settings for this session, such as effort[0m
+  [2m/context[0m  [2mShow how full the agent's context window is[0m
+  [2m/cost[0m     [2mShow the tokens and cost this session has spent[0m
+  [2m/echo[0m     [2mRepeat what follows the command[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › /c                                                                         [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m                           [2mFake Large with a 1M context window · medium effort[0m

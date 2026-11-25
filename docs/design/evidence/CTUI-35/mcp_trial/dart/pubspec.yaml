@@ -1,0 +1,9 @@
+name: mcp_trial
+description: CTUI-35 trial of mcp_dart behind a bearer-token admission layer.
+publish_to: none
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  mcp_dart: 2.4.4

@@ -1,0 +1,40 @@
+ › Named transcript row 85
+
+ › Named transcript row 86
+
+ › Named transcript row 87
+
+ › Named transcript row 88
+
+ › Named transcript row 89
+
+ › Named transcript row 90
+
+ › Named transcript row 91
+
+ › Named transcript row 92
+
+ › Named transcript row 93
+
+ › Named transcript row 94
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                         esc to close completions             ctrl + x a for what waits on you
+  shift or \ + enter for a newline      esc to interrupt                     1–9 to pick a choice
+  alt + ← → to move by word             shift + tab to cycle modes           ↑ ↓ j k ← → to move or change a value
+  ↑ ↓ for prompts                       ctrl + o for verbose output          enter to pick the highlighted choice
+  pgup pgdn to scroll                   ctrl + c to copy                     esc to reject a permission
+  shift + ↑ ↓ to scroll a line          ctrl + x b to pick a code block      esc to leave a picker or shortcuts
+  home end for the top and the bottom   c to copy the picked block           ? for shortcuts
+  ↑ ↓ to pick a completion              ctrl + c to clear input              any key to quit the crash screen
+  tab to complete a command             ctrl + d or ctrl + c twice to quit
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › unsubmitted draft                                                                                                  │
+│   draft line 2                                                                                                       │
+│   draft line 3                                                                                                       │
+│   draft line 4                                                                                                       │
+│   draft line 5                                                                                                       │
+│   draft line 6                                                                                                       │
+│   draft line 7                                                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+

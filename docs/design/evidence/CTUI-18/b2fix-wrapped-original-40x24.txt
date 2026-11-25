@@ -1,0 +1,24 @@
+
+ ››› Waiting for permission… (23s)
+
+╭──────────────────────────────────────╮
+│ mcp__files__write_file               │
+│   path: docs/release.md              │
+│   content: # Release 0.56.0          │
+│                                      │
+│ ── ↓ 49 lines below ──────────────── │
+│                                      │
+│ Do you want to proceed?              │
+│ ❯ 1. Yes                             │
+│   2. Yes, and don't ask again for    │
+│   files - write_file commands        │
+│   3. No, and tell Claude what to do  │
+│   differently                        │
+│                                      │
+│ Esc to reject                        │
+╰──────────────────────────────────────╯
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

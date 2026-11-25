@@ -1,3 +1,0 @@
-alternate=0 cursor=1
-exit=0
-stty-identical=True

@@ -1,0 +1,24 @@
+Terminal services
+Copy sample: Long sample words remain complete inside the text area while the c…
+Editor: exited 0
+Last key: space
+[2m┌──────────────────────────────────────────────────────────────────────────────┐
+│[0m                                                                              [2m│
+│[0m Long sample words remain complete inside the text area while the caption kee [2m│
+│[0m ps one row and every service shortcut stays visible. Long sample words remai [2m│
+│[0m n complete inside the text area while the caption keeps one row and every se [2m│
+│[0m rvice shortcut stays visible. Long sample words remain complete inside the t [2m│
+│[0m ext area while the caption keeps one row and every service shortcut stays vi [2m│
+│[0m sible. Long sample words remain complete inside the text area while the capt [2m│
+│[0m ion keeps one row and every service shortcut stays visible. [7mT[0merminal service [2m│
+│[0m s                                                                            [2m│
+│[0m Second sample line                                                           [2m│
+│[0m Edited by scripted child                                                     [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+└──────────────────────────────────────────────────────────────────────────────┘
+super+left Move to line start · super+right Move to line end · ctrl+y Copy[0m
+[2msample · ctrl+g Open editor · ctrl+b Bell · ctrl+n OSC9 · ctrl+x n OSC777 ·[0m
+[2mctrl+t Title · ctrl+q Quit[0m

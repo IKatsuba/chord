@@ -1,0 +1,24 @@
+Text area
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌────────────────────────────────────────────────────────────────────────────┐
+ │ hello 界é🙂                                                                │
+ └────────────────────────────────────────────────────────────────────────────┘
+line 1, column 10 · rows 1–1 of 1
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter…

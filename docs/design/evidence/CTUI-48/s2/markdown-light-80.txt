@@ -1,0 +1,24 @@
+ Markdown  light, 100%
+Terminal cells
+
+A paragraph with emphasis, strong, struck, inline code, a link (https://example.
+com), https://auto.example and 日本語 that wraps in the width it receives, then
+continues at the same left edge. After a hard break.
+
+Lists
+
+- A first item
+- A second item that is long enough to wrap, so its text hangs under its own
+  first word and not under the marker
+  - A nested item
+[x] A done task
+[ ] An open task
+
+3. three
+4. four
+
+- loose one
+
+- loose two
+
+ctrl+s Stream again  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedo…

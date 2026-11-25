@@ -1,0 +1,25 @@
+Original error-80x24.txt | U7 live error-80x24.txt
+ ▀▄     chord v0.71.0                                                            |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-error-80                                   |  › error
+ ▀▀     ? for shortcuts · /help                                                  | 
+                                                                                 |  ⏺ About to fail.
+ › error                                                                         | 
+                                                                                 |  ⏺ The fake agent failed on purpose.
+ ⏺ About to fail.                                                                | 
+                                                                                 | 
+ ⏺ The fake agent failed on purpose.                                             | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |  ctrl+c or ctrl+d to quit

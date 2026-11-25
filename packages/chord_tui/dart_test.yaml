@@ -1,0 +1,8 @@
+tags:
+  compile:
+    # Builds a binary: slow, so run on its own with `dart test -t compile`.
+    skip: "run with: dart test -t compile --run-skipped"
+  publish:
+    # Exports HEAD and runs `dart pub publish --dry-run` on it: run on its
+    # own with `dart test -t publish --run-skipped`.
+    skip: "run with: dart test -t publish --run-skipped"

@@ -1,0 +1,2 @@
+ [1mchord[0;2m v0.0.1 · Claude Agent · ~/src/workspace/abc/chorded-tui-worktrees/CTUI-…[0m
+ [2mctrl+c or ctrl+d to quit[0m

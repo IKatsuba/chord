@@ -1,0 +1,40 @@
+ █▄     chord v0.0.1
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/project
+ █▀     ? for shortcuts · /help
+
+ › selectedteam
+
+ ⏺ Resources
+   ⎿  Read: 17:18:32 UTC · advisory snapshot
+      claude · 5h: 12.345% used · reset 18:18 UTC · models unknown
+      codex · 5h: 12.345% used · reset 18:18 UTC · models unknown
+
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve every role instruction and exact permission requirement. Capacity is unknown until get_budgets
+      is read, and external activity may be missing. Preserve every role instruction and exact permission
+      requirement. Capacity is unknown until get_budgets is read, and external activity may be missing. Preserve
+      every role instruction and exact permission requirement. Capacity is unknown until get_budgets is read, and
+      external activity may be missing.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort medium · mode plan
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      ctrl+o for saved definition and changes
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 12s
+    fixture  team · codex · Fake Small · medium                    ◦ idle 12s  ✓ new reply

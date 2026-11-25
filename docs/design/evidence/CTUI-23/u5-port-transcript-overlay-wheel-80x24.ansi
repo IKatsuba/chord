@@ -1,0 +1,24 @@
+   [2m│[0m   const session = await openSession({ agent: 'claude', cwd }); [2m│[0m
+   [2m│[0m   const turn = session.prompt('hello');                        [2m│[0m
+   [2m│[0m   await turn.result;                                           [2m│[0m
+   [2m└────────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1. [0mRun the checks:
+   [2m   ┌ sh ───────────┐[0m
+   [2m   │[0m   bun quality [2m│[0m
+   [2m   └───────────────┘[0m
+   [2m2. [0mCommit on main once every check has passed and the tree is clean, so
+   [2m   [0mwhoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ───────────────────────────────────────────────────┐[0m
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [1m/status[0m  [1mShow the agent, model, mode, session and directory[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › /sta[7m [0m                                                                      [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m         [2mFake Large with a 1M context window · medium effort · 1% context used[0m

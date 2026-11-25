@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /private/var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/here
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ /var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/chord/settings.json: "mcpServers.bad.command":
+   invalid input: expected string, received number; the server is ignored
+
+ ⏺ 1 MCP server was not passed to fake, which takes them over stdio and SSE only: docs (http). /mcp lists it.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord's MCP servers for fake. ACP does not say whether fake connected to the ones it was passed.                     │
+│                                                                                                                      │
+│ Name   Transport  Command or URL    Defined in                                                                       │
+│ docs   http       not passed        …/configs/xx/neutral-throwaway-config-place/c/run.capture-01/chord/settings.json │
+│ files  stdio      npx -y            …/configs/xx/neutral-throwaway-config-place/c/run.capture-01/chord/settings.json │
+│                   @modelcontextpro                                                                                   │
+│                   tocol/                                                                                             │
+│                   server-filesyste                                                                                   │
+│                   m .                                                                                                │
+│                                                                                                                      │
+│ docs was not passed: fake takes MCP servers over stdio and SSE only.                                                 │
+│                                                                                                                      │
+│ 1 server in /var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/chord/settings.json was ignored; chord   │
+│ said why when it started.                                                                                            │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

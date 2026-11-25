@@ -1,0 +1,24 @@
+   ⎿  User has answered your questions: . You can now continue with the
+      user's answers in mind.
+   ⎿  Language, Checks · Skipped
+
+ ⏺ Elicitation answer: decline
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+   ⎿  User has answered your questions: "Which language should helper scripts
+      use?"="Deno (TypeScript) (Recommended)", "Which checks should run
+      before a commit?"="Types, Lint". You can now continue with the user's
+      answers in mind.
+   ⎿  Language  Deno (TypeScript) (Recommended)
+      Checks    Types, Lint
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript) (Recommended)","question_1":["Types",
+   "Lint"]}
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

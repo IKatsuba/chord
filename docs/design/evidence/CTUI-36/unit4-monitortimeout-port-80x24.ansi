@@ -1,0 +1,24 @@
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m monitortimeout
+
+ [38;2;78;186;101m⏺[39m [1mMonitor[0m(heartbeat)
+   [2m⎿[0m  [2m$ sleep 1; echo "heartbeat 1: check the ship run"; sleep 600[0m
+      [2mm1 · times out after 5s[0m
+
+ ⏺ The heartbeat stops itself in five seconds.
+
+ ← [2mfrom [0;1mheartbeat[0;2m · monitor[0m
+   [2m⎿[0m  [2mheartbeat 1: check the ship run[0m
+
+ ⏺ Received the message from heartbeat · monitor.
+
+ [2m←[0m [2mfrom [0;1mheartbeat[0;2m · monitor · timed out[0m
+   [2m⎿[0m  [2mTimed out after 5s (timeout_ms 5000); chord stopped it.[0m
+
+ ⏺ Received the message from heartbeat · monitor · timed out.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

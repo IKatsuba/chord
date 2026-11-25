@@ -1,0 +1,40 @@
+Choices disabled
+Filter:
+  ↑ 4.  Choice 4
+    5.  Choice 5
+    6.  Choice 6
+    7.  Choice 7
+  ↓ 8.  Choice 8
+    … +4 more
+Answer: None
+ctrl+e Toggle choices  ctrl+f Focus choices  ctrl+c Quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

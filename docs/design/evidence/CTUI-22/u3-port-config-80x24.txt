@@ -1,0 +1,24 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   ~/projects/ikatsuba/chorded-tui-worktrees/CTUI-22
+ █▀     ? for shortcuts
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Settings                                                                     │
+│ Change fake's settings for this session.                                     │
+│                                                                              │
+│ ❯ 1. Effort  Medium                                                          │
+│                                                                              │
+│ Enter to choose · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

@@ -1,0 +1,40 @@
+
+
+
+                                                    ██▄
+                                                    ████▄
+                                                    ██████▄
+                                                     ▀██████▄
+                                                     ▄██████▀   chord
+                                                    ██████▀
+                                                    ████▀
+                                                    ██▀
+
+                                          One terminal for every coding agent.
+                                                v0.0.1 · fake · project
+
+                  ╭──────────────────────────────────────────────────────────────────────────────────╮
+                  │ Resume a session                                                                 │
+                  │ Pick one of fake's earlier sessions to open.                                     │
+                  │                                                                                  │
+                  │ ❯   1.  just now   Saved title line 1                                            │
+                  │                    Saved title line 2                                            │
+                  │                    Saved title line 3                                            │
+                  │                    Saved title line 4                                            │
+                  │                    Saved title line 5                                            │
+                  │                    Saved title line 6                                            │
+                  │                    Saved title line 7                                            │
+                  │                    Saved title line 8                                            │
+                  │                    Saved title line 9                                            │
+                  │                    Saved title line 10                                           │
+                  │                    Saved title line 11                                           │
+                  │                    Saved title line 12                                           │
+                  │                    Saved title line 13                                           │
+                  │                    Saved title line 14                                           │
+                  │   ↓                Saved title line 15                                           │
+                  │                                                                                  │
+                  │ Enter to resume · Ctrl+a for all directories · Esc to quit                       │
+                  ╰──────────────────────────────────────────────────────────────────────────────────╯
+
+
+

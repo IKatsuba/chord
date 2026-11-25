@@ -16,44 +16,60 @@ issue.
 
 ## Running chord from source
 
-You need [Bun](https://bun.sh) 1.4.4 or newer.
+You need Dart 3.12 or newer. The scripted fake agent runs with Dart.
 
 ```sh
 git clone https://github.com/IKatsuba/chord && cd chord
-bun install
-bun dev chord --fake  # scripted test agent, no account needed
-bun dev chord        # your real default agent
+dart pub get
+(cd packages/chord_tui && dart pub get)
+dart run tool/dev.dart chord --fake # scripted test agent
+dart run tool/dev.dart chord        # your real default agent
 ```
 
-The test agent in `tests/fixtures/fake_agent/` plays a scenario for a prompt
-that names one: type `edit`, `permission`, `plan`, `subagent` or `team` to see
-each part of the interface work.
-`tests/fixtures/fake_agent/AGENTS.md` lists them all.
+The Dart test agent under `test/fixtures/fake_agent/` plays a scenario
+for a prompt that names one: type `edit`, `permission`, `plan`, `subagent`
+or `team` to see each part of the interface work. Its scenario names are
+listed in `test/fixtures/fake_agent/main.dart`.
+
+The TypeScript adapter in `packages/cursor-cloud-acp/` uses Bun 1.4.4 or
+newer. Bun is needed only for that adapter and its tooling. From the root,
+run `bun install`, `bun dev quality cursor-cloud-acp` and
+`bun test ./tests/scripts ./lint` for adapter changes.
 
 ## Before you open a pull request
 
 ```sh
-bun dev quality chord # types, lint, formatting and every test
+dart analyze
+(cd packages/chord_tui && dart analyze)
+dart format --output=none --set-exit-if-changed .
+dart test
+(cd packages/chord_tui && dart test)
 ```
 
-This is the full check, and CI runs it. Locally, choose checks that match
-what changed, following [AGENTS.md](AGENTS.md#choosing-checks-for-a-change).
+Run static checks and relevant tests, following [AGENTS.md](AGENTS.md#tests).
 For prose-only changes, review the diff and check formatting of the changed
 files; application tests are not needed. For code, run relevant tests and
-static checks, with the full suite locally or in CI for broad changes. State
-which checks you ran in the pull request. `bun dev lint chord --fix` then
-`bun fmt` fixes most lint and formatting issues. `bun check` runs only
-the native type checker; `bun dev quality chord --static` runs all static checks.
+static checks, with the full suite locally for broad changes. State which
+checks you ran in the pull request. `dart format .` fixes formatting;
+`dart analyze` runs types and lints.
+
+[CI](.github/workflows/ci.yml) runs on `ubuntu-latest`: both packages are
+analyzed, formatting and actionlint are checked, each suite runs in three
+shards, and both `compile` tags run with `expect`. It also tests the npm shim
+with Node 22.13, builds linux-x64 natively and cross-compiles linux-arm64.
+The adapter job runs its Bun quality checks and tooling tests.
+The aggregate `check` requires all jobs to pass. Darwin builds run in the
+maintainer's local release.
 
 - Keep a pull request to one change. For behavior changes, add a test that
   would have failed without it when appropriate. Tests never reach a real
   model or a real agent: the interface is
-  driven through `tests/ui/harness.tsx`, the session layer through the fake
-  agent.
+  driven through `package:chord_tui/testing.dart`, the session layer through
+  the fake agent.
 - A new action gets a key, and the shortcuts panel lists it
-  (`src/ui/shortcuts/keys.ts`).
-- Take a maintained library before writing your own parser, renderer or
-  widget, and say in the pull request what you tried.
+  (`lib/ui/shortcuts/bindings.dart`).
+- Take a maintained library for non-terminal code before writing your own,
+  and say in the pull request what you tried.
 - Commit messages use conventional prefixes (`feat:`, `fix:`, `docs:`,
   `chore:`) and carry no trailers.
 - Everything in the repository is in English and names no private path.
@@ -64,11 +80,9 @@ larger change, or open an issue first to talk it through.
 
 ## Screenshots
 
-The README's screenshots are taken from chord itself, on the test agent, by
-`bun dev screenshots` (tmux and Chrome). Retake what a change moves and
-commit the images with it. `bun dev social` lays the repository's social
-preview out of them into `dist/social-preview.png`; the owner uploads it in
-the repository's settings.
+Check screen changes at 120x40 and 80x24, following [AGENTS.md](AGENTS.md#tests).
+Use `dart run tool/dev.dart chord --fake` for captures without
+a real agent. Retake what a change moves and commit the captures with it.
 
 ## Code of conduct
 

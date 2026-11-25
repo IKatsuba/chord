@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts
+        resumed · yesterday · Inspect the saved notes
+
+ › Inspect the saved notes
+
+ ⏺ The saved notes are ready.
+
+ › /resume
+   ⎿   That session is in
+       fixture-root___________/tmp/chord-record-history-3SWaMQ/another project.
+       Quit and open it there with:
+[owned fake command redacted]
+[owned fake command redacted]
+[owned fake command redacted]
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

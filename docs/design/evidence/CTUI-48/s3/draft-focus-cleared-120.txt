@@ -1,0 +1,40 @@
+Selection area · immutable source log
+Known coverage: true · overlay: false
+Record 0 · 日本語 👩‍💻 é
+
+┌ dart ──────────────────┐
+│     print("record 0"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+Record 1 · 日本語 👩‍💻 é
+
+┌ dart ──────────────────┐
+│     print("record 1"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+Record 2 · 日本語 👩‍💻 é
+
+┌ dart ──────────────────┐
+│     print("record 2"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+Record 3 · 日本語 👩‍💻 é
+
+┌ dart ──────────────────┐
+│     print("record 3"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+Record 4 · 日本語 👩‍💻 é
+
+┌ dart ──────────────────┐
+│     print("record 4"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+draft stays focused typed
+finalized: );
+C-l clear · C-s snapshot · C-o overlay · C-u coverage · C-t theme · C-r reveal · S-↑/↓ scroll · PgUp/PgDn · C-q quit

@@ -1,0 +1,24 @@
+ [1mchord[0;2m v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7[0m
+   [2m- [0mcloses the agent and waits until its exit is seen
+
+   [2m│ [3mA closed agent counts as gone only once its exit is seen:[0m
+   [2m│ [0m[38;5;244m┌ ts ────────────────────────────────────────────────────────┐[39m
+   [2m│ [0m[38;5;244m│[39m   [38;2;215;166;255mawait[39m session.[38;2;140;200;255mclose[39m(); [38;2;143;150;160m// resolves once the exit is seen[39m [38;5;244m│[39m
+   [2m│ [0m[38;5;244m└────────────────────────────────────────────────────────────┘[39m
+
+   [2m┌───────────────┬───────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                         [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼───────────────────────────────┼────────────────────┤[0m
+   [2m│[0m [38;2;177;185;249msession.ts[39m    [2m│[0m opening, prompting and        [2m│[0m [38;2;177;185;249msession_test.ts[39m    [2m│[0m
+   [2m│[0m               [2m│[0m closing a session             [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;177;185;249mprocesses.ts[39m  [2m│[0m the promise that a closed     [2m│[0m [38;2;177;185;249mprocesses_test.ts[39m  [2m│[0m
+   [2m│[0m               [2m│[0m agent is gone                 [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;177;185;249mtranscript.ts[39m [2m│[0m the reducer from events to    [2m│[0m [38;2;177;185;249mtranscript_test.ts[39m [2m│[0m
+   [2m│[0m               [2m│[0m what is drawn                 [2m│[0m                    [2m│[0m
+   [2m└───────────────┴───────────────────────────────┴────────────────────┘[0m
+
+   [38;5;244m┌ ts ────────────────────────────────────────────────────────────┐[39m
+   [38;5;244m│[39m   [38;2;215;166;255mconst[39m session = [38;2;215;166;255mawait[39m [38;2;140;200;255mopenSession[39m({ [38;2;245;163;199magent[39m: [38;2;242;211;138m'claude'[39m, cwd }); [38;5;244m│[39m
+   [38;5;244m└────────────────────────────────────────────────────────────────┘[39m
+ [2m› [0;7m [0m
+ [2mctrl+c or ctrl+d to quit[0m

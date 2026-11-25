@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  /team     Describe, keep and run teams of agents
+  /theme    Choose chord's colours for a dark or light terminal
+  /context  Show how full the agent's context window is
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /te                                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort

@@ -1,0 +1,82 @@
+{
+  "runtimeLabel": "aot-picker",
+  "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700)",
+  "workload": {
+    "choices": 2000,
+    "rowLimit": 10,
+    "steadyFrames": 50,
+    "terminalSizes": [
+      "120x40",
+      "80x24"
+    ],
+    "navigationScheduleMs": 16
+  },
+  "limits": "Actual ResumePicker with in-memory summary fixtures. No scan, agent, reopen, disk or PTY timing. One separately labelled run; not substituted for transcript costs. Keys traverse the picker host and acceptance callback.",
+  "pickerFirstLayout120x40": {
+    "wallMs": 64.88,
+    "rssBytes": 58179584,
+    "cumulativePeakRssBytes": 58179584,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 74.874,
+      "downDispatchMs": 0.082,
+      "navigationDrawMs": 25.764,
+      "enterDispatchMs": 0.013,
+      "selectedId": "session-1998"
+    }
+  },
+  "pickerResize80x24": {
+    "wallMs": 34.52,
+    "rssBytes": 59162624,
+    "cumulativePeakRssBytes": 59162624,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 43.875,
+      "downDispatchMs": 0.078,
+      "navigationDrawMs": 25.177,
+      "enterDispatchMs": 0.006,
+      "selectedId": "session-1997"
+    }
+  },
+  "pickerResizeBack120x40": {
+    "wallMs": 33.016,
+    "rssBytes": 59686912,
+    "cumulativePeakRssBytes": 59686912,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 42.847,
+      "downDispatchMs": 0.075,
+      "navigationDrawMs": 25.608,
+      "enterDispatchMs": 0.005,
+      "selectedId": "session-1996"
+    }
+  },
+  "pickerSteady120x40": {
+    "wallMs": 6.367,
+    "rssBytes": 59834368,
+    "cumulativePeakRssBytes": 59834368,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 29.458,
+      "downDispatchMs": 0.088,
+      "navigationDrawMs": 25.809,
+      "enterDispatchMs": 0.005,
+      "selectedId": "session-1995"
+    }
+  },
+  "steadyFrameCosts": {
+    "samples": 50,
+    "p50Ms": 0.061,
+    "p99Ms": 0.139,
+    "maxMs": 0.139
+  },
+  "steadyCellDiffAndUtf8Costs": {
+    "samples": 50,
+    "p50Ms": 0.056,
+    "p99Ms": 0.077,
+    "maxMs": 0.077
+  },
+  "steadyDiffBytes": 1100,
+  "ownedRootRemoved": true,
+  "ownedHandlesAfterCleanup": {
+    "available": true,
+    "count": 0,
+    "descriptors": []
+  }
+}

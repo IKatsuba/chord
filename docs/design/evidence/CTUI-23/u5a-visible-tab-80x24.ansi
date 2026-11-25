@@ -1,0 +1,24 @@
+Resize to five rows to hide the completion.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  status  Complete the word
+status[7m [0m
+Draft: status
+Last Tab: completed
+[1menter[0;2m Submit[0m  [1mshift+enter[0;2m Insert newline[0m  [1malt+enter[0;2m Insert newline[0m  [1mctrl+enter…[0m
+Typing keeps focus; Ctrl+R resets the seed.

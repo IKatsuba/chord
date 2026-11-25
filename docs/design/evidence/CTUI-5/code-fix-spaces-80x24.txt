@@ -1,0 +1,24 @@
+ Code  dark, numbers off, wrap on
+ sh, with a tab
+  for f in *.txt; do
+    echo "$f" | grep -v x > /dev/null
+  done
+
+ no language
+  plain text, as it is
+
+    indented after a blank line
+
+ empty
+
+
+ spaces kept, 7 cells wide
+  a
+↪ b
+
+ spaces kept, 12 cells wide
+  x      y
+
+↪ indented
+↪ ten
+ctrl+n Line numbers  ctrl+w Wrap  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a…

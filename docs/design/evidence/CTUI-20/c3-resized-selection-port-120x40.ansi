@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+                                                   ██▄
+                                                   ████▄
+                                                   ██████▄
+                                                    ▀██████▄   [1mchord[0m
+                                                    ▄██████▀
+                                                   ██████▀
+                                                   ████▀
+                                                   ██▀
+
+                                          One terminal for every coding agent.
+                            [2mv0.0.1 · /workspace/packages/terminal/interfaces/example/project[0m
+
+                              Select agent
+
+                              [1m [0m 1. claude
+                              [1m❯[0m [1m2.[0m [1mcodex[0m
+                              [1m [0m 3. pi[2m · not on PATH[0m
+
+                              [2m↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel[0m
+
+
+
+
+
+
+
+
+
+
+

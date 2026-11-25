@@ -1,0 +1,10 @@
+import 'dart:convert';
+import 'package:intl4x/collation.dart';
+void main() {
+  const names = ['clear','config','cost','effort','exit','fast','fork','help','model','new','resume','status','Z','a','z','ä','Å','é','e','É','İ','i','ı','Σ','ς','σ','команда','Код','🙂','_private','-x','9run'];
+  for (final locale in ['en-US','de-DE','sv-SE','tr-TR']) {
+    final compare = Collation(locale: Locale.parse(locale));
+    final sorted = [...names]..sort(compare.compare);
+    print(jsonEncode({'locale':locale,'sorted':sorted}));
+  }
+}

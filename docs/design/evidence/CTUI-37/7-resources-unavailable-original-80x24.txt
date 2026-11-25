@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   codex · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › resources
+
+ ⏺ Resources
+   ⎿  Read: 16:47:08 UTC · advisory snapshot
+      claude: unavailable · Scripted unavailable provider.
+      codex: unavailable · Scripted unavailable provider.
+
+ ⏺ Resource facts are advisory; unknown data remains unknown.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

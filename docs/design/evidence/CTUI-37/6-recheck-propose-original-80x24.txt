@@ -1,0 +1,24 @@
+      lead's instructions
+      Read the job and the code it points at until you can name the cause and
+      the files involved. Open tester first, coder once tester's test fails,
+      and reviewer last, on the diff.
+
+      tester's instructions
+      Write the smallest test that fails because of the bug, and run it to
+      show that.
+
+      coder's instructions
+      Make the failing test pass with the smallest change. Do not touch
+      tests.
+
+      reviewer's instructions
+ ── ↓ 40 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake         ◦ idle 6s
+    bugfix     team · fake  ◦ idle 32s        ✓ new reply
+    ├─ tester  fake         ● permission 31s  ← new message
+    └─ coder   fake         ◦ idle 31s        ✓ new reply

@@ -1,0 +1,41 @@
+ORIGINAL             | PORT
+ ▀▄     chor...71.0  |  ▀▄     chord v0.0…
+ ▀▀▀▄   fake...ndow  |  ▀▀▀▄   fake · Fak…
+ ▄▀▀▀   …ner-ctui44  |  ▄▀▀▀   …/CTUI-45
+ ▀▀     ? fo...help  |  ▀▀     ? for shor…
+                     | 
+ › error             |  › error
+                     | 
+ ⏺ About to fail.    |  ⏺ About to fail.
+                     | 
+ ⏺ The fake agent    |  ⏺ The fake agent
+   failed on         |    failed on
+   purpose.          |    purpose.
+                     | 
+ › plan              |  › plan
+                     | 
+ ⏺ Planned. Step 2   |  ⏺ Planned. Step 2
+   done. Step 3      |    done. Step 3
+   done.             |    done.
+                     | 
+ ⏺ Plan              |  ⏺ Plan
+   ⎿  ☒ Read...code  |    ⎿  ☒ Read...code
+      ☒Writ...hange  |       ☒ Writ...ange
+      ☒ Run ...ests  |       ☒ Run ...ests
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+                     | 
+╭──────────────────╮ | ╭──────────────────╮
+│ ›                │ | │ ›                │
+╰──────────────────╯ | ╰──────────────────╯
+   Fake… · 1% used   |   ? for shortcuts

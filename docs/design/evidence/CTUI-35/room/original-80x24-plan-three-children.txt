@@ -1,0 +1,24 @@
+      ◐ Move the routing
+      ☐ Run the tests
+
+ ››› Waiting for your answer to the plan… (11s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│ ❯ 1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│   Note  Tell fake what to change, sent with 2 (optional)                     │
+│                                                                              │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to keep planning                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake  ✻ working 10s
+    parser  fake  ◦ idle 41s        ✓ new reply
+    docs    fake  ● permission 41s  ← new message
+    other   fake  ◦ idle 35s        ✓ new reply

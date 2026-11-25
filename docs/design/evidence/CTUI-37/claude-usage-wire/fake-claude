@@ -1,0 +1,4 @@
+#!/bin/sh
+# No .js/.ts suffix, so the SDK runs it as a native binary.
+here=$(cd "$(dirname "$0")" && pwd)
+exec deno run --allow-all "$here/fake.ts" "$here/wire.log" "$@"

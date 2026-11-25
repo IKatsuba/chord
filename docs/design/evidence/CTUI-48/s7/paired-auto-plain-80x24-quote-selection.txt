@@ -1,0 +1,25 @@
+ORIGINAL + RECORDING STUB                                                        | PORT + RECORDING BOOTSTRAP
+ › markdown                                                                      |  › markdown
+                                                                                 | 
+ ⏺ Reading the session layer                                                     |  ⏺ Reading the session layer
+                                                                                 | 
+   The session layer wraps the SDK so the interface never touches a process.     |    The session layer wraps the SDK so the interface never touches a process.
+   Start with src/session/session.ts, then see the ACP spec (https://            |    Start with src/session/session.ts, then see the ACP spec (https://
+   agentclientprotocol.com) for the wire format.                                 |    agentclientprotocol.com) for the wire format.
+                                                                                 | 
+   What it does                                                                  |    What it does
+                                                                                 | 
+   - opens one persistent session per chord session                              |    - opens one persistent session per chord session
+   - starts turns with startTurn and cancels them                                |    - starts turns with startTurn and cancels them
+     1. a cancel stops the turn at once                                          |      1. a cancel stops the turn at once
+     2. the agent is told with session/cancel                                    |      2. the agent is told with session/cancel
+   - closes the agent and waits until its exit is seen                           |    - closes the agent and waits until its exit is seen
+                                                                                 | 
+   │ A closed agent counts as gone only once its exit is seen:                   |    │ A closed agent counts as gone only once its exit is seen:
+   │ ┌ ts ──────────────────────────────────────────────────────┐                |    │ ┌ ts ────────────────────────────────────────────────────────┐
+ ── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────  |  ── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  sent 12 chars to the terminal's clipboard                                      |   sent 12 chars to the terminal's clipboard

@@ -1,0 +1,8 @@
+SIZE 120
+
+ ⏺ Plan
+   ⎿  ☒ A long completed plan step with terminal cells and Uni...eted plan step with terminal cells and Unicode 日本語
+SIZE 80
+
+ ⏺ Plan
+   ⎿  ☒ A long completed plan step with te...terminal cells and Unicode 日本語

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0| ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · GPT-5.3 Codex| ▀▀▀▄   fake · GPT-5.3 Codex
+ ▄▀▀▀   /private/tmp/ctui29e-look/wT| ▄▀▀▀   /private/tmp/ctui29e-look/wT
+ ▀▀     ? for shortcuts · /help| ▀▀     ? for shortcuts
+|
+ › /cost| › /cost
+   ⎿  fake has not reported what this session has used.|   ⎿  fake has not reported what this session has used.
+      Session time: 9s|      Session time: 7s
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────|
+  /clear    Start a new session with an empty transcript| ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  /config   Change the agent's settings for this session, such as effort|  /clear    Start a new session with an empty transcript
+  /context  Show how full the agent's context window is|  /config   Change the agent's settings for this session, such as effort
+  /cost     Show the tokens and cost this session has spent|  /context  Show how full the agent's context window is
+  /echo     Repeat what follows the command|  /cost     Show the tokens and cost this session has spent
+  /mcp      Show the MCP servers chord passed to the agent|  /echo     Repeat what follows the command
+|
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮|╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /c                                                                                                                 │|│ › /c                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯|╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                         GPT-5.3 Codex · medium effort|                                                                                         GPT-5.3 Codex · medium effort

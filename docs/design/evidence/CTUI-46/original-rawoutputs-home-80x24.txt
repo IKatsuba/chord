@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.rawoutputs
+ █▀     ? for shortcuts · /help
+
+ › rawoutputs
+
+ ⏺ Run(date)
+   ⎿  Thu Oct 22 12:00:00 UTC 2026
+
+ ⏺ Run(npm test)
+   ⎿  ok 1
+      ok 2
+
+ ⏺ Run(npm run lint)
+   ⎿  Error: src/a.ts:3 unused x
+
+ ⏺ View(src/a.ts)
+ ── ↓ 15 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

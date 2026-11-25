@@ -1,0 +1,24 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts
+
+ › /model
+   ⎿  Effort set to High
+
+ › /model
+   ⎿  Effort set to Medium
+
+ › /model
+   ⎿  Switched to Fake Small · High effort
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                     Fake Small · high effort

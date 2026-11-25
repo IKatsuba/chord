@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   …/CTUI-27/build/designer-u27c1-refuse/fixture-project
+ ▀▀     ? for shortcuts · /help
+
+ › readsheld
+
+ ⏺ Working
+
+
+
+
+
+
+
+
+ ››› Working… (18s · esc to interrupt)
+ › oldest refused
+ › newer queued
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft untouched                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

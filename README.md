@@ -56,8 +56,8 @@ then the picker.
   all, and a keybindings file moves them.
 - **Nothing to set up.** One binary, no account, no daemon. chord starts the
   agent, keeps the session, and gives it back with `chord --continue`.
-- **Open source.** MIT, built on [OpenTUI](https://github.com/anomalyco/opentui)
-  and the [ACP SDK](https://github.com/agentclientprotocol/typescript-sdk).
+- **Open source.** MIT, built in Dart on
+  [chord_tui](packages/chord_tui/README.md).
 
 ## A tour
 
@@ -128,6 +128,8 @@ session title; `/resume` opens the list. Quitting prints main's resume command.
 
 ```sh
 npm install -g @chorded/chord   # or bun, pnpm, yarn
+# Or, for stable releases:
+brew install ikatsuba/tap/chord
 ```
 
 The package is a small shim around a prebuilt binary for macOS and Linux,
@@ -137,27 +139,31 @@ updates it through the package manager that installed it.
 chord starts agents through `npx`, `uvx` or their own CLI; sign in to
 Claude Code, Codex or Gemini as you normally would.
 
-Build from source with [Bun](https://bun.sh) 1.4.4 or newer. Compilation
-installs all target packages and embeds OpenTUI's native library:
+Build from source with [Dart](https://dart.dev) 3.12 or newer:
 
 ```sh
 git clone https://github.com/IKatsuba/chord && cd chord
-bun install
-bun dev compile --install   # into ~/.local/bin/chord
+dart pub get
+mkdir -p build
+dart compile exe bin/chord.dart -o build/chord
+./build/chord
 ```
+
+The binary needs no Dart runtime. [Development](docs/development.md) covers
+fixtures, benchmarks and release tooling.
 
 ## Use
 
 ```sh
 chord                  # choose an agent in this directory
-chord gemini -C ~/src/app
+chord gemini -C .
 chord agents           # agents, startup commands and own CLI availability
 chord agents --json    # versioned agent list for scripts
 chord acp codex         # serve ACP on stdin and stdout for another client
 chord --continue       # the latest session here, again
 chord --resume <id>     # a recorded session, on its own agent
 chord --resume         # pick an earlier session
-chord -p "Explain src/main.tsx"          # one reply on stdout, for scripts
+chord -p "Explain this project"          # one reply on stdout, for scripts
 git diff | chord -p "Review this" --output-format json
 ```
 
@@ -196,7 +202,7 @@ left out; values under real setting names and agent, server and `env` key
 names can reach the model.
 
 **[The guide](docs/guide.md)** has everything else: every flag, setting, key,
-the team file format, chord's MCP tools for agents, and how sessions are
+saved teams, chord's MCP tools for agents, and how sessions are
 recorded.
 
 ## Supported agents
@@ -213,18 +219,24 @@ how to run chord from source against its scripted test agent, choose checks
 for a change, and follow the code conventions. Found a security issue?
 See [SECURITY.md](SECURITY.md).
 
-The screenshots above are chord itself, captured by `bun dev screenshots`
-with fixture settings and sessions and the scripted test agent.
+The screenshots show chord itself, captured with
+`dart run tool/screenshots.dart` using fixture settings and sessions and
+the scripted Dart agent. [Development](docs/development.md#screenshots)
+has the capture commands.
 
 ## Licence
 
-chord's code is [MIT](LICENSE). Its binary includes FFmpeg under
-LGPL-2.1-or-later through OpenTUI. npm platform packages include
-`LICENSE-FFMPEG`, `LICENSE-ZLIB` and `FFMPEG-SOURCE.md` beside chord's
-`LICENSE`; [the guide](docs/guide.md#rebuilding-with-a-modified-libopentui)
-explains how to rebuild with a modified library. The Chorded name and
+chord's code is [MIT](LICENSE). The Chorded name and
 chevron mark are trademarks of Igor Katsuba, outside the licence; a fork
 should draw its own ([TRADEMARKS.md](TRADEMARKS.md)).
 
 chord is the open sibling of [Chorded](https://chorded.app), a native macOS
 workspace for agent sessions driven by key chords.
+
+## Credits
+
+The CHORD wordmark rows come from [OpenTUI](https://github.com/anomalyco/opentui)'s `block` and `tiny` fonts, under the MIT licence; its notice is retained in [wordmark.dart](lib/ui/header/wordmark.dart).
+
+Record scans use [byte_search](https://pub.dev/packages/byte_search) 0.1.0,
+under the BSD-3-Clause licence; release archives and npm packages retain
+its licence in `NOTICES`.

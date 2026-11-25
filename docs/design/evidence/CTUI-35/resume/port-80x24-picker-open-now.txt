@@ -1,0 +1,24 @@
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯ 1. just now  open now  docs · permission                                   │
+│   2. just now  open now  parser · agentchild                                 │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake  ◦ idle 24s
+    parser  fake  ◦ idle 24s        ✓ new reply
+    docs    fake  ● permission 24s  ← new message

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › /status
+   ⎿  Agent:     fake
+      Title:     not given
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   c8db18cc-0b71-4697-b602-7a7a64c40b00
+      Directory: <project>
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

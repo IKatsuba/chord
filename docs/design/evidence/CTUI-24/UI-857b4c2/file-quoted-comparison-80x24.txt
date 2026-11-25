@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0                                                            |  ⏺ Transcript record 70
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               |
+ ▄▀▀▀   /tmp/chord-qa.ctui-designer-mentions                                     |  ⏺ Transcript record 71
+ ▀▀     ? for shortcuts · /help                                                  |
+                                                                                 |  ⏺ Transcript record 72
+                                                                                 |
+                                                                                 |  ⏺ Transcript record 73
+                                                                                 |
+                                                                                 |  ⏺ Transcript record 74
+                                                                                 |
+                                                                                 |  ⏺ Transcript record 75
+                                                                                 |
+                                                                                 |  ⏺ Transcript record 76
+                                                                                 |
+                                                                                 |  ⏺ Transcript record 77
+                                                                                 |
+                                                                                 |  ⏺ Transcript record 78
+                                                                                 |
+                                                                                 |  ⏺ Transcript record 79
+                                                                                 |
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › @"space name.txt"                                                          │ | │ › @"space name.txt"                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort   |

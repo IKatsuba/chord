@@ -1,0 +1,10 @@
+▾ Run checks
+$ dart analyze
+Analyzing CTUI-2...
+No issues found!
+$ dart format --output=none --set-exit-if-changed .
+  … 3 more lines
+
+Name    Transport  Command or URL
+memory  stdio      npx -y memory
+ctrl+o Toggle tool details  ctrl+q Quit

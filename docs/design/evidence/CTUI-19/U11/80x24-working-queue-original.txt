@@ -1,0 +1,24 @@
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › status
+
+ ⏺ Status sent.
+
+ › ignorescancel
+
+ ⏺ Holding on.
+   ⎿  Interrupted by user
+
+ › readsheld
+
+ ⏺ Working
+
+ ››› Working… (25s · esc to interrupt)
+ › queued check
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · medium · 1% used

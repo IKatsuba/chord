@@ -1,0 +1,25 @@
+Original edit-expanded-80x24.txt | U7 live edit-expanded-80x24.txt
+ ▀▄     chord v0.71.0                                                            |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-edit-80                                    |  › edit
+ ▀▀     ? for shortcuts · /help                                                  | 
+                                                                                 |  ⏺ Edit(src/greeting.ts)
+ › edit                                                                          |    ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+                                                                                 |       1 + /** Greets someone by name. */
+ ⏺ Edit(src/greeting.ts)                                                         |       2   export function greet(name: string): string {
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal                     |       2 -   return "hello " + name;
+      1 + /** Greets someone by name. */                                         |       3 +   return `hello, ${name}`;
+      2   export function greet(name: string): string {                          |       4   }
+      2 -   return "hello " + name;                                              | 
+      3 +   return `hello, ${name}`;                                             |  ⏺ Edited.
+      4   }                                                                      | 
+                                                                                 | 
+ ⏺ Edited.                                                                       | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |  ctrl+c or ctrl+d to quit

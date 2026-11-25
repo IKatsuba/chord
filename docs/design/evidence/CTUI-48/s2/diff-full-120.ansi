@@ -1,0 +1,40 @@
+Updated sample.ts with 2 additions and 2 removals
+[2m 2[0m   line 2
+[2m 3[0m   line 3
+[2m 4[0m   line 4
+[2m 5[0m - line 5
+[2m 5[0m + changed 5: A message about terminal cells, 日本語, and preserving every grapheme while the source line wraps
+[2m 6[0m   line 6
+[2m 7[0m   line 7
+[2m 8[0m   line 8
+   [2m…[0m
+[2m22[0m   line 22
+[2m23[0m   line 23
+[2m24[0m   line 24
+[2m25[0m - line 25
+[2m25[0m + changed 25: A message about terminal cells, 日本語, and preserving every grapheme while the source line wraps
+[2m26[0m   line 26
+[2m27[0m   line 27
+[2m28[0m   line 28
+[1mctrl+o[0;2m Toggle diff details[0m  [1mctrl+q[0;2m Quit[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -8,7 +8,7 @@
  * cannot disagree.
  */
 import { gt, inc, prerelease, valid } from 'semver';
-import { channelOf, checkChannel, VersionError } from '../../../src/channel.ts';
+import { channelOf, checkChannel, VersionError } from './channel.ts';
 import { BUMPS, type Bump, isBump, isVersionArgument } from './select.ts';
 
 export { isVersionArgument, VersionError };

@@ -1,0 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:serverpod_cloud_cli/util/ignore.dart';
+void main(List<String> args) {
+  final root = args.single;
+  final (files, _) = Ignore.listFiles(
+    listDir: (dir) => Directory(p.join(root, dir)).listSync(followLinks: false).map((e) => p.relative(e.path, from: root)).where((e) => p.basename(e) != '.git'),
+    ignoreForDir: (dir) { final f = File(p.join(root, dir, '.gitignore')); return f.existsSync() ? Ignore(f.readAsLinesSync()) : null; },
+    isDir: (dir) => Directory(p.join(root, dir)).existsSync(),
+  );
+  print(jsonEncode(files.toList()..sort()));
+}

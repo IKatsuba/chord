@@ -1,0 +1,23 @@
+Usage: chord [agent]
+Version: 0.0.1
+
+A full-screen terminal client for ACP coding agents. A new unnamed interactive start asks which agent to use for this invocation; explicit commands, headless and resume routes keep their existing behavior.
+
+Options:
+  -h, --help                       Show this help.
+  -V, --version                    Show the version number for this program.
+      --agent-command=<command>    Start this ACP agent command instead of chord's own; [agent] only names it.
+  -m, --model=<model>              Start each of [agent]'s sessions on this model, by its id for it.
+      --effort=<effort>            Start each of [agent]'s sessions on this effort, by its id for it.
+      --permission-mode=<mode>     Start each of [agent]'s sessions in this mode, by its id for it.
+  -c, --continue                   Open the agent's latest session in this directory again.
+  -r, --resume [id]                     Open a session by the id chord prints on quit; with no id, pick one.
+
+Commands:
+  agents  List the agents chord can start: name, title, command, and for those started by their own CLI whether PATH has it.
+
+Examples:
+  Claude Code                   chord claude
+  Pick up where you left off    chord claude --continue
+  Pick an earlier session       chord --resume
+  An agent chord does not know  chord my-agent --agent-command "my-agent --acp"

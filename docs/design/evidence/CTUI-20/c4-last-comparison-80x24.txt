@@ -1,0 +1,25 @@
+Original actual CLI | Port actual CLI (80x24; private directory prefixes redacted)
+                                   █▄                                            |                                    █▄
+                                   ▀██▄                                          |                                    ▀██▄
+                                   ▄██▀  chord                                   |                                    ▄██▀  chord
+                                   █▀                                            |                                    █▀
+                       v0.71.0 · <checkout>/chord                                |            v0.0.1 · <checkout>/CTUI-18
+                                                                                 | 
+          Select agent                                                           |           Select agent
+                                                                                 | 
+            ↑ 18. kilo · Kilo                                                    |             ↑ 25. qwen-code · Qwen Code
+              19. kimi · Kimi Code                                               |               26. sigit · siGit Code
+              20. minimax-code · MiniMax Code                                    |               27. autohand · Autohand Code · not on PATH
+              21. minion-code · Minion Code                                      |               28. cursor · Cursor
+              22. nova · Nova                                                    |               29. devin · Devin · not on PATH
+              23. pi-acp · pi ACP                                                |               30. fx
+              24. qoder · Qoder CLI                                              |               31. goose · not on PATH
+              25. qwen-code · Qwen Code                                          |               32. junie · Junie · not on PATH
+              26. sigit · siGit Code                                             |               33. kiro · Kiro · not on PATH
+              27. cursor · Cursor                                                |               34. openclaw · OpenClaw · not on PATH
+              28. fx                                                             |               35. opencode · OpenCode
+          ❯   29. opencode · OpenCode                                            |               36. poolside · Poolside · not on PATH
+              … +17 more                                                         |           ❯   37. zeroclaw · ZeroClaw · not on PATH
+                                                                                 | 
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel             |           ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+                                                                                 | 

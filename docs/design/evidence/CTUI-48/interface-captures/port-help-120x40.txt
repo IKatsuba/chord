@@ -1,0 +1,40 @@
+   │ │   await session.close(); // resolves once the exit is seen │
+   │ └────────────────────────────────────────────────────────────┘
+
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘
+
+   ┌ ts ────────────────────────────────────────────────────────────┐
+   │   const session = await openSession({ agent: 'claude', cwd }); │
+   │   const turn = session.prompt('hello');                        │
+   │   await turn.result;                                           │
+   └────────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. To land a change:
+
+   1. Run the checks:
+      ┌ sh ───────────┐
+      │   bun quality │
+      └───────────────┘
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                         tab to complete a command            1–9 to pick a choice
+  shift or \ + enter for a newline      esc to close completions             ↑ ↓ j k ← → to move or change a value
+  alt + ← → to move by word             esc to interrupt                     enter to pick the highlighted choice
+  ↑ ↓ for prompts                       shift + tab to cycle modes           esc to reject a permission
+  pgup pgdn to scroll                   ctrl + o for verbose output          esc to leave a picker or shortcuts
+  shift + ↑ ↓ to scroll a line          ctrl + c to clear input              ? for shortcuts
+  home end for the top and the bottom   ctrl + d or ctrl + c twice to quit   any key to quit the crash screen
+  ↑ ↓ to pick a completion              ctrl + x a for what waits on you
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

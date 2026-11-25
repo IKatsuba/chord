@@ -1,0 +1,25 @@
+ORIGINAL                                                                         | PORT
+ › permission                                                                    |  › permission
+                                                                                 | 
+ ⏺ Write(notes.txt)                                                              |  ⏺ Write(notes.txt)
+   ⎿  Waiting…                                                                   |    ⎿  Waiting…
+                                                                                 | 
+ ››› Waiting for permission… (1m 20s)                                            |  ››› Waiting for permission… (1m 20s)
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │ | │ Write notes.txt                                                              │
+│                                                                              │ | │                                                                              │
+│   1 + notes                                                                  │ | │   1 + notes                                                                  │
+│                                                                              │ | │                                                                              │
+│ Do you want to proceed?                                                      │ | │ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │ | │ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │ | │   2. Always allow                                                            │
+│   3. Deny                                                                    │ | │   3. Deny                                                                    │
+│                                                                              │ | │                                                                              │
+│ Esc to reject                                                                │ | │ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |   ? for shortcuts          Fake Large with a 1M context window · medium effort

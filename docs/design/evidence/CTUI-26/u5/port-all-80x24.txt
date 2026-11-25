@@ -1,0 +1,24 @@
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in every directory.                                  │
+│                                                                              │
+│ ❯   1. just now   project                                                    │
+│        Inspect the saved notes and retain this descriptive title across      │
+│        wrapped lines.                                                        │
+│     2. yesterday  …/界😀/another-directory-1                                 │
+│        Saved session 1 · 界😀 with a long title and an_unbroken_title_tail   │
+│   ↓ 3. yesterday  project                                                    │
+│     … +1 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                   │
+╰──────────────────────────────────────────────────────────────────────────────╯

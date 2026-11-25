@@ -1,0 +1,40 @@
+ ▀▀     ? for shortcuts · /help
+
+ › team
+
+ ⏺ List teams
+   ⎿  1 team · bugfix
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  Issue 214: a string at the end of a line loses its closing quote. readString in src/parse/tokenize.ts stops at
+      the newline before it consumes the quote. Add a test that fails for that reason, fix it, and have the diff
+      reviewed. Report to me when it is done.
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 24s
+
+      This session     Cost  Tokens
+      main          $0.0250   4,000
+      bugfix        $0.0500   8,000  team run: lead $0.0250 · tester not reported · coder $0.0250
+      Total         $0.0750  12,000  tester not reported
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window · medium         ◦ idle 17s
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ◦ idle 16s        ✓ new reply
+    ├─ tester  fake · Fake Small · medium                                  ● permission 16s  ← new message
+    └─ coder   fake · Fake Large with a 1M context window · medium         ◦ idle 15s        ✓ new reply

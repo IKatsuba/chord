@@ -1,0 +1,19 @@
+{
+  "probe": "self-start recovery closure-observer send",
+  "sourceRevision": "sha256:019914b1ef8c7bea83bc7eb71deda2078fb417bd71c6d6b30918e33a10a9dcdd",
+  "runtime": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"macos_arm64\"",
+  "dispatched": "sent",
+  "observerSent": true,
+  "expectedBeforeQuiet": [
+    "running"
+  ],
+  "actualBeforeQuiet": [
+    "running"
+  ],
+  "ownTurn": "self-1",
+  "lateWorkTurn": "self-1",
+  "orderPass": true,
+  "workOwnerPass": true,
+  "pendingTimersAfterClose": 0,
+  "closes": 1
+}

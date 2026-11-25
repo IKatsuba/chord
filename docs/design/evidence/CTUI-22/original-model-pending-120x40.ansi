@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m194. [0mLine 194 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m195. [0mLine 195 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m196. [0mLine 196 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m197. [0mLine 197 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m198. [0mLine 198 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m199. [0mLine 199 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m200. [0mLine 200 of 200, streamed one at a time.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mpermission[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mWrite[0m(notes.txt)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mFailed[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected Write notes.txt[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: deny.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mbigask[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mfiles - write_file[0;2m (MCP)[0m(path: "docs/release.md", content: "# Release 0.56.0\n\nThis release changes how chord draws[38;2;255;255;255m
+   [39mlong requests: the permission box now caps its height, keeps its options on screen and lets the person scroll[38;2;255;255;255m
+   [39mthrough the whole argument before answering, at any window size, including 80 by 24.\n\n## Changes\n\n- Change 1:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 2: a turn can be resumed\n- Change 3: headlines wrap\n- Change 4: the box[38;2;255;255;255m
+   [39mscrolls\n- Change 5: tests run in parallel\n- Change 6: the prompt keeps its draft\n- Change 7: a turn can be[38;2;255;255;255m
+   [39mresumed\n- Change 8: headlines wrap\n- Change 9: the box scrolls\n- Change 10: tests run in parallel\n- Change 11:[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[39mSelect model[0m[38;2;255;255;255m                                                                                                         [38;5;244m│
+│[38;2;255;255;255m [2m[39mSwitch fake's model for this session.[0m[38;2;255;255;255m                                                                                [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [39m❯[38;2;255;255;255m [39m1. Fake Large with a 1M context window ✔[38;2;255;255;255m                                                                           [38;5;244m│
+│[38;2;255;255;255m [39m [38;2;255;255;255m [39m2. Fake Small[38;2;255;255;255m                                                                                                      [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [39mHigh effort •  ←/→ to adjust[38;2;255;255;255m                                                                                         [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [2m[39mEnter to set · ←/→ for effort · Esc to close[0m[38;2;255;255;255m                                                                         [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m

@@ -1,0 +1,24 @@
+ Markdown  light, 81%
+- loose one
+
+- loose two
+
+│ A quoted paragraph that is long enough to wrap, keeping its bar on every row
+│ it takes.
+│ │ A nested quote.
+
+┌ dart ────────────────────────────────────────────────────────────────────────┐
+│   void main() {                                                              │
+│     print('A long message about terminal cells, 日本語, and keeping every    │
+│ ↪ grapheme together on screen.');                                            │
+│   }                                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐
+│   unlabelled │
+└──────────────┘
+
+┌ nolanguage ────────────┐
+│   unknown label, plain │
+└────────────────────────┘
+ctrl+s Stream again  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedo…

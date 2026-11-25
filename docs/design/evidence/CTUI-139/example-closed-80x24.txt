@@ -1,0 +1,24 @@
+▸ Run checks
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ctrl+o Toggle tool details  ctrl+q Quit

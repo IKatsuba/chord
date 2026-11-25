@@ -1,0 +1,40 @@
+   ⎿  Total cost:   $0.0375
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 38s
+
+      This session            Cost  Tokens
+      main                 $0.0375   6,000
+        Fix the tokenizer  $0.0125   2,000  task agent, ended
+      Total                $0.0500   8,000
+
+ › tasktwo
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Watch the build) · fake · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(Watch the deploy) · fake · 0 tool uses
+      ⎿  Initializing…
+
+ ⏺ The build and the deploy are being watched.
+
+ › /cost
+   ⎿  Total cost:   $0.0500
+      Tokens in:    4,000
+      Tokens out:   800
+      Cache read:   3,200
+      Session time: 52s
+
+      This session            Cost  Tokens
+      main                 $0.0500   8,000
+        Fix the tokenizer  $0.0125   2,000  task agent, ended
+        Watch the build          —       —  task agent, running: counted when it ends
+        Watch the deploy         —       —  task agent, running: counted when it ends
+      Total                $0.0625  10,000  2 running
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running                         Fake Large with a 1M context window · medium effort · 1% context used
+    background  2 tasks running

@@ -1,0 +1,40 @@
+ ▀▄     chor....71.0
+ ▀▀▀▄   fake...indow
+ ▄▀▀▀   …gner-ctui44
+ ▀▀     ? fo.../help
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent
+   failed on
+   purpose.
+
+ › plan
+
+ ⏺ Planned. Step 2
+   done. Step 3
+   done.
+
+ ⏺ Plan
+   ⎿  ☒ Read... code
+      ☒ Writ...hange
+      ☒ Run ...tests
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭───────────────────╮
+│ ›                 │
+╰───────────────────╯
+    Fake… · 1% used

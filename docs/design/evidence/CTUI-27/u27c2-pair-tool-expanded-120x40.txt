@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › alpha first                                                                                                               |  › alpha first
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle crosses                                        |  › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle crosses
+   終わり 😀 é needle crosses                                                                                                   |    終わり 😀 é needle crosses
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › thought                                                                                                                   |  › thought
+                                                                                                                             |
+ ∴ Thinking…                                                                                                                 |  ∴ Thinking…
+   Considering the question.                                                                                                 |    Considering the question.
+                                                                                                                             |
+ ⏺ Here is the answer.                                                                                                       |  ⏺ Here is the answer.
+                                                                                                                             |
+ › calls                                                                                                                     |  › calls
+                                                                                                                             |
+ ⏺ Read(src/main.tsx)                                                                                                        |  ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';                                                                             |    ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';                                                                                          |       import { render } from 'ink';
+      import { App } from './ui/App.tsx';                                                                                    |       import { App } from './ui/App.tsx';
+                                                                                                                             |
+      await new Command()                                                                                                    |       await new Command()
+        .name('chord')                                                                                                       |         .name('chord')
+        .parse(Deno.args);                                                                                                   |         .parse(Deno.args);
+                                                                                                                             |
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw      |  ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw
+   their status")                                                                                                            |    their status")
+   ⎿  Running…                                                                                                               |    ⎿  Running…
+                                                                                                                             |
+ ››› Working… (1s · esc to interrupt)                                                                                        |  ››› Working… (1s · esc to interrupt)
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │     | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used       |   ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

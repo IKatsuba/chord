@@ -1,0 +1,26 @@
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+# Run in the scratch directory holding the compiled probe.
+# Pass the original checkout as argv[1]; do not write into that checkout.
+original = Path(sys.argv[1]).resolve()
+base = os.environ.copy()
+oracle = Path('original_oracle.mjs').read_text()
+cases = [
+    ('override', {'XDG_STATE_HOME': '/state-test'}, []),
+    ('relative', {'XDG_STATE_HOME': 'relative-state'}, []),
+    ('empty', {'XDG_STATE_HOME': ''}, []),
+    ('missing', {}, ['XDG_STATE_HOME']),
+    ('no-home', {}, ['XDG_STATE_HOME', 'HOME']),
+]
+for label, overrides, absent in cases:
+    env = base.copy()
+    env.update(overrides)
+    for key in absent:
+        env.pop(key, None)
+    print(label + ': ' + subprocess.check_output(
+        ['./probe'], env=env, text=True).strip())
+    print('original: ' + subprocess.check_output(
+        ['bun', '--eval', oracle], cwd=original, env=env, text=True).strip())

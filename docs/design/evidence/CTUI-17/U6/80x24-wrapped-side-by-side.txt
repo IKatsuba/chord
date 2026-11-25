@@ -1,0 +1,6 @@
+Original                                                                         | Port fixture
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › A keyboard-first prompt wraps 日本語 and emoji 🙂 without splitting graphe │ | │ › A keyboard-first prompt wraps 日本語 and emoji 🙂 without splitting graphe │
+│   mes. The next words continue through the available text cells and preserve │ | │   mes. The next words continue through the available text cells and preserve │
+│    alignment.                                                                │ | │    alignment.                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯

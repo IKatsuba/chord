@@ -16,7 +16,7 @@ import { basename, join } from 'node:path';
 import { loadedNative } from '../compile.ts';
 import { TARGETS } from '../../targets.ts';
 import { quote } from 'shell-quote';
-import { channelOf } from '../../../src/channel.ts';
+import { channelOf } from './channel.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { sha256 } from './sums.ts';
 

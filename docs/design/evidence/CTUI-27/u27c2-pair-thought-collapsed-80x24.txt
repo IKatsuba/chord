@@ -1,0 +1,25 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+ › alpha second                                                                                                              |  › alpha second
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › alpha first                                                                                                               |  › alpha first
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle                                                |  › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle
+   crosses                                                                                                                   |    crosses
+   終わり 😀 é needle crosses                                                                                                   |    終わり 😀 é needle crosses
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › thought                                                                                                                   |  › thought
+                                                                                                                             |
+ ∴ Thinking…                                                                                                                 |  ∴ Thinking…
+                                                                                                                             |
+ ⏺ Here is the answer.                                                                                                       |  ⏺ Here is the answer.
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────╮                                             | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │                                             | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯                                             | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used                                               |   ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

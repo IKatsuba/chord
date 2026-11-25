@@ -1,0 +1,24 @@
+                                   █▄
+                                   ▀██▄
+                                   ▄██▀  [1mchord[0m
+                                   █▀
+           [2mv0.0.1 · <checkout>/CTUI-18[0m
+
+          Select agent
+
+          [1m❯[0m [2m↑[0m [1m4. [0m [1mclaude[2m · Claude Agent[0m
+          [1m [0m   5.  cline[2m · Cline[0m
+          [1m [0m   6.  codebuddy-code[2m · Codebuddy Code[0m
+          [1m [0m   7.  codex[2m · Codex[0m
+          [1m [0m   8.  cursor-cloud[2m · Cursor Cloud Agents[0m
+          [1m [0m   9.  deepagents[2m · DeepAgents[0m
+          [1m [0m   10. dimcode[2m · DimCode[0m
+          [1m [0m   11. dirac[2m · Dirac[0m
+          [1m [0m   12. factory-droid[2m · Factory Droid[0m
+          [1m [0m   13. fast-agent
+          [1m [0m   14. gemini[2m · Gemini CLI[0m
+          [1m [0m [2m↓[0m 15. github-copilot-cli[2m · GitHub Copilot[0m
+          [2m    … +17 more[0m
+
+          [2m↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel[0m
+

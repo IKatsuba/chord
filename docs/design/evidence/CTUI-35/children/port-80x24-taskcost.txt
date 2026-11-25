@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › taskcost
+
+ ⏺ Agent(Count the cost) · fake
+   ⎿  costwait
+
+ ⏺ Agent(Count the cost) · fake
+   ⎿  Initializing…
+
+ ⏺ The cost is being counted.
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running          Fake Large with a 1M context window · 1% used

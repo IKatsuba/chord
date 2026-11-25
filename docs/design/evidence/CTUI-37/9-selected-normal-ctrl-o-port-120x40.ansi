@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mcodex · Fake Large with a 1M context window[0m
+ ▄██▀   [2m~/project[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m selectedteam
+
+ ⏺ [1mResources[0m
+   [2m⎿[0m  [2mRead: 17:16:11 UTC · advisory snapshot[0m
+      [2mclaude · 5h: 12.345% used · reset 18:16 UTC · models unknown[0m
+      [2mcodex · 5h: 12.345% used · reset 18:16 UTC · models unknown[0m
+
+ ⏺ [1mTeam[0m(fixture)[2m · codex · fake-small · medium[0m
+   [2m⎿[0m  [2mselectedidle[0m
+      [2mSelection: agent-selected · this run[0m
+      [2mReason: Preserve all instructions and exact permission requirements; capacity is unknown.[0m
+      [2mBilling: unknown · advisory[0m
+      [2mPlanned for this run:[0m
+      [2mlead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan[0m
+      [2mActual: confirmed · session runtime codex · model fake-small · effort medium · mode plan[0m
+      [2mreviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan[0m
+      [2mActual: not opened · configuration unconfirmed[0m
+      [2mRun: 1fb4feca · saved definition: fixture (project)[0m
+      [2mlead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default[0m
+      [2mChanges from saved: model, mode[0m
+      [2mreviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent[0m
+      [2mdefault (unconfirmed)[0m
+      [2mChanges from saved: model, mode[0m
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m
+    [1mmain   [0;2m  codex · Fake Large with a 1M context window · medium  ◦ idle 15s[0m
+    fixture[2m  team · codex · Fake Small · medium                    ◦ idle 15s  ✓ new reply[0m

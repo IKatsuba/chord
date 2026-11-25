@@ -1,0 +1,5 @@
+chord: /tmp/ctui29-look/cfg/chord/settings.json: unknown key "colour", ignored
+chord: /private/tmp/ctui29-look/w2/.chord/settings.json: "agents.fake.command": expected a string, got a number · fake will not start
+chord: /private/tmp/ctui29-look/w2/.chord/settings.json: "theme" is read only from /tmp/ctui29-look/cfg/chord/settings.json, ignored
+chord: fake not started: agents.fake.command in .chord/settings.json: expected a string, got a number
+exit 1

@@ -1,0 +1,148 @@
+== left
+│ › alpha beta gamma
+│   delta epsilo|n zeta
+== right
+│ › alpha beta gamma
+│   delta epsilon |zeta
+== up
+│ › alpha beta ga|mma
+│   delta epsilon zeta
+== ctrl+f
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+b
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+left
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+right
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== alt+left
+│ › alpha beta gamma
+│   delta |epsilon zeta
+== alt+right
+│ › alpha beta gamma
+│   delta epsilon zeta|
+== alt+b
+│ › alpha beta gamma
+│   delta |epsilon zeta
+== alt+f
+│ › alpha beta gamma
+│   delta epsilon zeta|
+== alt+a
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== alt+e
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ESC a
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ESC e
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+a
+│ › alpha beta gamma
+│   |delta epsilon zeta
+== ctrl+e
+│ › alpha beta gamma
+│   delta epsilon zeta|
+== super+left
+│ › alpha beta gamma
+│   |delta epsilon zeta
+== super+right
+│ › alpha beta gamma
+│   delta epsilon zeta|
+== home
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== end
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== super+up
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== super+down
+│ › |
+== backspace
+│ › alpha beta gamma
+│   delta epsilo| zeta
+== shift+backspace
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== delete
+│ › alpha beta gamma
+│   delta epsilon|zeta
+== shift+delete
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+w
+│ › alpha beta gamma
+│   delta | zeta
+== alt+backspace
+│ › alpha beta gamma
+│   delta | zeta
+== ctrl+backspace
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== alt+d
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ESC d
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== alt+delete
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+delete
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+u
+│ › alpha beta gamma
+│   | zeta
+== ctrl+k
+│ › alpha beta gamma
+│   delta epsilon|
+== ctrl+-
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+.
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== super+z
+│ › alpha beta gamma
+│   delta epsilon zet|
+== super+shift+z
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== shift+left
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== shift+right
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== shift+alt+left
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== shift+alt+b
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+shift+a
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== ctrl+shift+e
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== shift+alt+a
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== super+shift+left
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== super+shift+up
+│ › alpha beta gamma
+│   delta epsilon| zeta
+== super+a
+│ › |

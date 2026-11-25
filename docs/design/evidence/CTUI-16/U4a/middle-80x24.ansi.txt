@@ -1,0 +1,24 @@
+W=3
+W=4     ...[32mZ[39m
+W=5     [31ma[39m...[32mZ[39m
+W=6     [31ma[39m...[32mYZ[39m
+W=8     [31mab[39m...[32mXYZ[39m
+W=9     [31mabc[39m...[32mXYZ[39m
+W=10    [31mabc[39m...[32mXYZ[39m
+W=11    [31mabc[39m...[32mXYZ[39m
+W=12    [31mabc[39m...[31m👩‍💻[32mXYZ[39m
+W=13    [31mabc日[39m...[31m👩‍💻[32mXYZ[39m
+W=14    [31mabc日本語👩‍💻[32mXYZ[39m
+A long full-width label preserving bot...ng both ends and terminal cells 日本語
+
+
+
+
+
+
+
+
+
+
+
+

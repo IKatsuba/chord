@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help
+
+ › readsheld
+
+ ⏺ Working
+
+ › first queued
+
+ ⏺ Read the message from nobody.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (37s · esc to interrupt)
+ › second queued
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › draft 界😀 stays                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort

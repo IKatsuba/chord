@@ -1,0 +1,24 @@
+   ├─ Agent(Watch the build) · fake · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(Watch the deploy) · fake · 0 tool uses
+      ⎿  Initializing…
+
+ ⏺ The build and the deploy are being watched.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running         Fake Large with a 1M context window · 3% used
+    background  2 tasks running

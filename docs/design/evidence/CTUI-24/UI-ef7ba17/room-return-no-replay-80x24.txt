@@ -1,0 +1,24 @@
+ ⏺ Transcript record 70
+
+ ⏺ Transcript record 71
+
+ ⏺ Transcript record 72
+
+ ⏺ Transcript record 73
+
+ ⏺ Transcript record 74
+
+ ⏺ Transcript record 75
+
+ ──────────────────────────────────────────────────────────────────────────────
+  src/beta.dart
+  src/alpha.dart
+  src/delta.dart
+  src/gamma.dart
+  src/epsilon.dart
+  src/long directory/a literal filename that exceeds the small completion row.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › @src                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

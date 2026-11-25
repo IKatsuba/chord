@@ -1,0 +1,40 @@
+Text area
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ A long message wraps by cells; wide characters 界🙂 stay together. A long message wraps by cells; wide characters  │
+ │ 界🙂 stay together. The final words remain editable.                                                               │
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+line 1, column 163 · rows 1–2 of 2
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter Insert newline  ctrl+j Insert newline  l…

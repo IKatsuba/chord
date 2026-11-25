@@ -1,0 +1,201 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:isolate';
+
+import 'package:cancellation_token/cancellation_token.dart' as ct;
+import 'package:worker_manager/worker_manager.dart' as wm;
+
+class Events {
+  final receive = ReceivePort();
+  final values = <Map<String, Object?>>[];
+  final pending = <String, Completer<Map<String, Object?>>>{};
+  late final StreamSubscription<dynamic> subscription;
+  Events() {
+    subscription = receive.listen((dynamic data) {
+      final value = Map<String, Object?>.from(data as Map);
+      values.add(value);
+      pending.remove(value['type'])?.complete(value);
+    });
+  }
+  Future<Map<String, Object?>> next(String type) {
+    final found = values.where((value) => value['type'] == type).firstOrNull;
+    return found == null
+        ? pending.putIfAbsent(type, Completer<Map<String, Object?>>.new).future
+        : Future.value(found);
+  }
+
+  bool has(String type) => values.any((value) => value['type'] == type);
+  List<String> get order => [
+    for (final value in values) value['type'] as String,
+  ];
+  void mark(String type) => values.add({'type': type});
+  Future<void> close() async {
+    await subscription.cancel();
+    receive.close();
+  }
+}
+
+Future<void> currentBody(String path, SendPort events) async {
+  final hold = ReceivePort();
+  Isolate.current.addOnExitListener(
+    events,
+    response: {'type': 'current-exit-notification'},
+  );
+  final file = await File(path).open();
+  try {
+    events.send({'type': 'current-started', 'control': hold.sendPort});
+    await hold.first;
+  } finally {
+    await file.close();
+    events.send({'type': 'current-cleanup-ack'});
+    hold.close();
+  }
+}
+
+Future<void> Function() currentWork(String path, SendPort events) =>
+    () => currentBody(path, events);
+
+Future<void> gentleBody(
+  String path,
+  SendPort events,
+  bool Function() canceled,
+) async {
+  final hold = ReceivePort();
+  final file = await File(path).open();
+  try {
+    events.send({'type': 'gentle-started', 'control': hold.sendPort});
+    await hold.first;
+    events.send({'type': 'gentle-cancel-state', 'canceled': canceled()});
+  } finally {
+    await file.close();
+    events.send({'type': 'gentle-cleanup-ack'});
+    hold.close();
+  }
+}
+
+wm.ExecuteGentle<void> gentleWork(String path, SendPort events) =>
+    (canceled) => gentleBody(path, events, canceled);
+
+Future<Map<String, Object?>> handles(String root) async {
+  final run = await Process.run('/usr/sbin/lsof', [
+    '-a',
+    '-p',
+    '$pid',
+    '-Fftn',
+  ]);
+  if (run.exitCode != 0) throw StateError('Cannot inspect probe descriptors');
+  final found = <Map<String, String>>[];
+  var descriptor = '', type = '';
+  for (final line in run.stdout.toString().split('\n')) {
+    if (line.startsWith('f')) descriptor = line.substring(1);
+    if (line.startsWith('t')) type = line.substring(1);
+    if (line.startsWith('n$root')) {
+      found.add({
+        'descriptor': descriptor,
+        'type': type,
+        'path': line.substring(root.length + 1),
+      });
+    }
+  }
+  return {'count': found.length, 'descriptors': found};
+}
+
+Future<void> main(List<String> args) async {
+  final watchdog = Timer(const Duration(seconds: 15), () => exit(99));
+  final root = await Directory.systemTemp.createTemp('ctui53-direct-');
+  final events = Events();
+  final token = ct.CancellationToken();
+  final report = <String, Object?>{
+    'runtime': args.firstOrNull ?? 'unspecified',
+    'versions': {'cancellation_token': '2.0.1', 'worker_manager': '7.2.9'},
+    'scope':
+        'Direct public package cancellation APIs. Worker owns an open file and a deterministic test-only processing gate. Cleanup acknowledgments are independent SDK SendPort test markers. No timing delay or polling establishes a pass. Exit notifications are observed callback order, not physical exit timing.',
+  };
+  try {
+    final current = File('${root.path}/current.data');
+    final gentle = File('${root.path}/gentle.data');
+    await current.writeAsString('current');
+    await gentle.writeAsString('gentle');
+    final running = ct.CancellableIsolate.run(
+      currentWork(current.path, events.receive.sendPort),
+      token,
+    );
+    final observed = running.then(
+      (_) => 'completed',
+      onError: (Object error) {
+        events.mark('current-public-future-canceled');
+        return error is ct.CancelledException
+            ? 'cancelled'
+            : 'unexpected:${error.runtimeType}';
+      },
+    );
+    await events.next('current-started');
+    token.cancel();
+    final result = await observed;
+    final closedAtFuture = events.has('current-cleanup-ack');
+    await events.next('current-exit-notification');
+    final afterExit = await handles(root.path);
+    report['cancellationTokenDirect'] = {
+      'result': result,
+      'cleanupAckAtFuture': closedAtFuture,
+      'handlesAfterExitNotification': afterExit,
+    };
+    if (result != 'cancelled' || closedAtFuture)
+      throw StateError('Unexpected current direct API result');
+
+    await wm.workerManager.init(isolatesCount: 1);
+    final task = wm.workerManager.executeGentle<void>(
+      gentleWork(gentle.path, events.receive.sendPort),
+    );
+    final gentleObserved = task.future.then(
+      (_) => 'completed',
+      onError: (Object error) {
+        events.mark('gentle-public-future-canceled');
+        return error is wm.CanceledError
+            ? 'cancelled'
+            : 'unexpected:${error.runtimeType}';
+      },
+    );
+    final started = await events.next('gentle-started');
+    task.cancel();
+    final gentleResult = await gentleObserved;
+    final gentleClosedAtFuture = events.has('gentle-cleanup-ack');
+    final beforeAck = await handles(root.path);
+    // Release the processing gate only after recording the public Future
+    // and descriptors. This is deterministic teardown, not a barrier workaround.
+    (started['control'] as SendPort).send('finish-processing');
+    await events.next('gentle-cleanup-ack');
+    final canceledState = await events.next('gentle-cancel-state');
+    final afterAck = await handles(root.path);
+    final beforeDescriptors = beforeAck['descriptors'] as List;
+    final afterDescriptors = afterAck['descriptors'] as List;
+    if (!beforeDescriptors.any((d) => (d as Map)['path'] == '/gentle.data') ||
+        afterDescriptors.any((d) => (d as Map)['path'] == '/gentle.data')) {
+      throw StateError(
+        'Gentle open-file/cleanup marker did not match actual descriptors',
+      );
+    }
+    report['workerManagerDirectGentle'] = {
+      'result': gentleResult,
+      'cleanupAckAtFuture': gentleClosedAtFuture,
+      'workerObservedCanceled': canceledState['canceled'],
+      'handlesBeforeCleanupAck': beforeAck,
+      'handlesAfterCleanupAck': afterAck,
+    };
+    if (gentleResult != 'cancelled' || gentleClosedAtFuture)
+      throw StateError('Unexpected gentle direct API result');
+    report['eventOrder'] = events.order;
+    report['verdict'] =
+        'Both public cancellation futures settle before their worker cleanup acknowledgment. Current owned handles after an exit notification are reported separately; notification order is not physical exit timing.';
+  } finally {
+    token.cancel();
+    await wm.workerManager.dispose();
+    await events.close();
+    await root.delete(recursive: true);
+    report['ownedRootRemoved'] = !await root.exists();
+    report['handlesBeforeProbeProcessExit'] = await handles(root.path);
+    watchdog.cancel();
+  }
+  print(const JsonEncoder.withIndent('  ').convert(report));
+}

@@ -1,0 +1,22 @@
+{"columns":120,"rows":40,"name":"no-motion","beforeRelease":"","selected":""}
+{"columns":120,"rows":40,"name":"same-cell-motion","beforeRelease":"","selected":""}
+{"columns":120,"rows":40,"name":"return-anchor","beforeRelease":"","selected":""}
+{"columns":120,"rows":40,"name":"release-elsewhere-no-motion","beforeRelease":"","selected":""}
+{"columns":120,"rows":40,"name":"motion-then-release-elsewhere","beforeRelease":"Th","selected":"Th"}
+{"columns":120,"rows":40,"name":"blank-click","beforeRelease":"","selected":""}
+{"columns":120,"rows":40,"name":"blank-same-cell-motion","beforeRelease":"","selected":""}
+{"columns":120,"rows":40,"name":"blank-row-across","beforeRelease":"","selected":""}
+{"columns":120,"rows":40,"name":"blank-to-code","beforeRelease":"\necho done","selected":"\necho done"}
+{"columns":120,"rows":40,"name":"code-to-blank","beforeRelease":"\necho done","selected":"\necho done"}
+{"columns":120,"rows":40,"name":"first-code-glyph-to-blank","beforeRelease":"\ne","selected":"\ne"}
+{"columns":80,"rows":24,"name":"no-motion","beforeRelease":"","selected":""}
+{"columns":80,"rows":24,"name":"same-cell-motion","beforeRelease":"","selected":""}
+{"columns":80,"rows":24,"name":"return-anchor","beforeRelease":"","selected":""}
+{"columns":80,"rows":24,"name":"release-elsewhere-no-motion","beforeRelease":"","selected":""}
+{"columns":80,"rows":24,"name":"motion-then-release-elsewhere","beforeRelease":"Th","selected":"Th"}
+{"columns":80,"rows":24,"name":"blank-click","beforeRelease":"","selected":""}
+{"columns":80,"rows":24,"name":"blank-same-cell-motion","beforeRelease":"","selected":""}
+{"columns":80,"rows":24,"name":"blank-row-across","beforeRelease":"","selected":""}
+{"columns":80,"rows":24,"name":"blank-to-code","beforeRelease":"\necho done","selected":"\necho done"}
+{"columns":80,"rows":24,"name":"code-to-blank","beforeRelease":"\necho done","selected":"\necho done"}
+{"columns":80,"rows":24,"name":"first-code-glyph-to-blank","beforeRelease":"\ne","selected":"\ne"}

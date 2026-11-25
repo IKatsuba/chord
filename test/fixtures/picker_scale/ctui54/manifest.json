@@ -1,0 +1,58 @@
+{
+  "harnessCommit": "5674e39d8de00ab936ebbc6a71796493624a5c25",
+  "productionCommit": "79dc587888abcc85653462903734f3ba5e744a90",
+  "compileCommand": "nice -n 19 dart compile exe example/chord/benchmark/picker.dart -o build/ctui54_resume_picker",
+  "binarySha256": "b4fb6f711a6cee86322e1caee73dbb9446add22dbb269cc57767e81d532426a3",
+  "runs": [
+    {
+      "file": "aot-baseline-20.json",
+      "stderrFile": "aot-baseline-20.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=20 --corpus=baseline --runtime=aot --source=5674e39d8de00ab936ebbc6a71796493624a5c25",
+      "exitCode": 0,
+      "wallSeconds": 9.788
+    },
+    {
+      "file": "aot-baseline-2000.json",
+      "stderrFile": "aot-baseline-2000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=2000 --corpus=baseline --runtime=aot --source=5674e39d8de00ab936ebbc6a71796493624a5c25",
+      "exitCode": 0,
+      "wallSeconds": 9.578
+    },
+    {
+      "file": "aot-baseline-10000.json",
+      "stderrFile": "aot-baseline-10000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=10000 --corpus=baseline --runtime=aot --source=5674e39d8de00ab936ebbc6a71796493624a5c25",
+      "exitCode": 0,
+      "wallSeconds": 11.483
+    },
+    {
+      "file": "aot-wrapped-2000.json",
+      "stderrFile": "aot-wrapped-2000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=2000 --corpus=wrapped --runtime=aot --source=5674e39d8de00ab936ebbc6a71796493624a5c25",
+      "exitCode": 0,
+      "wallSeconds": 9.879
+    },
+    {
+      "file": "aot-wrapped-10000.json",
+      "stderrFile": "aot-wrapped-10000.json.stderr",
+      "command": "nice -n 19 build/ctui54_resume_picker --count=10000 --corpus=wrapped --runtime=aot --source=5674e39d8de00ab936ebbc6a71796493624a5c25",
+      "exitCode": 0,
+      "wallSeconds": 13.505
+    }
+  ],
+  "reference": {
+    "sourceCommit": "2b550b7fd9299b30c9f843967aaf4d82972db441",
+    "file": "example/chord/test/fixtures/records/scale/aot-picker-2000.json",
+    "sha256": "ba2868172e488bd267d1e212d754b76774f7802db34e26a2f285f9dffa3675a0",
+    "comparability": "Same Dart3.13.5, actual ResumePicker baseline titles/order/last-use numbers and10-row cap. New first stage includes and separates AppHost construction because labels freeze at mount; old body was first layout only. Scheduled stage afterRequestedDelayMs subtracts16ms like old scheduledToAcceptanceMs; stable navigation groups include16ms. New AOT-active numeric counters add overhead. No universal speed ratio or final-head claim."
+  },
+  "limits": "Three repetitions per configuration; first/cold/steady stage input scheduled before synchronous work; actual keys reach beginning/middle/end, 50 samples each. Wrapped corpus separate from baseline. Cold width scalar shaping O(N), no-edge/edge/exact calls measured separately by integer counters. Visible census/current extents only; RSS/peakRSS process observations, whole heap unmeasured. No scan, disk, agent, reopen, PTY or display timing. Both designer/tester held execution during numeric runs.",
+  "cleanup": "All15 AppHosts disposed, every input timer awaited, no external processes or fixture roots started by harness. Runner joined all5 processes. Scratch binary and owned PID check recorded separately.",
+  "cleanupChecks": {
+    "ownedBenchmarkPidsAfterExit": [],
+    "scratchBinaryRemoved": true,
+    "allStderrEmpty": true,
+    "ownedRootsCreated": 0,
+    "tmuxSessionsCreated": 0
+  }
+}

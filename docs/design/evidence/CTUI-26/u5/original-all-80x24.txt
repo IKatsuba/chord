@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-root___________/project
+ ▀▀     ? for shortcuts · /help
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in every directory.                                  │
+│                                                                              │
+│ ❯   1. just now   …/ctui26-designer-u5/project                               │
+│        Inspect the saved notes and retain this descriptive title across      │
+│        wrapped lines.                                                        │
+│     2. yesterday  …/ctui26-designer-u5/project                               │
+│   ↓    Saved session 2 · 界😀 with a long title and an_unbroken_title_tail   │
+│     … +2 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

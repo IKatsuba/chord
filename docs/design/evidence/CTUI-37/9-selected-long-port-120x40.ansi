@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mcodex · Fake Large with a 1M context window[0m
+ ▄██▀   [2m~/project[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m selectedteam
+
+ ⏺ [1mResources[0m
+   [2m⎿[0m  [2mRead: 17:18:32 UTC · advisory snapshot[0m
+      [2mclaude · 5h: 12.345% used · reset 18:18 UTC · models unknown[0m
+      [2mcodex · 5h: 12.345% used · reset 18:18 UTC · models unknown[0m
+
+ ⏺ [1mTeam[0m(fixture)[2m · codex · fake-small · medium[0m
+   [2m⎿[0m  [2mselectedidle[0m
+      [2mSelection: agent-selected · this run[0m
+      [2mReason: Preserve every role instruction and exact permission requirement. Capacity is unknown until get_budgets[0m
+      [2mis read, and external activity may be missing. Preserve every role instruction and exact permission[0m
+      [2mrequirement. Capacity is unknown until get_budgets is read, and external activity may be missing. Preserve[0m
+      [2mevery role instruction and exact permission requirement. Capacity is unknown until get_budgets is read, and[0m
+      [2mexternal activity may be missing.[0m
+      [2mBilling: unknown · advisory[0m
+      [2mPlanned for this run:[0m
+      [2mlead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan[0m
+      [2mActual: confirmed · session runtime codex · model fake-small · effort medium · mode plan[0m
+      [2mreviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan[0m
+      [2mActual: not opened · configuration unconfirmed[0m
+      [2mctrl+o for saved definition and changes[0m
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m
+    [1mmain   [0;2m  codex · Fake Large with a 1M context window · medium  ◦ idle 12s[0m
+    fixture[2m  team · codex · Fake Small · medium                    ◦ idle 12s  ✓ new reply[0m

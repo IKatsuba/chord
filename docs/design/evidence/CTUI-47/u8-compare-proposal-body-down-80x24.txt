@@ -1,0 +1,26 @@
+Original | port; see u8-look.md for state/catalog/viewport limits
+
+                                                                                 | 
+ ››› Waiting for permission… (1m 12s)                                            |  ››› Waiting for permission… (1m 14s)
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                       │ | │ mcp__files__write_file                                                       │
+│ ── ↑ 1 line above · pageup to scroll ─────────────────────────────────────── │ | │ ── ↑ 1 line above · pageup to scroll ─────────────────────────────────────── │
+│   content: # Release 0.56.0                                                  │ | │   content: # Release 0.56.0                                                  │
+│                                                                              │ | │                                                                              │
+│   This release changes how chord draws long requests: the permission box now │ | │   This release changes how chord draws long requests: the permission box now │
+│   caps its height, keeps its options on screen and lets the person scroll    │ | │   caps its height, keeps its options on screen and lets the person scroll    │
+│ ── ↓ 37 lines below · pagedown to scroll ─────────────────────────────────── │ | │ ── ↓ 37 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │ | │                                                                              │
+│ Do you want to proceed?                                                      │ | │ Do you want to proceed?                                                      │
+│   1. Yes                                                                     │ | │   1. Yes                                                                     │
+│ ❯ 2. Yes, and don't ask again for files - write_file commands                │ | │ ❯ 2. Yes, and don't ask again for files - write_file commands                │
+│   3. No, and tell Claude what to do differently                              │ | │   3. No, and tell Claude what to do differently                              │
+│                                                                              │ | │                                                                              │
+│ Esc to reject                                                                │ | │ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |   ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,24 @@
+
+! printf ready; sleep
+  [2m⎿[0m  ready
+  [2m [0m  [2mRunning… (esc to stop)[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m── ↓ 1 line below · end to jump to the bottom ──────────────────────────────────
+1 full · 2 running · 3 empty · 4 success · 5 stopped · 6 error · 7 blank · 8 cut
+· esc stop · ctrl+q quit[0m

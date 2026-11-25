@@ -1,0 +1,24 @@
+ [1m[38;2;108;182;255mparser[0;2m · fake · Fake Large with a 1M context window · opened by main 16s ago[0m
+
+ ← [2mfrom [0;1m@main[0m
+   [2m⎿[0m  [2mchildmonitor[0m
+
+ [38;2;78;186;101m⏺[39m [1mMonitor[0m(parser tests)
+   [2m⎿[0m  [2m$ sleep 1; echo "ok 1 - parse a string at the end of a line"; sleep 600[0m
+      [2mm1 · times out after 10m[0m
+
+ ⏺ Watching the parser tests.
+
+ ← [2mfrom [0;1mparser tests[0;2m · monitor[0m
+   [2m⎿[0m  [2mok 1 - parse a string at the end of a line[0m
+
+ ⏺ Received the message from parser tests · monitor.
+
+
+[38;2;108;182;255m╭─[1m parser[0m[38;2;108;182;255m ─────────────────────────────────────────────────────────────────────╮
+│[39m ›                                                                            [38;2;108;182;255m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m↑ ↓ move · enter open · esc back[0m     [2mFake Large with a 1M context… · 1% used[0m
+    main  [2m  fake · Fake Large with a 1M context window · medium  ◦ idle 15s[0m
+    [1m[38;2;108;182;255mparser[0;2m  fake · Fake Large with a 1M context window · medium  ◦ idle 15s[0m
+  [38;2;177;185;249m❯ [1m[39mbackground[0;2m  2 monitors running[0m

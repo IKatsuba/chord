@@ -1,0 +1,24 @@
+ [2m›[0m alpha first
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m alpha second
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m alpha first
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle
+   crosses
+   終わり 😀 é needle crosses
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [2msearch prompts:[0m needle crosses[7m [0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[7mneedle[0m [2m│
+│[0m [2m [0m [7m crosses[0m                                                                   [2m│
+│[0m [2m [0m 終わり 😀 é [7mneedle crosses[0m                                                 [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m         [2mFake Large with a 1M context window · medium effort · 1% context used[0m

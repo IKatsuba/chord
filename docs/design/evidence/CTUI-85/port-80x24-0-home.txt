@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › tasktwo
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Watch the build) · fake · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(Watch the deploy) · fake · 0 tool uses
+      ⎿  Initializing…
+
+ ⏺ The build and the deploy are being watched.
+
+ › text
+
+ ── ↓ 9 lines below · end to jump to the bottom ───────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running         Fake Large with a 1M context window · 1% used
+    background  2 tasks running

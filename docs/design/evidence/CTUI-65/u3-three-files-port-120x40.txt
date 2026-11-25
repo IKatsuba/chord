@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <scratch>/b/proj
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ <scratch>/b/cfg/chord/settings.json: "mcpServers.u.command": invalid input: expected string, received
+   number; the server is ignored
+
+ ⏺ .mcp.json: "mcpServers.bad.command": invalid input: expected string, received number; the server is ignored
+
+ ⏺ .mcp.json: "mcpServers.bad2.command": invalid input: expected string, received number; the server is ignored
+
+ ⏺ .chord/settings.json: "mcpServers.p.command": invalid input: expected string, received number; the server is ignored
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord's MCP servers for fake. ACP does not say whether fake connected to the ones it was passed.                     │
+│                                                                                                                      │
+│ Name  Transport  Command or URL  Defined in                                                                          │
+│ ok    stdio      true            .mcp.json                                                                           │
+│                                                                                                                      │
+│ 1 server in <scratch>/b/cfg/chord/settings.json was ignored, 2 servers in .mcp.json were ignored, and 1     │
+│ server in .chord/settings.json was ignored; chord said why when it started.                                          │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

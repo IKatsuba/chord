@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   build/ctui48-s7-project
+ █▀     ? for shortcuts · /help
+
+ ⏺ --no-mcp-servers held back 1 MCP server from fake: chord (chord's own).
+   Without it, fake cannot start other agents or use chord's tools. /mcp lists
+   it.
+
+ › markdowncode
+
+ ⏺ A paragraph before the code.
+
+   ┌─ typescript ─[copy]─┐
+   │ x                   │
+   └─────────────────────┘
+
+   ┌─ sh ────────────────────────────────────────────────────────[copy]─[run]─┐
+ ── ↓ 15 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  sent 28 chars to the terminal's clipboard

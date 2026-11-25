@@ -1,0 +1,40 @@
+ Diff  plain
+[2m12[0m -   return 'A message about terminal cells, 日本語, and preserving every grapheme while the source line wraps';
+[2m12[0m +   return 'A shorter message';
+[2m13[0m   more13();
+[2m14[0m   more14();
+[2m15[0m   more15();
+   [2m…[0m
+[2m45[0m   more45();
+[2m46[0m   more46();
+[2m47[0m   save();
+[2m48[0m -   indented();
+[2m48[0m +   indented(again);
+
+ unified patch
+[2mlib/app.dart[0m
+ [2m3[0m     /* A comment the hunk opens
+ [2m4[0m        and closes. */
+ [2m5[0m -   final int count = 1;
+ [2m5[0m +   final int count = 2;
+ [2m6[0m     final String name;
+   [2m…[0m
+[2m20[0m     void run() {}
+[2m21[0m +   void stop() {}
+[2m22[0m   }
+
+ new file
+[2mnotes.md[0m
+[2m1[0m + line one
+[2m2[0m +
+[2m3[0m + line three
+
+ unknown language
+[2mdata.nolanguage[0m
+[2m1[0m   a
+[2m2[0m - b
+[2m2[0m + c
+
+ equal texts
+[2msame.txt[0m
+[1mctrl+t[0;2m Theme[0m  [1mctrl+q[0;2m Quit[0m  [1mpageup[0;2m Scroll up a page[0m  [1mpagedown[0;2m Scroll down a page[0m  [1mup[0;2m Scroll up a line[0m  [1mshift+up[0;2m Scroll u…

@@ -1,0 +1,40 @@
+   194. Line 194 of 200, streamed one at a time.
+   195. Line 195 of 200, streamed one at a time.
+   196. Line 196 of 200, streamed one at a time.
+   197. Line 197 of 200, streamed one at a time.
+   198. Line 198 of 200, streamed one at a time.
+   199. Line 199 of 200, streamed one at a time.
+   200. Line 200 of 200, streamed one at a time.
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › bigask
+
+ ⏺ files - write_file (MCP)(path: "docs/release.md", content: "# Release 0.56.0\n\nThis release changes how chord draws
+   long requests: the permission box now caps its height, keeps its options on screen and lets the person scroll
+   through the whole argument before answering, at any window size, including 80 by 24.\n\n## Changes\n\n- Change 1:
+   the prompt keeps its draft\n- Change 2: a turn can be resumed\n- Change 3: headlines wrap\n- Change 4: the box
+   scrolls\n- Change 5: tests run in parallel\n- Change 6: the prompt keeps its draft\n- Change 7: a turn can be
+   resumed\n- Change 8: headlines wrap\n- Change 9: the box scrolls\n- Change 10: tests run in parallel\n- Change 11:
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                                                         │
+│ Switch fake's model for this session.                                                                                │
+│                                                                                                                      │
+│ ❯ 1. Fake Large with a 1M context window ✔                                                                           │
+│   2. Fake Small                                                                                                      │
+│                                                                                                                      │
+│ High effort •  ←/→ to adjust                                                                                         │
+│                                                                                                                      │
+│ Enter to set · ←/→ for effort · Esc to close                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

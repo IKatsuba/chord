@@ -1,0 +1,6 @@
+ Fixture controls
+ f3  Refuse pending steer
+ f4  Finish current prompt
+ f5  Toggle open call
+ f6  Ask permission
+ F1 close · ↑↓ scroll

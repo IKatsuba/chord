@@ -1,0 +1,2 @@
+chord: /tmp/ctui29b-look/cfgA/chord/settings.json: "offeredAgents": no agent named nope, left out
+chord: /tmp/ctui29b-look/cfgA/chord/settings.json: "offeredAgents": no agent named typo, left out

@@ -1,0 +1,75 @@
+{
+  "fixSource": "0f823adbc576a4696e128afefef0e188b22d31b3",
+  "corpus": "u52c-repro-corpus.json",
+  "preFixTiming": "u52c-escape-resize-repro.json",
+  "commandTimings": [
+    {
+      "command": [
+        "send-keys",
+        "-t",
+        "designer52e-original",
+        "Escape"
+      ],
+      "startMs": 0.00104197533801198,
+      "endMs": 4.922957974486053
+    },
+    {
+      "command": [
+        "send-keys",
+        "-t",
+        "designer52e-port",
+        "Escape"
+      ],
+      "startMs": 4.933958000037819,
+      "endMs": 9.96858300641179
+    },
+    {
+      "command": [
+        "resize-window",
+        "-t",
+        "designer52e-original",
+        "-x",
+        "32",
+        "-y",
+        "10"
+      ],
+      "startMs": 9.978582966141403,
+      "endMs": 17.205875017680228
+    },
+    {
+      "command": [
+        "resize-window",
+        "-t",
+        "designer52e-port",
+        "-x",
+        "32",
+        "-y",
+        "10"
+      ],
+      "startMs": 17.216250009369105,
+      "endMs": 23.12666701618582
+    }
+  ],
+  "afterOverlapMonotonic": 405847.521091291,
+  "originalImmediate": {
+    "pickerVisible": true,
+    "captureMsAfterOverlap": 5.518334044609219
+  },
+  "portImmediate": {
+    "pickerVisible": true,
+    "captureMsAfterOverlap": 18.186625035014004
+  },
+  "originalSettled": {
+    "pickerVisible": false,
+    "captureMsAfterOverlap": 14906.882000039332
+  },
+  "portSettled": {
+    "pickerVisible": false,
+    "captureMsAfterOverlap": 14919.03099999763
+  },
+  "fresh32SeparatedControl": {
+    "originalPickerVisible": false,
+    "portPickerVisible": false
+  },
+  "cleanup": "Owned original/port/control sessions cooperatively exited; tmux ended; no relevant Dart/Bun/fake process; exact archive/state removed."
+}

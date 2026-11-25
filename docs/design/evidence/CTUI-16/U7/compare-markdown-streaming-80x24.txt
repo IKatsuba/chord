@@ -1,0 +1,25 @@
+Original markdown-streaming-80x24.txt | U7 live markdown-streaming-80x24.txt
+   │ │ await session.close(); // resolves once the exit is seen │                |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+   │ └──────────────────────────────────────────────────────────┘                |    - closes the agent and waits until its exit is seen
+                                                                                 | 
+   ┌───────────────┬───────────────────────────────┬────────────────────┐        |    │ A closed agent counts as gone only once its exit is seen:
+   │ Module        │ Holds                         │ Tested by          │        |    │ ┌ ts ────────────────────────────────────────────────────────┐
+   ├───────────────┼───────────────────────────────┼────────────────────┤        |    │ │   await session.close(); // resolves once the exit is seen │
+   │ session.ts    │ opening, prompting            │ session_test.ts    │        |    │ └────────────────────────────────────────────────────────────┘
+   │               │ and closing a session         │                    │        | 
+   │ processes.ts  │ the promise that a closed     │ processes_test.ts  │        |    ┌───────────────┬───────────────────────────────┬────────────────────┐
+   │               │ agent is gone                 │                    │        |    │ Module        │ Holds                         │ Tested by          │
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │        |    ├───────────────┼───────────────────────────────┼────────────────────┤
+   │               │ to what is drawn              │                    │        |    │ session.ts    │ opening, prompting and        │ session_test.ts    │
+   └───────────────┴───────────────────────────────┴────────────────────┘        |    │               │ closing a session             │                    │
+                                                                                 |    │ processes.ts  │ the promise that a closed     │ processes_test.ts  │
+   ┌─ ts ─────────────────────────────────────────────────────────┐              |    │               │ agent is gone                 │                    │
+   │ const session = await openSession({ agent: 'claude', cwd }); │              |    │ transcript.ts │ the reducer from events to    │ transcript_test.ts │
+   └──────────────────────────────────────────────────────────────┘              |    │               │ what is drawn                 │                    │
+                                                                                 |    └───────────────┴───────────────────────────────┴────────────────────┘
+ ››› Working… (0s · esc to interrupt)                                            | 
+                                                                                 |    ┌ ts ────────────────────────────────────────────────────────────┐
+╭──────────────────────────────────────────────────────────────────────────────╮ |    │   const session = await openSession({ agent: 'claude', cwd }); │
+│ ›                                                                            │ |    └────────────────────────────────────────────────────────────────┘
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |  ctrl+c or ctrl+d to quit

@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 2 lines above ───────────────────
+  shift or \ + enter for a newline
+  ctrl + g to edit in $EDITOR
+  ctrl + v to paste an image
+  alt + ← → to move by word
+  ── ↓ 37 lines below ──────────────────
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

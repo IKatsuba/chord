@@ -1,0 +1,25 @@
+ORIGINAL + RECORDING STUB                                                        | PORT + RECORDING BOOTSTRAP
+   │ │ await session.close(); // resolves once the exit is seen │                |    │ │   await session.close(); // resolves once the exit is seen │
+   │ └──────────────────────────────────────────────────────────┘                |    │ └────────────────────────────────────────────────────────────┘
+                                                                                 | 
+   ┌───────────────┬───────────────────────────────┬────────────────────┐        |    ┌───────────────┬───────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                         │ Tested by          │        |    │ Module        │ Holds                         │ Tested by          │
+   ├───────────────┼───────────────────────────────┼────────────────────┤        |    ├───────────────┼───────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting            │ session_test.ts    │        |    │ session.ts    │ opening, prompting            │ session_test.ts    │
+   │               │ and closing a session         │                    │        |    │               │ and closing a session         │                    │
+   │ processes.ts  │ the promise that a closed     │ processes_test.ts  │        |    │ processes.ts  │ the promise that a closed     │ processes_test.ts  │
+   │               │ agent is gone                 │                    │        |    │               │ agent is gone                 │                    │
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │        |    │ transcript.ts │ the reducer from events       │ transcript_test.ts │
+   │               │ to what is drawn              │                    │        |    │               │ to what is drawn              │                    │
+   └───────────────┴───────────────────────────────┴────────────────────┘        |    └───────────────┴───────────────────────────────┴────────────────────┘
+                                                                                 | 
+   ┌─ ts ──────────────────────────────────────────────────[copy]─┐              |    ┌ ts ─────────────────────────────────────────────────────[copy]─┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │              |    │   const session = await openSession({ agent: 'claude', cwd }); │
+ ── ↓ new output · 10 lines below · end to jump to the bottom ─────────────────  |  ── ↓ new output · 10 lines below · end to jump to the bottom ─────────────────
+                                                                                 | 
+ ››› Working… (4s · esc to interrupt)                                            |  ››› Working… (4s · esc to interrupt)
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |   ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

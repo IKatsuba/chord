@@ -1,0 +1,11 @@
+
+ ╭────────────────────────────╮
+ │ Resume a session           │
+ │ Pick one of...ons to open. │
+ │                            │
+ │ ❯ ↓ 1. just now            │
+ │                            │
+ │ Enter to resume · Ctrl+a   │
+ │ for all directories · Esc  │
+ │ to quit                    │
+ ╰────────────────────────────╯

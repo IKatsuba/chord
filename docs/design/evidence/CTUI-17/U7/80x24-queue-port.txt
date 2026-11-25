@@ -1,0 +1,24 @@
+ chord v0.0.1 · fake · [task directory]
+ ⏺ Hello, world. This reply came in chunks.
+
+ › queued second
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+ › readsheld
+
+ ⏺ Working
+ › narrow queued 1 …
+ › A long queued prompt preserves its e...board keyboard keyboard keyboard tail
+ › narrow queued 3
+ › … +3 more
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › narrow draft                                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ ctrl+c or ctrl+d to quit

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ ⏺ fake did not start: Failure detail line 1 界😀 wrapped words wrapped words
+   wrapped words wrapped words wrapped words wrapped words  Failure detail line
+   2 界😀 wrapped words wrapped words wrapped words wrapped words wrapped words
+   wrapped words  Failure detail line 3 界😀 wrapped words wrapped words
+   wrapped words wrapped words wrapped words wrapped words  Failure detail line
+   4 界😀 wrapped words wrapped words wrapped words wrapped words wrapped words
+   wrapped words  Failure detail line 5 界😀 wrapped words wrapped words
+   wrapped words wrapped words wrapped words wrapped words  Failure detail line
+   6 界😀 wrapped words wrapped words wrapped words wrapped words wrapped words
+   wrapped words  Failure detail line 7 界😀 wrapped words wrapped words
+   wrapped words wrapped words wrapped words wrapped words  Failure detail line
+   8 界😀 wrapped words wrapped words wrapped words wrapped words wrapped words
+   wrapped words  Failure detail line 9 界😀 wrapped words wrapped words
+ ── ↓ 169 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

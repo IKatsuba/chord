@@ -1,0 +1,24 @@
+   165. Line 165 of 200, streamed one at a time.
+   166. Line 166 of 200, streamed one at a time.
+   167. Line 167 of 200, streamed one at a time.
+   168. Line 168 of 200, streamed one at a time.
+   169. Line 169 of 200, streamed one at a time.
+   170. Line 170 of 200, streamed one at a time.
+   171. Line 171 of 200, streamed one at a time.
+   172. Line 172 of 200, streamed one at a time.
+   173. Line 173 of 200, streamed one at a time.
+   174. Line 174 of 200, streamed one at a time.
+   175. Line 175 of 200, streamed one at a time.
+   176. Line 176 of 200, streamed one at a time.
+   177. Line 177 of 200, streamed one at a time.
+   178. Line 178 of 200, streamed one at a time.
+   179. Line 179 of 200, streamed one at a time.
+   180. Line 180 of 200, streamed one at a time.
+   181. Line 181 of 200, streamed one at a time.
+   182. Line 182 of 200, streamed one at a time.
+ ── ↓ new output · 21 lines below · end to jump to the bottom ─────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                   Fake Small · high effort · 1% context used

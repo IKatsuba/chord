@@ -1,0 +1,24 @@
+   ⎿  Waiting…
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      This turn:    counted when it ends
+      Session time: 19s
+
+ ››› Waiting for permission… (9s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                    │
+│ Write notes/build.md                                                         │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer        Fake Large with a 1M context window

@@ -1,0 +1,24 @@
+Permission fixture: held
+Transcript
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                    │
+│ Write notes.txt                                                              │
+│                                                                              │
+│    1 - old                                                                   │
+│    1 + proposed line 1                                                       │
+│    2 + proposed line 2                                                       │
+│    3 + proposed line 3                                                       │
+│ ── ↓ 57 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │
+│ The safety review held this:                                                 │
+│ This command could overwrite files outside the project. Review the proposed  │
+│ changes before allowing it.                                                  │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Answer: always

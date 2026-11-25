@@ -1,0 +1,25 @@
+Original slow-cancelled-80x24.txt | U7 live slow-cancelled-80x24.txt
+ ▀▄     chord v0.71.0                                                            |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-slow-80                                    |  › slow
+ ▀▀     ? for shortcuts · /help                                                  | 
+                                                                                 |  ⏺ Working.....................................................................
+ › slow                                                                          |    ....................................
+                                                                                 |    ⎿  Interrupted by user
+ ⏺ Working.....................................................................  | 
+   .................................                                             | 
+   ⎿  Interrupted by user                                                        | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |  ctrl+c or ctrl+d to quit

@@ -1,0 +1,24 @@
+
+ ››› Waiting for your answer to the plan… (42s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│   1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│ ❯ Note  ── ↑ 55 lines above · pageup to scroll ───────────────────────────── │
+│         routing change small and test it first. Note line 57: keep the       │
+│         routing change small and test it first. Note line 58: keep the       │
+│         routing change small and test it first. Note line 59: keep the       │
+│         routing change small and test it first. Note line 60: keep the       │
+│         routing change small and test it first. Done.                        │
+│                                                                              │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep       │
+│ planning                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

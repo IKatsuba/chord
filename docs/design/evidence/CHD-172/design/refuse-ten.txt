@@ -1,1 +1,0 @@
-  error: A window opens at most 9 sessions; --resume named 10.

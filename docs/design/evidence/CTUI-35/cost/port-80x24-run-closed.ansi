@@ -1,0 +1,24 @@
+   [2m⎿[0m  [2mThe person closed docs (fake · fake-large, id f91f9a43). It takes no more[0m
+      [2mmessages; open_agent starts another.[0m
+
+ ⏺ Received the message from chord.
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:[0m   $0.0500
+   [2m [0m  [2mTokens in:[0m    4,000
+   [2m [0m  [2mTokens out:[0m   800
+   [2m [0m  [2mCache read:[0m   3,200
+   [2m [0m  [2mSession time:[0m 1m 1s
+   [2m [0m
+   [2m [0m  This session          Cost  Tokens
+   [2m [0m  main               $0.0500   8,000
+   [2m [0m  parser             $0.0125   2,000  agent
+   [2m [0m  docs          not reported       —  agent, closed
+   [2m [0m  Total              $0.0625  10,000  docs not reported
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m
+    [1mmain  [0;2m  fake · Fake Large with a 1M context window · medium  ◦ idle 9s[0m
+    [38;2;108;182;255mparser[2m[39m  fake · Fake Small · medium                           ◦ idle 55s[0m

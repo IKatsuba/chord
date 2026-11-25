@@ -1,0 +1,40 @@
+
+ [2m›[0m /team show bugfix
+   [2m⎿[0m  bugfix · .chord/teams/bugfix.md
+   [2m [0m  [2mFixes a bug end to end — a failing test first, then the fix.[0m
+
+   [2m [0m  lead    fake · fake-large  default      Splits the job, says who edits which files, reports to main
+   [2m [0m  tester  fake · fake-small  acceptEdits  Writes the failing test, then proves the fix
+   [2m [0m  coder   fake · fake-large  plan         Writes the fix, in the files the lead names
+
+   [2m [0m  [1;4mHow bugfix works[0m
+   [2m [0m  [2m1. [0mThe lead reads the job and names who may edit which files.
+   [2m [0m  [2m2. [0mtester writes a test that fails for the bug's own reason, in [38;2;177;185;249mtests/[39m.
+      [2m… +24 lines (ctrl+o to expand)[0m
+
+ [2m›[0m /team run bugfix Fix issue 214.
+
+ [38;2;78;186;101m⏺[39m [1mTeam[0m(bugfix)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mFix issue 214.[0m
+
+ [38;2;108;182;255m←[39m [2mfrom [0;1m[38;2;108;182;255m@bugfix[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/[0m
+      [2mparse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix · fake.
+
+ [2m›[0m /team show bugfix
+   [2m⎿[0m  bugfix · .chord/teams/bugfix.md · working 15s on "Fix issue 214."
+
+   [2m [0m  lead    fake · fake-large  default      [2m◦ idle 13s[0m        [2m✓ new reply[0m    ← from @tester · fake
+   [2m [0m  tester  fake · fake-small  acceptEdits  [38;2;255;193;7m● permission 13s[39m  [2m← new message[0m  Bash(bun dev test tests/parse)
+   [2m [0m  coder   fake · fake-large  plan         [2m◦ idle 12s[0m        [2m✓ new reply[0m    ← from @tester · fake
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;255;193;7m● tester needs your permission · ctrl+x a to go[2m[39m · ? for shortcuts[0m      [2mFake Large with a 1M context window · 1% used[0m
+    [1mmain     [0;2m  fake · Fake Large with a 1M context window · medium         ◦ idle 15s[0m
+    [38;2;108;182;255mbugfix   [2m[39m  team · fake · Fake Large with a 1M context window · medium  ◦ idle 14s        ✓ new reply[0m
+    [2m├─ [0m[38;2;196;156;255mtester[2m[39m  fake · Fake Small · medium                                [0m[38;2;255;193;7m  ● permission 14s[2m[39m  ← new message[0m
+    [2m└─ [0m[38;2;86;212;221mcoder [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 13s        ✓ new reply[0m

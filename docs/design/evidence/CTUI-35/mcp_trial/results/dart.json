@@ -1,0 +1,1450 @@
+{
+  "01 no token": {
+    "request": {
+      "method": "POST",
+      "authorization": "(none)",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Unknown token"
+      },
+      "id": null
+    }
+  },
+  "02 wrong token": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer not-a-token",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Unknown token"
+      },
+      "id": null
+    }
+  },
+  "03 non-initialize without session id": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list"
+      }
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "No session; initialize first"
+      },
+      "id": null
+    }
+  },
+  "04 malformed JSON without session id": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "raw": "{\"jsonrpc\": \"2.0\","
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "No session; initialize first"
+      },
+      "id": null
+    }
+  },
+  "05 initialize with Accept: application/json only": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "accept": "application/json",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 406,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "error": {
+        "code": -32000,
+        "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+      }
+    }
+  },
+  "06 initialize with Content-Type: text/plain": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "contentType": "text/plain",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 415,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "error": {
+        "code": -32000,
+        "message": "Unsupported Media Type: Content-Type must be application/json"
+      }
+    }
+  },
+  "07 GET without session id": {
+    "request": {
+      "method": "GET",
+      "authorization": "Bearer <token-main>",
+      "accept": "text/event-stream"
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "No session; initialize first"
+      },
+      "id": null
+    }
+  },
+  "08 initialize (main)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {
+              "tools": {}
+            },
+            "serverInfo": {
+              "name": "chord",
+              "version": "0.71.0"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "09 notifications/initialized (main)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+      }
+    },
+    "status": 202,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": null
+  },
+  "10 ping": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "ping"
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {}
+        }
+      }
+    ]
+  },
+  "11 unknown session id": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<uuid-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/list"
+      }
+    },
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Session not found"
+      },
+      "id": null
+    }
+  },
+  "12 session with another token": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-task>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/list"
+      }
+    },
+    "status": 403,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Session opened with another token"
+      },
+      "id": null
+    }
+  },
+  "13 tools/list (main)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/list"
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "result": {
+            "tools": [
+              {
+                "name": "send_message",
+                "description": "Sends a message to a long-lived agent you opened.",
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "to": {
+                      "description": "The agent, by the id open_agent answered or by its name",
+                      "type": "string"
+                    },
+                    "text": {
+                      "description": "What to tell it",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "to",
+                    "text"
+                  ]
+                },
+                "execution": {
+                  "taskSupport": "forbidden"
+                }
+              },
+              {
+                "name": "close_agent",
+                "description": "Closes a long-lived agent you opened.",
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "to": {
+                      "description": "The agent, by the id open_agent answered or by its name",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "to"
+                  ]
+                },
+                "execution": {
+                  "taskSupport": "forbidden"
+                }
+              },
+              {
+                "name": "clear_agent",
+                "description": "Clears a long-lived agent you opened.",
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "to": {
+                      "description": "The agent, by the id open_agent answered or by its name",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "to"
+                  ]
+                },
+                "execution": {
+                  "taskSupport": "forbidden"
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "14 initialize (task)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-task>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-2>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {
+              "tools": {}
+            },
+            "serverInfo": {
+              "name": "chord",
+              "version": "0.71.0"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "15 notifications/initialized (task)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-task>",
+      "session": "<session-2>",
+      "body": {
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+      }
+    },
+    "status": 202,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": null
+  },
+  "16 tools/list (task)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-task>",
+      "session": "<session-2>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list"
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-2>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "result": {
+            "tools": [
+              {
+                "name": "send_message",
+                "description": "Sends a message to the agent that started you.",
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "description": "What to tell it",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "text"
+                  ]
+                },
+                "execution": {
+                  "taskSupport": "forbidden"
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "17 tools/call send_message (main)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tools/call",
+        "params": {
+          "name": "send_message",
+          "arguments": {
+            "to": "parser",
+            "text": "hello"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "{\n  \"delivered\": \"sent\",\n  \"to\": \"parser\"\n}"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "18 tools/call close_agent gone (refusal)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/call",
+        "params": {
+          "name": "close_agent",
+          "arguments": {
+            "to": "gone"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 6,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "No agent gone is open in this session; list_sessions names them"
+              }
+            ],
+            "isError": true
+          }
+        }
+      }
+    ]
+  },
+  "19 tools/call close_agent parser": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "tools/call",
+        "params": {
+          "name": "close_agent",
+          "arguments": {
+            "to": "parser"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 7,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "parser has already ended"
+              }
+            ],
+            "structuredContent": {
+              "ended": "parser"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "20 tools/call clear_agent parser": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "tools/call",
+        "params": {
+          "name": "clear_agent",
+          "arguments": {
+            "to": "parser"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 8,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "parser (id a1) has a fresh session; it knows nothing of earlier turns."
+              }
+            ],
+            "structuredContent": {
+              "cleared": "parser",
+              "id": "a1"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "21 tools/call send_message (task)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-task>",
+      "session": "<session-2>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {
+          "name": "send_message",
+          "arguments": {
+            "text": "hello"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-2>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 3,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "{\n  \"delivered\": \"sent\",\n  \"to\": \"parser\"\n}"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "22 task calls close_agent (not in role)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-task>",
+      "session": "<session-2>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+          "name": "close_agent",
+          "arguments": {
+            "to": "parser"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-2>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 4,
+          "error": {
+            "code": -32602,
+            "message": "Tool 'close_agent' not found"
+          }
+        }
+      }
+    ]
+  },
+  "23 missing required argument": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "tools/call",
+        "params": {
+          "name": "send_message",
+          "arguments": {
+            "to": "parser"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 9,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Invalid arguments for tool 'send_message': JsonSchemaValidationException: Required property is missing: text (at )"
+              }
+            ],
+            "isError": true
+          }
+        }
+      }
+    ]
+  },
+  "24 no arguments at all": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "tools/call",
+        "params": {
+          "name": "close_agent"
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 10,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Invalid arguments for tool 'close_agent': JsonSchemaValidationException: Required property is missing: to (at )"
+              }
+            ],
+            "isError": true
+          }
+        }
+      }
+    ]
+  },
+  "25 wrong argument type (to: 5)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "tools/call",
+        "params": {
+          "name": "close_agent",
+          "arguments": {
+            "to": 5
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 11,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "Invalid arguments for tool 'close_agent': JsonSchemaValidationException: Value does not match schema type string (at to)"
+              }
+            ],
+            "isError": true
+          }
+        }
+      }
+    ]
+  },
+  "26 extra unknown argument": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "tools/call",
+        "params": {
+          "name": "close_agent",
+          "arguments": {
+            "to": "parser",
+            "extra": 1
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 12,
+          "result": {
+            "content": [
+              {
+                "type": "text",
+                "text": "parser has already ended"
+              }
+            ],
+            "structuredContent": {
+              "ended": "parser"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "27 unknown tool name": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "tools/call",
+        "params": {
+          "name": "no_such_tool",
+          "arguments": {}
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 13,
+          "error": {
+            "code": -32602,
+            "message": "Tool 'no_such_tool' not found"
+          }
+        }
+      }
+    ]
+  },
+  "28 unknown method": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "no/such_method"
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 14,
+          "error": {
+            "code": -32601,
+            "message": "Method not found: no/such_method"
+          }
+        }
+      }
+    ]
+  },
+  "29 malformed JSON with session id": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "raw": "{\"jsonrpc\": \"2.0\","
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32700,
+        "message": "Parse error",
+        "data": "FormatException: Unexpected end of input (at character 19)\n{\"jsonrpc\": \"2.0\",\n                  ^\n"
+      }
+    }
+  },
+  "30 wrong Accept with session id": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "accept": "application/json",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "tools/list"
+      }
+    },
+    "status": 406,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+      }
+    }
+  },
+  "31 no Accept header with session id": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "accept": "(none)",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 16,
+        "method": "tools/list"
+      }
+    },
+    "status": 406,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Not Acceptable: Client must accept both application/json and text/event-stream"
+      }
+    }
+  },
+  "32 unsupported MCP-Protocol-Version header": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "protocolVersion": "1999-01-01",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "tools/list"
+      }
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 17,
+      "error": {
+        "code": -32022,
+        "message": "Unsupported protocol version",
+        "data": {
+          "requested": "1999-01-01",
+          "supported": [
+            "2026-07-28",
+            "2025-11-25",
+            "2025-06-18",
+            "2025-03-26",
+            "2024-11-05",
+            "2024-10-07"
+          ]
+        }
+      }
+    }
+  },
+  "33 no MCP-Protocol-Version header": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "protocolVersion": "(none)",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "ping"
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-1>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 18,
+          "result": {}
+        }
+      }
+    ]
+  },
+  "34 JSON-RPC batch": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": [
+        {
+          "jsonrpc": "2.0",
+          "id": 19,
+          "method": "ping"
+        },
+        {
+          "jsonrpc": "2.0",
+          "id": 20,
+          "method": "tools/list"
+        }
+      ]
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32600,
+        "message": "Invalid Request: Batch JSON-RPC payloads are not supported"
+      }
+    }
+  },
+  "35 re-initialize on an open session": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 21,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 21,
+      "error": {
+        "code": -32600,
+        "message": "Invalid Request: Server already initialized"
+      }
+    }
+  },
+  "36 invalid JSON-RPC (no jsonrpc field)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "id": 22,
+        "method": "ping"
+      }
+    },
+    "status": 400,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "id": 22,
+      "error": {
+        "code": -32600,
+        "message": "Invalid Request",
+        "data": "FormatException: Invalid JSON-RPC version: null"
+      }
+    }
+  },
+  "37 GET stream on session": {
+    "request": {
+      "method": "GET",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "accept": "text/event-stream"
+    },
+    "failure": "no complete answer within 5 s"
+  },
+  "38 PUT on session": {
+    "request": {
+      "method": "PUT",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "raw": "{}"
+    },
+    "status": 405,
+    "headers": {
+      "content-type": "application/json; charset=utf-8",
+      "allow": "GET, POST, DELETE"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Method not allowed."
+      }
+    }
+  },
+  "39 DELETE session": {
+    "request": {
+      "method": "DELETE",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>"
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": null
+  },
+  "40 reuse deleted session": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-1>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 23,
+        "method": "ping"
+      }
+    },
+    "status": 404,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Session not found"
+      },
+      "id": null
+    }
+  },
+  "41 initialize (main, to revoke)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-3>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {
+              "tools": {}
+            },
+            "serverInfo": {
+              "name": "chord",
+              "version": "0.71.0"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "42 notifications/initialized (main, to revoke)": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-3>",
+      "body": {
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+      }
+    },
+    "status": 202,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": null
+  },
+  "43 revoke main token": {
+    "request": "trial stdin: revoke <token-main>"
+  },
+  "44 call on a revoked token session": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "session": "<session-3>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "send_message",
+          "arguments": {
+            "to": "parser",
+            "text": "hello"
+          }
+        }
+      }
+    },
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Unknown token"
+      },
+      "id": null
+    }
+  },
+  "45 initialize with a revoked token": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-main>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+          "protocolVersion": "2025-11-25",
+          "capabilities": {},
+          "clientInfo": {
+            "name": "trial",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "status": 401,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": {
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -32000,
+        "message": "Unknown token"
+      },
+      "id": null
+    }
+  },
+  "46 task session survives the main revocation": {
+    "request": {
+      "method": "POST",
+      "authorization": "Bearer <token-task>",
+      "session": "<session-2>",
+      "body": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "ping"
+      }
+    },
+    "status": 200,
+    "headers": {
+      "content-type": "text/event-stream; charset=utf-8",
+      "mcp-session-id": "<session-2>",
+      "cache-control": "no-cache, no-transform"
+    },
+    "sse": [
+      {
+        "event": "message",
+        "data": {
+          "jsonrpc": "2.0",
+          "id": 5,
+          "result": {}
+        }
+      }
+    ]
+  }
+}

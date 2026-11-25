@@ -1,0 +1,15 @@
+$ dart run example/chord/bin/chord.dart upgrade --help
+Usage: chord upgrade
+Version: 0.0.1
+
+Upgrade chord executable to latest or given version.
+
+Options:
+  -h, --help                 Show this help.
+  -l, --list-versions        Show available versions.
+      --version=<version>    The version to upgrade to.
+                             (defaults to "latest")
+  -f, --force                Replace current installation even if not out-of-date.
+  -v, --verbose              Log verbose output.
+[exit 0]
+$

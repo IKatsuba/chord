@@ -1,0 +1,10 @@
+ ⏺ fake did not start: it
+   refused session/load:
+   Resource not found:
+   00000000-0000-0000-0000-
+   000000000002
+
+╭──────────────────────────────╮
+│ ›                            │
+╰──────────────────────────────╯
+  ? for shortcuts

@@ -1,0 +1,40 @@
+      Todos
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ [38;2;10;116;112m››[38;2;210;255;228m› [38;2;71;231;165mWaiting for your answer to the plan… [2m(8s)[0m
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ [1m[38;2;177;185;249mApprove Plan[0m                                                                                                         [38;2;177;185;249m│
+│                                                                                                                      [38;2;177;185;249m│
+│ fake has a plan. Do you want to proceed?                                                                             [38;2;177;185;249m│
+│ [38;2;177;185;249m  1. Yes, accept the plan                                                                                            [38;2;177;185;249m│
+│ [38;2;177;185;249m  2. No, keep planning                                                                                               [38;2;177;185;249m│
+│                                                                                                                      [38;2;177;185;249m│
+│ [38;2;177;185;249m❯ [1mNote  [0m step 1 keeps the old routing behind a flag until the tests pass; step 2 keeps the old routing behind a flag [38;2;177;185;249m│
+│          until the tests pass; step 3 keeps the old routing behind a flag until the tests pass; step 4 keeps the old [38;2;177;185;249m│
+│          routing behind a flag until the tests pass; step 5 keeps the old routing behind a flag until the tests pass [38;2;177;185;249m│
+│         ; step 6 keeps the old routing behind a flag until the tests pass; step 7 keeps the old routing behind a fla [38;2;177;185;249m│
+│         g until the tests pass; step 8 keeps the old routing behind a flag until the tests pass; step 9 keeps the ol [38;2;177;185;249m│
+│         d routing behind a flag until the tests pass; step 10 keeps the old routing behind a flag until the tests pa [38;2;177;185;249m│
+│         ss; step 11 keeps the old routing behind a flag until the tests pass; step 12 keeps the old routing behind a [38;2;177;185;249m│
+│          flag until the tests pass; step 13 keeps the old routing behind a flag until the tests pass; step 14 keeps  [38;2;177;185;249m│
+│         the old routing behind a flag until the tests pass; step 15 keeps the old routing behind a flag until the te [38;2;177;185;249m│
+│         sts pass; step 16 keeps the old routing behind a flag until the tests pass; step 17 keeps the old routing be [38;2;177;185;249m│
+│         hind a flag until the tests pass; step 18 keeps the old routing behind a flag until the tests pass; step 19  [38;2;177;185;249m│
+│         keeps the old routing behind a flag until the tests pass; step 20 keeps the old routing behind a flag until  [38;2;177;185;249m│
+│         the tests pass; step 21 keeps the old routing behind a flag until the tests pass; step 22 keeps the old rout [38;2;177;185;249m│
+│         ing behind a flag until the tests pass; step 23 keeps the old routing behind a flag until the tests pass; st [38;2;177;185;249m│
+│         ep 24 keeps the old routing behind a flag until the tests pass; step 25 keeps the old routing behind a flag  [38;2;177;185;249m│
+│         until the tests pass; step 26 keeps the old routing behind a flag until the tests pass; step 27 keeps the ol [38;2;177;185;249m│
+│         d routing behind a flag until the tests pass; step 28 keeps the old routing behind a flag until the tests pa [38;2;177;185;249m│
+│         ss; step 29 keeps the old routing behind a flag until the tests pass; step 30 keeps the old routing behind a [38;2;177;185;249m│
+│          flag until the tests pass                                                                                   [38;2;177;185;249m│
+│                                                                                                                      [38;2;177;185;249m│
+│ [2mEnter to keep planning with this note · ↑ to the options · Esc to keep planning[0m                                      [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                  [2mFake Large with a 1M context window · medium effort[0m

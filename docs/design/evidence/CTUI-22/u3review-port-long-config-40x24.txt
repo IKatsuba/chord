@@ -1,0 +1,24 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────╮
+│ Settings                             │
+│ Change fixture-...for this session.  │
+│                                      │
+│ ❯ 1. Effort      ...label 界👩‍💻  tail │
+│   2. Option long ...tail  Value tail │
+│                                      │
+│ Enter to choose · Esc to close       │
+╰──────────────────────────────────────╯

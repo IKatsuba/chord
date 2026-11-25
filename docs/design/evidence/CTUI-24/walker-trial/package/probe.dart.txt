@@ -1,0 +1,38 @@
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:serverpod_cloud_cli/util/ignore.dart';
+
+void main() {
+  final root = Directory.systemTemp.createTempSync('walker-trial-');
+  void file(String path, [String content = 'sample']) {
+    final f = File(p.join(root.path, path));
+    f.parent.createSync(recursive: true);
+    f.writeAsStringSync(content);
+  }
+  try {
+    file('.gitignore', '*.log\nroot-only.txt\nignored/\n');
+    file('.hidden');
+    file('visible.txt');
+    file('root-only.txt');
+    file('root.log');
+    file('ignored/never.txt');
+    file('.git/config');
+    file('sub/.gitignore', '!keep.log\n/local.txt\n');
+    file('sub/keep.log');
+    file('sub/drop.log');
+    file('sub/local.txt');
+    file('sub/deeper/local.txt');
+    final (found, _) = Ignore.listFiles(
+      listDir: (dir) => Directory(p.join(root.path, dir)).listSync(followLinks: false).map((e) => p.relative(e.path, from: root.path)).where((e) => p.basename(e) != '.git'),
+      ignoreForDir: (dir) {
+        final f = File(p.join(root.path, dir, '.gitignore'));
+        return f.existsSync() ? Ignore(f.readAsLinesSync()) : null;
+      },
+      isDir: (dir) => Directory(p.join(root.path, dir)).existsSync(),
+    );
+    final actual = found.toList()..sort();
+    final expected = ['.gitignore','.hidden','visible.txt','sub/.gitignore','sub/keep.log','sub/deeper/local.txt']..sort();
+    if (actual.join('\n') != expected.join('\n')) throw StateError('Expected $expected, got $actual');
+    print('PASS nested ignore, root rules, child negation, anchoring, dotfiles, nonrepository, file-only, .git exclusion: $actual');
+  } finally { root.deleteSync(recursive: true); }
+}

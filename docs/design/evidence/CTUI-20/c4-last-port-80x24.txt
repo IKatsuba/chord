@@ -1,0 +1,24 @@
+                                   █▄
+                                   ▀██▄
+                                   ▄██▀  chord
+                                   █▀
+           v0.0.1 · <checkout>/CTUI-18
+
+          Select agent
+
+            ↑ 25. qwen-code · Qwen Code
+              26. sigit · siGit Code
+              27. autohand · Autohand Code · not on PATH
+              28. cursor · Cursor
+              29. devin · Devin · not on PATH
+              30. fx
+              31. goose · not on PATH
+              32. junie · Junie · not on PATH
+              33. kiro · Kiro · not on PATH
+              34. openclaw · OpenClaw · not on PATH
+              35. opencode · OpenCode
+              36. poolside · Poolside · not on PATH
+          ❯   37. zeroclaw · ZeroClaw · not on PATH
+
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+

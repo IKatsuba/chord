@@ -1,0 +1,20 @@
+{"columns":120,"rows":40,"name":"click","selected":""}
+{"columns":120,"rows":40,"name":"forward","selected":"This"}
+{"columns":120,"rows":40,"name":"reverse","selected":"This"}
+{"columns":120,"rows":40,"name":"past-right","selected":"This reply came in chunks."}
+{"columns":120,"rows":40,"name":"past-left","selected":"Hello, world. This"}
+{"columns":120,"rows":40,"name":"past-below","selected":"s reply came in chunks."}
+{"columns":120,"rows":40,"name":"past-above","selected":"Hello, world. This"}
+{"columns":120,"rows":40,"name":"cross-entry-direct","selected":"text"}
+{"columns":120,"rows":40,"name":"cross-entry-stepped","selected":"text\nHello, world. This reply came in chunks."}
+{"columns":120,"rows":40,"name":"cross-entry-reverse-stepped","selected":"text\nHello, world. This reply came in chunks."}
+{"columns":80,"rows":24,"name":"click","selected":""}
+{"columns":80,"rows":24,"name":"forward","selected":"This"}
+{"columns":80,"rows":24,"name":"reverse","selected":"This"}
+{"columns":80,"rows":24,"name":"past-right","selected":"This reply came in chunks."}
+{"columns":80,"rows":24,"name":"past-left","selected":"Hello, world. This"}
+{"columns":80,"rows":24,"name":"past-below","selected":"s reply came in chunks."}
+{"columns":80,"rows":24,"name":"past-above","selected":"Hello, world. This"}
+{"columns":80,"rows":24,"name":"cross-entry-direct","selected":"text"}
+{"columns":80,"rows":24,"name":"cross-entry-stepped","selected":"text\nHello, world. This reply came in chunks."}
+{"columns":80,"rows":24,"name":"cross-entry-reverse-stepped","selected":"text\nHello, world. This reply came in chunks."}

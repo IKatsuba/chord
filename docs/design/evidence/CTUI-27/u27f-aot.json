@@ -1,0 +1,37 @@
+{
+  "sourceCommit": "85bccdc02b64ecbd72712c17c1acf17f821c6287",
+  "runtime": "Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"macos_arm64\"",
+  "sourceSha256": {
+    "lib/src/widgets/text_area.dart": "3a25f16950220c7431a23c07d8526d22ccfbd8cf9c02f7c97740aa606141b5ea",
+    "lib/src/text/text_area_span.dart": "1d878dbcb453da3eed63224481ffdb361789a55666c42156459f35b0813e5c42",
+    "test/fixtures/text_area_span_probe.dart": "4d51ec90a8f16c3d2e9134bc3b9123b9182d3611ff1003b7e03f9afb28deec2a"
+  },
+  "jit": {
+    "command": "nice -n 19 dart run test/fixtures/text_area_span_probe.dart 85bccdc02b64ecbd72712c17c1acf17f821c6287",
+    "exitCode": 0,
+    "stderr": "",
+    "result": {
+      "checks": 6,
+      "runtimeRejection": true,
+      "assertionsEnabled": false,
+      "source": "85bccdc02b64ecbd72712c17c1acf17f821c6287"
+    }
+  },
+  "aot": {
+    "compileCommand": "nice -n 19 dart compile exe test/fixtures/text_area_span_probe.dart -o build/text_area_span_probe",
+    "compileExitCode": 0,
+    "runCommand": "nice -n 19 ./build/text_area_span_probe 85bccdc02b64ecbd72712c17c1acf17f821c6287",
+    "runExitCode": 0,
+    "result": {
+      "checks": 6,
+      "runtimeRejection": true,
+      "assertionsEnabled": false,
+      "source": "85bccdc02b64ecbd72712c17c1acf17f821c6287"
+    }
+  },
+  "scope": "Headless build rejection and hidden-handler checks only; no terminal, model, agent or performance claim.",
+  "cleanup": {
+    "binaryRemoved": true,
+    "hostsDisposedPerRuntime": 6
+  }
+}

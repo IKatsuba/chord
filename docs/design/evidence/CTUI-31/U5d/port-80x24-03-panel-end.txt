@@ -1,0 +1,24 @@
+ ──────────────────────────────────────────────────────────────────────────────
+  ── ↑ 18 lines above · pageup to scroll ───────────────────────────────────────
+  esc to interrupt or stop a command
+  shift + tab to cycle modes
+  ctrl + o for verbose output
+  ctrl + c to copy
+  ctrl + x b to pick a code block
+  c r to copy or put in the prompt
+  ctrl + c to clear input
+  ctrl + d or ctrl + c twice to quit
+  ctrl + x a for what waits on you
+  1–9 to pick a choice
+  ↑ ↓ j k ← → to move or change a value
+  enter to pick the highlighted choice
+  esc to reject a permission
+  esc to leave a picker or shortcuts
+  ctrl + a to show all directories
+  ! for shortcuts
+  any key to quit the crash screen
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ! for shortcuts          Fake Large with a 1M context window · medium effort

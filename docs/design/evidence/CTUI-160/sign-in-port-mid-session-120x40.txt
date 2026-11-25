@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/<workspace>/chorded-tui
+ ▀▀     ? for shortcuts · /help
+
+ › hello
+
+ ⏺ fake needs a sign-in: Authentication required
+   ⎿  fake reports Claude Max · name@example.com · Example Org.
+      chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

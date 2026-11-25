@@ -1,0 +1,24 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m[fixture directory][0m
+ █▀     [2m? for shortcuts[0m
+
+ [2m›[0m /model
+   [2m⎿[0m  [2mEffort set to High[0m
+
+ [2m›[0m /model
+   [2m⎿[0m  [2mEffort set to Medium[0m
+
+ [2m›[0m /model
+   [2m⎿[0m  [2mSwitched to Fake Small · High effort[0m
+
+ [2m›[0m /model
+   [2m⎿[0m  [2mSwitched to Fake Large with a 1M context window · Medium effort[0m
+
+ [2m›[0m /model
+ ⏺ Could not switch to Fake Small: The agent exited.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

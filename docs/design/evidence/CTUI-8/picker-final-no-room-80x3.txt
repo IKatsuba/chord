@@ -1,0 +1,3 @@
+Filter:
+Chosen: nothing yet
+/ Edit filter  escape Cancel picker  ctrl+q Quit

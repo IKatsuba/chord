@@ -1,0 +1,24 @@
+   │ bun dev comp │
+   │ ile --all    │
+   │ for bin in d │
+   │ ist/*/chord; │
+   │  do echo "bu │
+   │ ilt $bin"; d │
+   │ one          │
+   └──────────────┘
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected
+      Write notes.
+      txt
+
+ ⏺ Permission:
+   deny.
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+  ↑ ↓ block

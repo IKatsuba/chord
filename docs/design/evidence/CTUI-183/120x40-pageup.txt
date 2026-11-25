@@ -1,0 +1,40 @@
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ ››› Waiting for your answer to the plan… (22s)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  Note line 01: keep the routing change small and test it first. Note line 02: keep the routing change small   │
+│         and test it first. Note line 03: keep the routing change small and test it first. Note line 04: keep the     │
+│         routing change small and test it first. Note line 05: keep the routing change small and test it first. Note  │
+│         line 06: keep the routing change small and test it first. Note line 07: keep the routing change small and    │
+│         test it first. Note line 08: keep the routing change small and test it first. Note line 09: keep the routing │
+│         change small and test it first. Note line 10: keep the routing change small and test it first. Note line 11: │
+│         keep the routing change small and test it first. Note line 12: keep the routing change small and test it     │
+│         first. Note line 13: keep the routing change small and test it first. Note line 14: keep the routing change  │
+│         small and test it first. Note line 15: keep the routing change small and test it first. Note line 16: keep   │
+│         the routing change small and test it first. Note line 17: keep the routing change small and test it first.   │
+│         Note line 18: keep the routing change small and test it first. Note line 19: keep the routing change small   │
+│         and test it first. Note line 20: keep the routing change small and test it first. Note line 21: keep the     │
+│         routing change small and test it first. Note line 22: keep the routing change small and test it first. Note  │
+│         line 23: keep the routing change small and test it first. Note line 24: keep the routing change small and    │
+│         test it first. Note line 25: keep the routing change small and test it first. Note line 26: keep the routing │
+│         change small and test it first. Note line 27: keep the routing change small and test it first. Note line 28: │
+│         keep the routing change small and test it first. Note line 29: keep the routing change small and test it     │
+│         first. Note line 30: keep the routing change small and test it first. Note line 31: keep the routing change  │
+│         small and test it first. Note line 32: keep the routing change small and test it first. Note line 33: keep   │
+│         ── ↓ 17 lines below · pagedown to scroll ─────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

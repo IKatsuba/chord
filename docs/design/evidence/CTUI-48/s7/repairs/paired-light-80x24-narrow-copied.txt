@@ -1,0 +1,25 @@
+ORIGINAL + STUB | PORT + RECORDER
+   │ ord-qa -p >  │  |    │ ↪ chord-qa   │
+   │ /tmp/screen. │  |    │ ↪ -p > /tmp/ │
+   │ txt          │  |    │ ↪ screen.txt │
+   │              │  |    │              │
+   │ echo done    │  |    │   echo done  │
+   └──────────────┘  |    └──────────────┘
+                     | 
+   - a loose item    |    - a loose item
+                     | 
+   - a loose item    |    - a loose item
+     with a box:     |      with a box:
+                     | 
+     ┌─ sh ───────┐  |      ┌ sh ────────┐
+     │ bun dev ch │  |      │   bun dev  │
+     │ eck        │  |      │ ↪ check    │
+     └────────────┘  |      └────────────┘
+                     | 
+   A paragraph       |    A paragraph
+   after.            |    after.
+                     | 
+╭──────────────────╮ | ╭──────────────────╮
+│ ›                │ | │ ›                │
+╰──────────────────╯ | ╰──────────────────╯
+  sent 1...ipboard   |   sent 13 chars to

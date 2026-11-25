@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › /rename the parser
+   ⎿  Renamed to the parser in chord only: fake takes no title, and its own may
+      replace it
+
+ › /rename
+   ⎿  Name the session: /rename <title>. Now: the parser
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  /rename  Rename this session; the agent's own title may replace it
+  /resume  Resume an earlier session, here or from another directory
+  /greet   Say hello from the fake agent
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /re                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

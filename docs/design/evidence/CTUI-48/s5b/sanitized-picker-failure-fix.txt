@@ -1,0 +1,16 @@
+Developer handed pre-fix aggregate (no designer baseline replay):
+00:22 +723 -1: test/ui/app/wheel_panels_test.dart: body-only wheel permission=true fitting=false at Size(120, 40) [E]
+  Expected: same instance as FocusNode:<FocusNode(picker)>
+    Actual: FocusNode:<FocusNode(picker)>
+00:22 +730 -2: test/ui/app/wheel_panels_test.dart: body-only wheel permission=true fitting=false at Size(80, 24) [E]
+  Expected: same instance as FocusNode:<FocusNode(picker)>
+    Actual: FocusNode:<FocusNode(picker)>
+00:37 +1269 -3: test/ui/app/wheel_fake_test.dart: wheel through the original fake bigask body fits or consumes one step at Size(120, 40) [E]
+  Expected: contains '❯ 2.'
+    Actual: '   "overwrite")\n'
+00:51 +1279 -4: test/ui/app/wheel_fake_test.dart: wheel through the original fake bigask body fits or consumes one step at Size(80, 24) [E]
+  Expected: contains '❯ 2.'
+    Actual: '\n'
+
+Developer handed same-byte final aggregate at 97a041f:
+01:39 +1306: All tests passed!

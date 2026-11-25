@@ -1,0 +1,24 @@
+
+ [38;2;78;186;101m⏺[39m [1mOpen[0m(docs)[2m · fake[0m
+   [2m⎿[0m  [2mpermission[0m
+
+ ⏺ Waiting on parser.
+
+ ← [2mfrom [0;1m@parser[0;2m · fake[0m
+   [2m⎿[0m  [2mRan bun dev test tests/parse: 2 failures, both in tests/parse/[0m
+      [2mprinter_test.ts.[0m
+
+ ⏺ Received the message from parser · fake.
+
+ ← [2mfrom [0;1m@parser[0;2m · fake[0m
+   [2m⎿[0m  [2mAll 214 parser tests pass now.[0m
+
+ ⏺ Received the message from parser · fake.
+
+ [2m⏺[0m [2mparser (fake) and docs (fake) were open when this session was left and are[0m
+   [2mnot reopened · /resume lists them[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

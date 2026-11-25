@@ -1,0 +1,132 @@
+=== the named top is the capture cell for cell, the name bold in the agent's colour, at Size(120, 40)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== the named top is the capture cell for cell, the name bold in the agent's colour, at Size(80, 24)
+
+╭─ docs ───────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== news on a hidden child is told once it is picked again, the shown one's scroll untouched, at Size(120, 40)
+   line 35
+
+   line 36
+
+   line 37
+
+   line 38
+
+   line 39
+
+   line 40
+
+   line 41
+
+   line 42
+
+   line 43
+
+   line 44
+
+   line 45
+
+   line 46
+
+   line 47
+
+   line 48
+
+   line 49
+
+ ── ↓ new output · 61 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake               ◦ idle 0s
+    parser  fake · Fake Small  ✻ working 0s
+=== news on a hidden child is told once it is picked again, the shown one's scroll untouched, at Size(80, 24)
+   line 59
+
+   line 60
+
+   line 61
+
+   line 62
+
+   line 63
+
+   line 64
+
+   line 65
+
+ ── ↓ new output · 29 lines below · end to jump to the bottom ─────────────────
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake               ◦ idle 0s
+    parser  fake · Fake Small  ✻ working 0s

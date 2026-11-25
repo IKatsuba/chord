@@ -1,0 +1,40 @@
+ █▄     chord v0.71.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/project
+ █▀     ? for shortcuts · /help
+
+ › selectedteam
+
+ ⏺ Resources
+   ⎿  Read: 17:18:00 UTC · advisory snapshot
+      claude · 5h: 12.345% used · reset 18:18 UTC · models unknown
+      codex · 5h: 12.345% used · reset 18:18 UTC · models unknown
+
+ ⏺ Team(fixture) · claude · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): claude · model fake-small · effort high · mode plan
+      Actual: confirmed · session runtime claude · model fake-small · effort medium · mode plan
+      lead: The requested effort was not confirmed; the runtime effort remains advisory.
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      ctrl+o for saved definition and changes
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 12s
+    fixture  team · claude · Fake Small · medium                   ◦ idle 12s  ✓ new reply

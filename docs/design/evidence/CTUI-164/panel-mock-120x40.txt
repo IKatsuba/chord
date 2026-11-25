@@ -1,0 +1,18 @@
+Mock: the shortcuts panel's entries at 120x40 with section 8's two lines,
+flowed in three columns as the port flows them today (ceil(45/3) rows).
+
+  enter to send                           pgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit
+  tab to send the oldest queued now       shift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you
+  shift or \ + enter for a newline        home end for the top and the bottom     ctrl + x b to pick a code block
+  ctrl + g to edit in $EDITOR             ctrl + c to copy                        c r to copy or put in the prompt
+  ctrl + v to paste an image              / @ @@ for commands, files or agents    1–9 to pick a choice
+  alt + ← → to move by word               ↑ ↓ to pick a completion                ↑ ↓ j k ← → to move or change a value
+  cmd + ← → to line start or end          tab to complete a command               enter to pick the highlighted choice
+  cmd + a to select all input             tab enter to add a file or agent        esc to reject a permission
+  cmd + z to undo, with shift to redo     esc to close completions                esc ← to leave a picker or shortcuts
+  ↑ ↓ for prompts, agents, background     ! for bash mode                         ctrl + a to show all directories
+  x to close an agent, stop background    backspace to leave bash mode            tab ← → ↑ ↓ space to answer forms
+  enter for background, details, a call   esc to interrupt or stop a command      ctrl + c to stop the turn and its form
+  ctrl + r to search prompts              shift + tab to cycle modes              /vim for vim mode
+  tab enter to take a match               ctrl + o for verbose output             ? for shortcuts
+  esc to cancel a search                  ctrl + c to clear input                 any key to quit the crash screen

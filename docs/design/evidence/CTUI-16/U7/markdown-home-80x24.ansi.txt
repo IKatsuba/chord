@@ -1,0 +1,24 @@
+ [1mchord[0;2m v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7[0m
+
+ [2m›[0m markdown
+
+ ⏺ [1;4mReading the session layer[0m
+
+   The [1msession layer[0m wraps [3mthe SDK[0m so the interface never touches a process.
+   Start with [38;2;177;185;249msrc/session/session.ts[39m, then see the [4m[38;2;140;200;255mACP spec[0m
+   [2m(https://agentclientprotocol.com)[0m for the wire format.
+
+   [1mWhat it does[0m
+
+   [2m- [0mopens one persistent session per chord session
+   [2m- [0mstarts turns with [38;2;177;185;249mstartTurn[39m and cancels them
+   [2m  1. [0ma cancel stops the turn at once
+   [2m  2. [0mthe agent is told with [38;2;177;185;249msession/cancel[39m
+   [2m- [0mcloses the agent and waits until its exit is seen
+
+   [2m│ [3mA closed agent counts as gone only once its exit is seen:[0m
+   [2m│ [0m[38;5;244m┌ ts ────────────────────────────────────────────────────────┐[39m
+   [2m│ [0m[38;5;244m│[39m   [38;2;215;166;255mawait[39m session.[38;2;140;200;255mclose[39m(); [38;2;143;150;160m// resolves once the exit is seen[39m [38;5;244m│[39m
+ [2m── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────[0m
+ [2m› [0;7m [0m
+ [2mctrl+c or ctrl+d to quit[0m

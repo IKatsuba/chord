@@ -1,0 +1,24 @@
+ Pick one
+
+Filter: 14
+❯ 1. Choice 14, with a second line
+       under its label
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Chosen: nothing yet
+enter Finish editing filter  escape Finish editing filter  ctrl+q Quit

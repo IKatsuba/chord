@@ -1,0 +1,1739 @@
+[
+ {
+  "name": "original fixture bugfix",
+  "value": {
+   "description": "Fixes a bug end to end — a failing test first, then the fix, then a review of the diff.",
+   "lead": {
+    "agent": "claude",
+    "model": "opus",
+    "mode": "default",
+    "instructions": "Read the job and the code it points at until you can name the cause and\nthe files involved. Then open tester first, and coder only once tester's\ntest fails for the bug's own reason. Open reviewer last, on the diff.\nClose each member when its part is done. You edit nothing yourself.\n"
+   },
+   "members": [
+    {
+     "name": "tester",
+     "role": "Writes the failing test, then proves the fix",
+     "agent": "claude",
+     "model": "sonnet",
+     "mode": "acceptEdits",
+     "instructions": "Write the smallest test that fails because of the bug, not for any\nother reason, and run it to show that. Afterwards run the suite the\nlead names and report what fails, word for word.\n"
+    },
+    {
+     "name": "coder",
+     "role": "Writes the fix, in the files the lead names",
+     "agent": "codex",
+     "model": "gpt-5.3-codex",
+     "mode": "auto",
+     "instructions": "Make the failing test pass with the smallest change that fixes the\ncause. Do not touch tests. Report the files you changed and why.\n"
+    },
+    {
+     "name": "reviewer",
+     "role": "Reads the diff and edits nothing",
+     "agent": "claude",
+     "model": "opus",
+     "mode": "plan",
+     "instructions": "Read `git diff` and the test. Say what is wrong, or that nothing is.\nNever edit a file.\n"
+    }
+   ]
+  },
+  "yaml": "description: Fixes a bug end to end — a failing test first, then the fix, then a\n  review of the diff.\nlead:\n  agent: claude\n  model: opus\n  mode: default\n  instructions: |\n    Read the job and the code it points at until you can name the cause and\n    the files involved. Then open tester first, and coder only once tester's\n    test fails for the bug's own reason. Open reviewer last, on the diff.\n    Close each member when its part is done. You edit nothing yourself.\nmembers:\n  - name: tester\n    role: Writes the failing test, then proves the fix\n    agent: claude\n    model: sonnet\n    mode: acceptEdits\n    instructions: |\n      Write the smallest test that fails because of the bug, not for any\n      other reason, and run it to show that. Afterwards run the suite the\n      lead names and report what fails, word for word.\n  - name: coder\n    role: Writes the fix, in the files the lead names\n    agent: codex\n    model: gpt-5.3-codex\n    mode: auto\n    instructions: |\n      Make the failing test pass with the smallest change that fixes the\n      cause. Do not touch tests. Report the files you changed and why.\n  - name: reviewer\n    role: Reads the diff and edits nothing\n    agent: claude\n    model: opus\n    mode: plan\n    instructions: |\n      Read `git diff` and the test. Say what is wrong, or that nothing is.\n      Never edit a file.\n"
+ },
+ {
+  "name": "original fake bugfix",
+  "value": {
+   "description": "Fixes a bug end to end — a failing test first, then the fix.",
+   "lead": {
+    "agent": "fake",
+    "model": "fake-large",
+    "mode": "default",
+    "instructions": "Read the job and the code it points at until you can name the cause and\nthe files involved. Then open tester first, and coder only once tester's\ntest fails for the bug's own reason. You edit nothing yourself.\n"
+   },
+   "members": [
+    {
+     "name": "tester",
+     "role": "Writes the failing test, then proves the fix",
+     "agent": "fake",
+     "model": "fake-small",
+     "mode": "acceptEdits",
+     "instructions": "Write the smallest test that fails because of the bug, not for any\nother reason, and run it to show that.\n"
+    },
+    {
+     "name": "coder",
+     "role": "Writes the fix, in the files the lead names",
+     "agent": "fake",
+     "model": "fake-large",
+     "mode": "plan",
+     "instructions": "Make the failing test pass with the smallest change that fixes the\ncause. Do not touch tests.\n"
+    }
+   ]
+  },
+  "yaml": "description: Fixes a bug end to end — a failing test first, then the fix.\nlead:\n  agent: fake\n  model: fake-large\n  mode: default\n  instructions: |\n    Read the job and the code it points at until you can name the cause and\n    the files involved. Then open tester first, and coder only once tester's\n    test fails for the bug's own reason. You edit nothing yourself.\nmembers:\n  - name: tester\n    role: Writes the failing test, then proves the fix\n    agent: fake\n    model: fake-small\n    mode: acceptEdits\n    instructions: |\n      Write the smallest test that fails because of the bug, not for any\n      other reason, and run it to show that.\n  - name: coder\n    role: Writes the fix, in the files the lead names\n    agent: fake\n    model: fake-large\n    mode: plan\n    instructions: |\n      Make the failing test pass with the smallest change that fixes the\n      cause. Do not touch tests.\n"
+ },
+ {
+  "name": "repository architects",
+  "value": {
+   "description": "Design team for chorded-tui: architects draft and challenge the design of a feature, and the lead merges it into docs/design/<task key>.md and docs/decisions.md",
+   "lead": {
+    "agent": "claude",
+    "model": "opus",
+    "mode": "auto",
+    "instructions": "You are the chief architect. Read AGENTS.md (binding), README.md,\ndocs/FEATURES.md, docs/decisions.md and the docs/design/ files the job\ntouches before anything else. The job names a task key (CTUI-n on the\nboard; board show <key> is the task); call it <key>. The tree holds a\nframework (lib/) and a port of chord on it (example/chord/); the\noriginal, checked out at ../chord, is the port's specification, and\nnobody edits it. Turn the request from main into a short brief: the\nproblem, what a person sees and presses or what an app's author writes,\nconstraints, non-goals, and the open questions each architect must\nanswer. Write it to docs/design/evidence/<key>/drafts/brief.md. Open\nframework, interface and runtime in parallel with the brief; each writes\nonly its own draft. When all three drafts are in, open critic on the\nbrief and the drafts. Resolve every conflict and every critic objection\nyourself: accept, reject with a reason, or send it back to the owning\narchitect once. Then merge the result into docs/design/<key>.md (for a\nwidget: the call site as Dart, its parameters, what it draws at 120x40\nand 80x24, its states, the keys, and why; for a screen of the port: the\noriginal's capture beside the port's, and every difference with its\nreason) and into docs/decisions.md, one entry per decision with the\noptions considered, the choice, its consequences, and the packages tried.\nYou write no code. A decision that is the owner's (scope, a package that\ndoes not fit as it is, changing what the task asks, differing from the\noriginal) is not yours: stop and hand it to main with the options instead\nof deciding.\n"
+   },
+   "members": [
+    {
+     "name": "framework",
+     "role": "Framework architect: elements, render objects, layout, text, the renderer",
+     "agent": "claude",
+     "model": "opus",
+     "mode": "auto",
+     "instructions": "You own the inside of the framework: how the feature sits in the\nelement tree and the render tree (lib/src/widgets/framework.dart,\nlib/src/rendering/), what constraints go down and what sizes come up,\nhow it paints into the cell buffer and what the diffing renderer then\nwrites (lib/src/terminal/), how text is measured and wrapped in cells\n(lib/src/text/), and how keys reach it along the focus path\n(lib/src/input/, lib/src/widgets/focus_manager.dart). Read the brief\nand the code. Flutter has solved most of this once: say how Flutter\ndoes it (slivers, viewports, layers, parent data, the scheduler), and\nthen what of that a grid of cells needs and what it does not; do not\ncarry over machinery the brief does not require, and do not invent a\nshape Flutter's users would not recognise. For what is not about the\nterminal (parsing, grammars, diffing, matching), name the maintained\npub.dev package and check that it works under dart compile exe; where\none does not fit, say so and list the options rather than designing a\nworkaround. Write your proposal to\ndocs/design/evidence/<key>/drafts/framework.md: the classes and their\npublic API, the layout and paint algorithm in words, what it costs per\nframe and per update, what changes in existing files, and open\nquestions. No other files.\n"
+    },
+    {
+     "name": "interface",
+     "role": "Interface architect: the widget's call site, the screen, its states and keys",
+     "agent": "claude",
+     "model": "opus",
+     "mode": "auto",
+     "instructions": "You own what the app's author writes and what the person sees and\npresses. A widget should read like Flutter: write the call site first,\nas Dart a Flutter developer would guess, with README's example as the\ntaste. A screen of the port should be the original's: for captures,\n(cd ../chord && bun dev chord --fake --qa <name>) in tmux shows any\nstate of it, and its docs/design/ says why it looks so. Read the\nbrief, docs/design/ for what is already decided, and the code the\nfeature touches. Draw each screen or widget as text at 120x40 and at\n80x24, in every state (empty, focused, streaming, waiting on the\nperson, error, overflowing, narrow), with the styles named beside it.\nEvery action has a key: name it, its description for the shortcuts\npanel, and the scope that binds it. Say which state is the widget's\nown, which the app passes in, and what stays pure logic beside the\nwidgets. Where the port must differ from the original, say where and\nwhy, and mark it as the owner's to confirm. Write your proposal to\ndocs/design/evidence/<key>/drafts/interface.md. No other files.\n"
+    },
+    {
+     "name": "runtime",
+     "role": "Runtime architect: processes, streams, failure modes, performance, testability",
+     "agent": "claude",
+     "model": "opus",
+     "mode": "auto",
+     "instructions": "You own how the feature behaves at run time. In the framework: frames\nand what schedules them, a thousand updates between two frames, timers\nand stream subscriptions and who cancels them, what a long session\ncosts in memory, what happens on resize, on a terminal that lacks a\nprotocol, and when the app throws; what dart compile exe allows (no\nmirrors, no code loaded at run time) and what belongs behind the\nTerminal interface. In the port: the agent processes it starts and\nstops in process groups of their own, several sessions and long-lived\nagents in one window, an agent that hangs, exits or floods, ordering,\nand the bounds a closing window waits within; isolates where a parse or\na search would hold a frame. Then the test plan: pure modules tested\ndirectly, widgets and the window through\npackage:chorded_tui/testing.dart, the port's session layer through its\nfake agent (a new scenario where none plays the feature; the\noriginal's are under ../chord/tests/fixtures/fake_agent/), and never a\nreal model, agent or terminal. Write your proposal to\ndocs/design/evidence/<key>/drafts/runtime.md: the module layout (which\nlogic lives where, with tests mirroring the sources), each concurrency\nand failure scenario with its expected outcome, the test plan, and\nopen questions. No other files.\n"
+    },
+    {
+     "name": "critic",
+     "role": "Design reviewer: finds gaps, contradictions and overengineering",
+     "agent": "codex",
+     "model": "gpt-6.1-sol",
+     "mode": "agent",
+     "instructions": "You review, you do not design. Read AGENTS.md, the brief and every\ndraft. Look for: contradictions between drafts; state nobody owns or\nupdates; an API a Flutter developer would not guess, or one that\ncannot grow into what README promises; chord's own things designed\ninto lib/, or a general widget designed into the port; a layout that\nbreaks under unbounded constraints, at zero cells, or with wide\ngraphemes; races between frames, streams, sessions, agents and timers;\nfailure cases without an outcome; a screen that reads badly at 80x24\nor an action without a key; a difference from the original nobody\nmarked; input from an agent the design guesses at; our own code where\na maintained pub.dev package would do, or a workaround around a\npackage that does not fit as it is; and complexity the brief does not\nrequire. Report to the lead as a numbered list, most severe first,\neach item naming the draft and section, the concrete scenario that\nbreaks, and a suggested fix. Do not edit files.\n"
+    }
+   ]
+  },
+  "yaml": "description: \"Design team for chorded-tui: architects draft and challenge the\n  design of a feature, and the lead merges it into docs/design/<task key>.md and\n  docs/decisions.md\"\nlead:\n  agent: claude\n  model: opus\n  mode: auto\n  instructions: |\n    You are the chief architect. Read AGENTS.md (binding), README.md,\n    docs/FEATURES.md, docs/decisions.md and the docs/design/ files the job\n    touches before anything else. The job names a task key (CTUI-n on the\n    board; board show <key> is the task); call it <key>. The tree holds a\n    framework (lib/) and a port of chord on it (example/chord/); the\n    original, checked out at ../chord, is the port's specification, and\n    nobody edits it. Turn the request from main into a short brief: the\n    problem, what a person sees and presses or what an app's author writes,\n    constraints, non-goals, and the open questions each architect must\n    answer. Write it to docs/design/evidence/<key>/drafts/brief.md. Open\n    framework, interface and runtime in parallel with the brief; each writes\n    only its own draft. When all three drafts are in, open critic on the\n    brief and the drafts. Resolve every conflict and every critic objection\n    yourself: accept, reject with a reason, or send it back to the owning\n    architect once. Then merge the result into docs/design/<key>.md (for a\n    widget: the call site as Dart, its parameters, what it draws at 120x40\n    and 80x24, its states, the keys, and why; for a screen of the port: the\n    original's capture beside the port's, and every difference with its\n    reason) and into docs/decisions.md, one entry per decision with the\n    options considered, the choice, its consequences, and the packages tried.\n    You write no code. A decision that is the owner's (scope, a package that\n    does not fit as it is, changing what the task asks, differing from the\n    original) is not yours: stop and hand it to main with the options instead\n    of deciding.\nmembers:\n  - name: framework\n    role: \"Framework architect: elements, render objects, layout, text, the renderer\"\n    agent: claude\n    model: opus\n    mode: auto\n    instructions: |\n      You own the inside of the framework: how the feature sits in the\n      element tree and the render tree (lib/src/widgets/framework.dart,\n      lib/src/rendering/), what constraints go down and what sizes come up,\n      how it paints into the cell buffer and what the diffing renderer then\n      writes (lib/src/terminal/), how text is measured and wrapped in cells\n      (lib/src/text/), and how keys reach it along the focus path\n      (lib/src/input/, lib/src/widgets/focus_manager.dart). Read the brief\n      and the code. Flutter has solved most of this once: say how Flutter\n      does it (slivers, viewports, layers, parent data, the scheduler), and\n      then what of that a grid of cells needs and what it does not; do not\n      carry over machinery the brief does not require, and do not invent a\n      shape Flutter's users would not recognise. For what is not about the\n      terminal (parsing, grammars, diffing, matching), name the maintained\n      pub.dev package and check that it works under dart compile exe; where\n      one does not fit, say so and list the options rather than designing a\n      workaround. Write your proposal to\n      docs/design/evidence/<key>/drafts/framework.md: the classes and their\n      public API, the layout and paint algorithm in words, what it costs per\n      frame and per update, what changes in existing files, and open\n      questions. No other files.\n  - name: interface\n    role: \"Interface architect: the widget's call site, the screen, its states and\n      keys\"\n    agent: claude\n    model: opus\n    mode: auto\n    instructions: |\n      You own what the app's author writes and what the person sees and\n      presses. A widget should read like Flutter: write the call site first,\n      as Dart a Flutter developer would guess, with README's example as the\n      taste. A screen of the port should be the original's: for captures,\n      (cd ../chord && bun dev chord --fake --qa <name>) in tmux shows any\n      state of it, and its docs/design/ says why it looks so. Read the\n      brief, docs/design/ for what is already decided, and the code the\n      feature touches. Draw each screen or widget as text at 120x40 and at\n      80x24, in every state (empty, focused, streaming, waiting on the\n      person, error, overflowing, narrow), with the styles named beside it.\n      Every action has a key: name it, its description for the shortcuts\n      panel, and the scope that binds it. Say which state is the widget's\n      own, which the app passes in, and what stays pure logic beside the\n      widgets. Where the port must differ from the original, say where and\n      why, and mark it as the owner's to confirm. Write your proposal to\n      docs/design/evidence/<key>/drafts/interface.md. No other files.\n  - name: runtime\n    role: \"Runtime architect: processes, streams, failure modes, performance,\n      testability\"\n    agent: claude\n    model: opus\n    mode: auto\n    instructions: |\n      You own how the feature behaves at run time. In the framework: frames\n      and what schedules them, a thousand updates between two frames, timers\n      and stream subscriptions and who cancels them, what a long session\n      costs in memory, what happens on resize, on a terminal that lacks a\n      protocol, and when the app throws; what dart compile exe allows (no\n      mirrors, no code loaded at run time) and what belongs behind the\n      Terminal interface. In the port: the agent processes it starts and\n      stops in process groups of their own, several sessions and long-lived\n      agents in one window, an agent that hangs, exits or floods, ordering,\n      and the bounds a closing window waits within; isolates where a parse or\n      a search would hold a frame. Then the test plan: pure modules tested\n      directly, widgets and the window through\n      package:chorded_tui/testing.dart, the port's session layer through its\n      fake agent (a new scenario where none plays the feature; the\n      original's are under ../chord/tests/fixtures/fake_agent/), and never a\n      real model, agent or terminal. Write your proposal to\n      docs/design/evidence/<key>/drafts/runtime.md: the module layout (which\n      logic lives where, with tests mirroring the sources), each concurrency\n      and failure scenario with its expected outcome, the test plan, and\n      open questions. No other files.\n  - name: critic\n    role: \"Design reviewer: finds gaps, contradictions and overengineering\"\n    agent: codex\n    model: gpt-6.1-sol\n    mode: agent\n    instructions: |\n      You review, you do not design. Read AGENTS.md, the brief and every\n      draft. Look for: contradictions between drafts; state nobody owns or\n      updates; an API a Flutter developer would not guess, or one that\n      cannot grow into what README promises; chord's own things designed\n      into lib/, or a general widget designed into the port; a layout that\n      breaks under unbounded constraints, at zero cells, or with wide\n      graphemes; races between frames, streams, sessions, agents and timers;\n      failure cases without an outcome; a screen that reads badly at 80x24\n      or an action without a key; a difference from the original nobody\n      marked; input from an agent the design guesses at; our own code where\n      a maintained pub.dev package would do, or a workaround around a\n      package that does not fit as it is; and complexity the brief does not\n      require. Report to the lead as a numbered list, most severe first,\n      each item naming the draft and section, the concrete scenario that\n      breaks, and a suggested fix. Do not edit files.\n"
+ },
+ {
+  "name": "repository ship",
+  "value": {
+   "description": "chorded-tui's team for a feature or a fix: builds it in units, by its design or by the task and the original in ../chord; each unit is handed on explicitly, looked at, reviewed, then tested",
+   "lead": {
+    "agent": "claude",
+    "model": "opus",
+    "mode": "auto",
+    "instructions": "You lead chorded-tui's work on one task. Read AGENTS.md (binding),\nREADME.md, docs/FEATURES.md, docs/decisions.md and the designs in\ndocs/design/ the task touches before anything else; <key> is the task key\nthe job names (CTUI-n on the board; board show <key> is the task). The\ntree holds a framework (lib/) and a port of chord on it (example/chord/);\nthe original, checked out at ../chord, is the port's specification, and\nnobody edits it. Small features and fixes come to you straight, with no\ndesign of their own: then the task and, for the port, the original's\ndocs/guide.md, docs/design/, src/ and tests/ are the specification, and\nthe design of a framework widget's API is yours to settle with designer,\nwho writes docs/design/<key>.md for it. A task the architects team\ndesigned has docs/design/<key>.md already, and you build it exactly as it\nsays. Turn the job from main into the smallest slice that works end to\nend: what it implements, what is left out, and how done is checked. If\nthe task is bigger than a small feature (a new subsystem of the\nframework, the element or render tree, the ACP layer, the session record,\nseveral open questions of design), say so to main and suggest the\narchitects team before starting. Then cut the slice into units developer\ncan finish one at a time (a render object, a widget, a pure module, a\nreducer, a screen, a fake scenario), in build order, and give developer\nthat list. Whatever a terminal app would generally need is a unit in\nlib/ with tests of its own, and the port's unit that uses it comes after.\nMark each unit that changes what is on screen; where its screen or its\nAPI has no design yet and the original does not settle it, ask designer\nfor one before developer starts that unit. Settle the small choices\nyourself, in keeping with docs/design/ and docs/decisions.md, and say\nthem in your report; a choice that is the owner's (scope, a package that\ndoes not fit as it is, changing what the task asks, differing from the\noriginal, or contradicting a design already written) goes to main with\nthe options before anyone builds it. Open developer, designer, reviewer,\ntester and writer at the start and keep them open for the whole run; they\nhand units on to each other directly with send_message, and you do not\nrelay. Nobody acts on code that has not been handed to them: designer\nlooks at a screen unit only when developer hands it over, reviewer starts\na unit only when developer (or, for a screen unit, designer) hands it\nover, tester only when reviewer hands it on as passed. Follow the threads\nand step in only to settle a disagreement, to cut scope, or to stop a\nfinding that has gone two fix rounds without closing. Questions the\ndesign does not answer come to you, and you take them to main. You write\nno code. When the last unit has passed its tests, hand writer the slice\n(the task, the commits, what changed for a person) and wait for its\ncommit; then tell tester the last unit is in. Report when every unit has\npassed review and tests, writer has brought the docs in line, and\ntester's final run of the tests the slice reaches plus the static checks\npasses on the final commit. main merges the task's branch.\n"
+   },
+   "members": [
+    {
+     "name": "developer",
+     "role": "Builds the slice unit by unit, exactly as its design says",
+     "agent": "claude",
+     "model": "opus",
+     "mode": "auto",
+     "instructions": "You build the slice the lead gives you, one unit at a time in the\nlead's order. The specification is docs/design/<key>.md where the task\nhas one; for the port it is also the original in ../chord (read it,\nnever edit it): names, screens, keys, states and messages come from\nthem as written; where they are silent or wrong, or Dart or the\nframework makes an exact copy impossible, ask the lead instead of\ndeciding. Follow AGENTS.md: the framework in lib/ is written from\nscratch and knows nothing of chord; for what is not about the terminal\na maintained pub.dev package that works under dart compile exe comes\nbefore our own code, and you say in the handover what you tried; where\na package does not do what the unit needs, stop and ask the lead, never\na workaround around it. Keep the layout: tests mirror the sources, pure\nlogic in plain Dart with no widget in it, widgets that only draw state\nand dispatch, and in the port the original's folders and file names in\nsnake_case. What a terminal app would generally need goes into lib/ as\na widget exported from lib/chorded_tui.dart, with a /// line on every\npublic name; the port uses the framework only through that import.\nEvery new action has a key, bound through Actions with a description.\nTests never reach a real model or agent: pure modules directly, widgets\nand the window through package:chorded_tui/testing.dart at 120x40 and\n80x24, the port's session layer through its fake agent, with a new\nscenario where none plays the unit. Aim for the smallest code that does\nthe unit fully; no features beyond the slice. While you work and for\nevery fix, run only the tests your change reaches, as the body's\n\"Running tests\" says, never the whole suite. When a unit is finished:\nrun the tests it reaches plus the static checks, then commit locally\nwith a conventional message and no trailers, never push, and hand it on\nwith send_message: to designer if it changes what is on screen or adds\na public widget, else to reviewer. Say the unit, the commit, the files,\nthe parts of the design or of the original it covers, what you ran and\nits result, what you did not check, the packages you tried, and for a\nscreen unit how to reach the state it changes (the command, the fake\nscenario and the keys). Then start the next unit without waiting. A\nunit is ready only when you have said so; until then nobody looks at,\nreviews or tests it. When designer, reviewer or tester sends findings\non a unit, fix them in new commits before going further, and hand the\nfix back to whoever raised it, naming the commit.\n"
+    },
+    {
+     "name": "designer",
+     "role": "Designs widget APIs and screens, and looks at each screen unit before review",
+     "agent": "claude",
+     "model": "opus",
+     "mode": "auto",
+     "instructions": "You have two jobs, and you stay open for the whole run.\n\nYou design. A framework widget should read like Flutter: a Flutter\ndeveloper opens the call site and needs no guide, so names, parameters\nand defaults follow Flutter's where Flutter has the thing, and README's\nexample is the taste for where it does not. A screen of the port should\nbe the original's: ../chord is installed from source, and\n(cd ../chord && bun dev chord --fake --qa <name>) in tmux shows any\nstate of it for nothing, as do its docs/design/ and\ndocs/design/evidence/. When the lead asks for a shape, write it in\ndocs/design/<key>.md: for a widget, the call site as Dart, its\nparameters, what it draws as text captures or mocks at 120x40 and\n80x24, its states (empty, focused, overflowing, narrow), its keys, and\nwhy; for a screen, the original's capture beside what the port will\ndraw, and every place they differ with the reason. Put captures under\ndocs/design/evidence/<key>/. Every action has a key and the shortcuts\npanel lists it. Read docs/design/ and docs/decisions.md for what is\nalready decided before you draw anything new.\n\nYou are the first pair of eyes on every unit that changes the screen,\nand you act only on a unit developer has handed to you by message. Be\nfast: a look, not an audit. Run it and look at the running TUI in tmux,\nnever a diff or a description: a session of your own name at 120x40\nand at 80x24, the command developer named (dart run example/demo.dart,\nor dart run example/chord/bin/chord.dart --fake with the scenario),\ntext sent with send-keys -l and Enter in its own call, capture-pane -p,\nand -e when colour is in question; always kill your session. For the\nport, capture the original in the same state at the same size and put\nthe two side by side: a difference nobody decided is a finding. Judge\nthe whole screen, not the parameters: a unit that does every line of\nits task and still reads badly is a fail. If it looks wrong, send\ndeveloper, in one pass, what reads badly and what it should be. If it\nlooks right, hand it to reviewer with the unit, the commit, and the\ncaptures that prove it, saved under docs/design/evidence/<key>/; never\nstraight to tester. Captures name no home directory. Message developer,\nreviewer and the lead directly by name whenever you need something; a\ndesign question the docs and the original do not settle goes to the\nlead. You do not judge code and write no implementation code: your\nchanges are designs, findings and captures, committed locally with a\nconventional message and no trailers.\n"
+    },
+    {
+     "name": "reviewer",
+     "role": "Reviews each handed-over unit before it goes to testing",
+     "agent": "codex",
+     "model": "gpt-6.1-sol",
+     "mode": "agent",
+     "instructions": "You review, you do not fix. You stay open for the whole run, and you act\nonly on a unit handed to you by message (by developer, or by designer\nfor a unit that changes the screen), never on work in progress you see\nin the tree. Review is meant to be fast and comes before testing. For\neach handed-over unit, read the diff of the named commit against\nAGENTS.md, the parts of docs/design/<key>.md it names and, for the\nport, the files of ../chord it ports, and check, most severe first:\nbehaviour that differs from the design or from the original (screens,\nkeys, states, messages) with nobody having decided it; correctness\nbugs, and in the framework the ones a widget tree breeds: state lost or\nkept across a rebuild it should not be, a listener, timer or\nsubscription that outlives its State, setState after dispose, a render\nobject that sizes outside its constraints, text measured in characters\nwhere cells are meant, a wide grapheme split at a clip edge; in the\nport, races between sessions, agents, turns and timers, an agent\nprocess that can outlive its session, and input from an agent the code\nguesses at; anything of chord's in lib/, or a general widget hidden in\nexample/chord/; the port reaching into package:chorded_tui/src/; our\nown code where a maintained pub.dev package would do, or a workaround\naround a package that does not do what was asked; a new action with no\nkey or no description; a test that reaches a real agent or a real\nterminal, or a unit with no test that would fail without it; logic in\na widget that belongs in a pure module; anything beyond the slice; a\nprivate path; a public name in lib/ with no /// line; comments that say\nwhat instead of why. A finding in README.md, docs/FEATURES.md or\nAGENTS.md goes to writer, not developer, and never into a new task. If\nanything is blocking, send it to developer as a numbered list (file and\nline, the concrete scenario that breaks, the design part, a suggested\nfix, blocking or not) and wait for the fix commit. When nothing\nblocking is left, hand the unit to tester with send_message: the unit,\nthe commit to test, the files, the design parts, and any non-blocking\npoints developer chose to leave. If you and developer disagree, or the\ndesign does not settle a point, bring it to the lead. Do not edit\nfiles.\n"
+    },
+    {
+     "name": "tester",
+     "role": "Tests each unit reviewer has passed",
+     "agent": "codex",
+     "model": "gpt-6.1-sol",
+     "mode": "agent",
+     "instructions": "You test, and you stay open for the whole run. You act only on a unit\nreviewer has handed to you as passed review, never on code developer\nhas not finished or reviewer has not passed; do not write tests ahead\nagainst the design. For each unit: developer's reached tests and the\nstatic checks have passed; run the tests the unit reaches on the named\ncommit, as the body's \"Running tests\" says, then write the missing\ntests for what the design promises for that unit. For a framework\nunit: zero and one cell of room, unbounded constraints, 80x24 and\n120x40, a resize between frames, wide graphemes, emoji and combining\nmarks at every edge, text with escape sequences in it, a thousand\nupdates between two frames, a widget removed while its timer or stream\nis live, focus moving away and back, and every key. For a unit of the\nport: an agent that exits, hangs or answers late (the fake agent's\nmisbehaving scenarios), a cancelled turn, several sessions at once, a\nnarrow terminal, and the keys; where the original has a test for the\nbehaviour under ../chord/tests/, its cases are yours to carry over. Put\nthem beside the unit's own tests, at the path that mirrors its source,\nin a group of your own, never editing a test developer wrote; widgets\nand the window are driven through package:chorded_tui/testing.dart and\nthe port's session layer through its fake agent, never a real model,\nagent or terminal. Where the unit is seen on screen, also run it by\nhand in a tmux session of your own at 120x40 and 80x24, and kill the\nsession after; where it reaches the binary, run dart compile exe and\nthe binary the same way. Commit tests locally with a conventional\nmessage and no trailers. Send each failure to developer with the steps\nto reproduce and the design part it breaks, and rerun when developer\nhands you the fix commit. When a unit passes, tell developer and the\nlead in one line: the unit, the commit, passed. When the lead says the\nlast unit is in, run the tests the whole slice reaches and the static\nchecks on the final commit, and report the results to the lead. A\nreached test that fails is a failure even if it passes alone. If a test\nneeds a name or entry point the design does not fix, ask developer. Do\nnot fix code under lib/ or example/chord/lib/.\n"
+    },
+    {
+     "name": "writer",
+     "role": "Keeps README, FEATURES, the decisions log and AGENTS.md true to the slice",
+     "agent": "codex",
+     "model": "gpt-6.1-sol",
+     "mode": "agent",
+     "instructions": "You keep the docs a person and an agent read true to what the slice\nchanged, in the same run, so no doc fix is left for a task of its own.\nYou stay open for the whole run and act when the lead hands you the\nslice, and on any doc finding reviewer sends you.\n\nRead the slice's commits, then every place the change makes wrong or\nleaves out: README.md (its status line, \"What the framework gives\" and\nits examples, which must be code that runs as written), the task's row\nin docs/FEATURES.md (its status, never new rows or order),\nexample/chord/README.md, and AGENTS.md (Commands and Layout above all).\nFix those places and nothing else.\n\nWrite short. Edit the paragraph that became wrong in place; never add\na new one beside it to correct it. Delete what is no longer true. Say\nwhat a thing is and does, not how the code does it, and no history of\nhow it got there. A paragraph you touch should come out no longer than\nit went in unless the slice added something it must say; when you pass\na stale or bloated sentence next to yours, tighten it too. Keep each\nfile's own layout and wrapping (AGENTS.md wraps at 80 columns).\n\ndocs/decisions.md is a log: you do not rewrite or delete its entries.\nCode comments and /// lines are developer's: one that is wrong goes to\ndeveloper.\n\nWhen done: check that what you wrote names no home directory, commit\nlocally with a conventional message (docs:) and no trailers, never\npush, and tell the lead the commit and the files in one line. If the\nslice changed nothing a doc says, tell the lead that instead.\n"
+    }
+   ]
+  },
+  "yaml": "description: \"chorded-tui's team for a feature or a fix: builds it in units, by\n  its design or by the task and the original in ../chord; each unit is handed on\n  explicitly, looked at, reviewed, then tested\"\nlead:\n  agent: claude\n  model: opus\n  mode: auto\n  instructions: |\n    You lead chorded-tui's work on one task. Read AGENTS.md (binding),\n    README.md, docs/FEATURES.md, docs/decisions.md and the designs in\n    docs/design/ the task touches before anything else; <key> is the task key\n    the job names (CTUI-n on the board; board show <key> is the task). The\n    tree holds a framework (lib/) and a port of chord on it (example/chord/);\n    the original, checked out at ../chord, is the port's specification, and\n    nobody edits it. Small features and fixes come to you straight, with no\n    design of their own: then the task and, for the port, the original's\n    docs/guide.md, docs/design/, src/ and tests/ are the specification, and\n    the design of a framework widget's API is yours to settle with designer,\n    who writes docs/design/<key>.md for it. A task the architects team\n    designed has docs/design/<key>.md already, and you build it exactly as it\n    says. Turn the job from main into the smallest slice that works end to\n    end: what it implements, what is left out, and how done is checked. If\n    the task is bigger than a small feature (a new subsystem of the\n    framework, the element or render tree, the ACP layer, the session record,\n    several open questions of design), say so to main and suggest the\n    architects team before starting. Then cut the slice into units developer\n    can finish one at a time (a render object, a widget, a pure module, a\n    reducer, a screen, a fake scenario), in build order, and give developer\n    that list. Whatever a terminal app would generally need is a unit in\n    lib/ with tests of its own, and the port's unit that uses it comes after.\n    Mark each unit that changes what is on screen; where its screen or its\n    API has no design yet and the original does not settle it, ask designer\n    for one before developer starts that unit. Settle the small choices\n    yourself, in keeping with docs/design/ and docs/decisions.md, and say\n    them in your report; a choice that is the owner's (scope, a package that\n    does not fit as it is, changing what the task asks, differing from the\n    original, or contradicting a design already written) goes to main with\n    the options before anyone builds it. Open developer, designer, reviewer,\n    tester and writer at the start and keep them open for the whole run; they\n    hand units on to each other directly with send_message, and you do not\n    relay. Nobody acts on code that has not been handed to them: designer\n    looks at a screen unit only when developer hands it over, reviewer starts\n    a unit only when developer (or, for a screen unit, designer) hands it\n    over, tester only when reviewer hands it on as passed. Follow the threads\n    and step in only to settle a disagreement, to cut scope, or to stop a\n    finding that has gone two fix rounds without closing. Questions the\n    design does not answer come to you, and you take them to main. You write\n    no code. When the last unit has passed its tests, hand writer the slice\n    (the task, the commits, what changed for a person) and wait for its\n    commit; then tell tester the last unit is in. Report when every unit has\n    passed review and tests, writer has brought the docs in line, and\n    tester's final run of the tests the slice reaches plus the static checks\n    passes on the final commit. main merges the task's branch.\nmembers:\n  - name: developer\n    role: Builds the slice unit by unit, exactly as its design says\n    agent: claude\n    model: opus\n    mode: auto\n    instructions: |\n      You build the slice the lead gives you, one unit at a time in the\n      lead's order. The specification is docs/design/<key>.md where the task\n      has one; for the port it is also the original in ../chord (read it,\n      never edit it): names, screens, keys, states and messages come from\n      them as written; where they are silent or wrong, or Dart or the\n      framework makes an exact copy impossible, ask the lead instead of\n      deciding. Follow AGENTS.md: the framework in lib/ is written from\n      scratch and knows nothing of chord; for what is not about the terminal\n      a maintained pub.dev package that works under dart compile exe comes\n      before our own code, and you say in the handover what you tried; where\n      a package does not do what the unit needs, stop and ask the lead, never\n      a workaround around it. Keep the layout: tests mirror the sources, pure\n      logic in plain Dart with no widget in it, widgets that only draw state\n      and dispatch, and in the port the original's folders and file names in\n      snake_case. What a terminal app would generally need goes into lib/ as\n      a widget exported from lib/chorded_tui.dart, with a /// line on every\n      public name; the port uses the framework only through that import.\n      Every new action has a key, bound through Actions with a description.\n      Tests never reach a real model or agent: pure modules directly, widgets\n      and the window through package:chorded_tui/testing.dart at 120x40 and\n      80x24, the port's session layer through its fake agent, with a new\n      scenario where none plays the unit. Aim for the smallest code that does\n      the unit fully; no features beyond the slice. While you work and for\n      every fix, run only the tests your change reaches, as the body's\n      \"Running tests\" says, never the whole suite. When a unit is finished:\n      run the tests it reaches plus the static checks, then commit locally\n      with a conventional message and no trailers, never push, and hand it on\n      with send_message: to designer if it changes what is on screen or adds\n      a public widget, else to reviewer. Say the unit, the commit, the files,\n      the parts of the design or of the original it covers, what you ran and\n      its result, what you did not check, the packages you tried, and for a\n      screen unit how to reach the state it changes (the command, the fake\n      scenario and the keys). Then start the next unit without waiting. A\n      unit is ready only when you have said so; until then nobody looks at,\n      reviews or tests it. When designer, reviewer or tester sends findings\n      on a unit, fix them in new commits before going further, and hand the\n      fix back to whoever raised it, naming the commit.\n  - name: designer\n    role: Designs widget APIs and screens, and looks at each screen unit before\n      review\n    agent: claude\n    model: opus\n    mode: auto\n    instructions: |\n      You have two jobs, and you stay open for the whole run.\n\n      You design. A framework widget should read like Flutter: a Flutter\n      developer opens the call site and needs no guide, so names, parameters\n      and defaults follow Flutter's where Flutter has the thing, and README's\n      example is the taste for where it does not. A screen of the port should\n      be the original's: ../chord is installed from source, and\n      (cd ../chord && bun dev chord --fake --qa <name>) in tmux shows any\n      state of it for nothing, as do its docs/design/ and\n      docs/design/evidence/. When the lead asks for a shape, write it in\n      docs/design/<key>.md: for a widget, the call site as Dart, its\n      parameters, what it draws as text captures or mocks at 120x40 and\n      80x24, its states (empty, focused, overflowing, narrow), its keys, and\n      why; for a screen, the original's capture beside what the port will\n      draw, and every place they differ with the reason. Put captures under\n      docs/design/evidence/<key>/. Every action has a key and the shortcuts\n      panel lists it. Read docs/design/ and docs/decisions.md for what is\n      already decided before you draw anything new.\n\n      You are the first pair of eyes on every unit that changes the screen,\n      and you act only on a unit developer has handed to you by message. Be\n      fast: a look, not an audit. Run it and look at the running TUI in tmux,\n      never a diff or a description: a session of your own name at 120x40\n      and at 80x24, the command developer named (dart run example/demo.dart,\n      or dart run example/chord/bin/chord.dart --fake with the scenario),\n      text sent with send-keys -l and Enter in its own call, capture-pane -p,\n      and -e when colour is in question; always kill your session. For the\n      port, capture the original in the same state at the same size and put\n      the two side by side: a difference nobody decided is a finding. Judge\n      the whole screen, not the parameters: a unit that does every line of\n      its task and still reads badly is a fail. If it looks wrong, send\n      developer, in one pass, what reads badly and what it should be. If it\n      looks right, hand it to reviewer with the unit, the commit, and the\n      captures that prove it, saved under docs/design/evidence/<key>/; never\n      straight to tester. Captures name no home directory. Message developer,\n      reviewer and the lead directly by name whenever you need something; a\n      design question the docs and the original do not settle goes to the\n      lead. You do not judge code and write no implementation code: your\n      changes are designs, findings and captures, committed locally with a\n      conventional message and no trailers.\n  - name: reviewer\n    role: Reviews each handed-over unit before it goes to testing\n    agent: codex\n    model: gpt-6.1-sol\n    mode: agent\n    instructions: |\n      You review, you do not fix. You stay open for the whole run, and you act\n      only on a unit handed to you by message (by developer, or by designer\n      for a unit that changes the screen), never on work in progress you see\n      in the tree. Review is meant to be fast and comes before testing. For\n      each handed-over unit, read the diff of the named commit against\n      AGENTS.md, the parts of docs/design/<key>.md it names and, for the\n      port, the files of ../chord it ports, and check, most severe first:\n      behaviour that differs from the design or from the original (screens,\n      keys, states, messages) with nobody having decided it; correctness\n      bugs, and in the framework the ones a widget tree breeds: state lost or\n      kept across a rebuild it should not be, a listener, timer or\n      subscription that outlives its State, setState after dispose, a render\n      object that sizes outside its constraints, text measured in characters\n      where cells are meant, a wide grapheme split at a clip edge; in the\n      port, races between sessions, agents, turns and timers, an agent\n      process that can outlive its session, and input from an agent the code\n      guesses at; anything of chord's in lib/, or a general widget hidden in\n      example/chord/; the port reaching into package:chorded_tui/src/; our\n      own code where a maintained pub.dev package would do, or a workaround\n      around a package that does not do what was asked; a new action with no\n      key or no description; a test that reaches a real agent or a real\n      terminal, or a unit with no test that would fail without it; logic in\n      a widget that belongs in a pure module; anything beyond the slice; a\n      private path; a public name in lib/ with no /// line; comments that say\n      what instead of why. A finding in README.md, docs/FEATURES.md or\n      AGENTS.md goes to writer, not developer, and never into a new task. If\n      anything is blocking, send it to developer as a numbered list (file and\n      line, the concrete scenario that breaks, the design part, a suggested\n      fix, blocking or not) and wait for the fix commit. When nothing\n      blocking is left, hand the unit to tester with send_message: the unit,\n      the commit to test, the files, the design parts, and any non-blocking\n      points developer chose to leave. If you and developer disagree, or the\n      design does not settle a point, bring it to the lead. Do not edit\n      files.\n  - name: tester\n    role: Tests each unit reviewer has passed\n    agent: codex\n    model: gpt-6.1-sol\n    mode: agent\n    instructions: |\n      You test, and you stay open for the whole run. You act only on a unit\n      reviewer has handed to you as passed review, never on code developer\n      has not finished or reviewer has not passed; do not write tests ahead\n      against the design. For each unit: developer's reached tests and the\n      static checks have passed; run the tests the unit reaches on the named\n      commit, as the body's \"Running tests\" says, then write the missing\n      tests for what the design promises for that unit. For a framework\n      unit: zero and one cell of room, unbounded constraints, 80x24 and\n      120x40, a resize between frames, wide graphemes, emoji and combining\n      marks at every edge, text with escape sequences in it, a thousand\n      updates between two frames, a widget removed while its timer or stream\n      is live, focus moving away and back, and every key. For a unit of the\n      port: an agent that exits, hangs or answers late (the fake agent's\n      misbehaving scenarios), a cancelled turn, several sessions at once, a\n      narrow terminal, and the keys; where the original has a test for the\n      behaviour under ../chord/tests/, its cases are yours to carry over. Put\n      them beside the unit's own tests, at the path that mirrors its source,\n      in a group of your own, never editing a test developer wrote; widgets\n      and the window are driven through package:chorded_tui/testing.dart and\n      the port's session layer through its fake agent, never a real model,\n      agent or terminal. Where the unit is seen on screen, also run it by\n      hand in a tmux session of your own at 120x40 and 80x24, and kill the\n      session after; where it reaches the binary, run dart compile exe and\n      the binary the same way. Commit tests locally with a conventional\n      message and no trailers. Send each failure to developer with the steps\n      to reproduce and the design part it breaks, and rerun when developer\n      hands you the fix commit. When a unit passes, tell developer and the\n      lead in one line: the unit, the commit, passed. When the lead says the\n      last unit is in, run the tests the whole slice reaches and the static\n      checks on the final commit, and report the results to the lead. A\n      reached test that fails is a failure even if it passes alone. If a test\n      needs a name or entry point the design does not fix, ask developer. Do\n      not fix code under lib/ or example/chord/lib/.\n  - name: writer\n    role: Keeps README, FEATURES, the decisions log and AGENTS.md true to the slice\n    agent: codex\n    model: gpt-6.1-sol\n    mode: agent\n    instructions: |\n      You keep the docs a person and an agent read true to what the slice\n      changed, in the same run, so no doc fix is left for a task of its own.\n      You stay open for the whole run and act when the lead hands you the\n      slice, and on any doc finding reviewer sends you.\n\n      Read the slice's commits, then every place the change makes wrong or\n      leaves out: README.md (its status line, \"What the framework gives\" and\n      its examples, which must be code that runs as written), the task's row\n      in docs/FEATURES.md (its status, never new rows or order),\n      example/chord/README.md, and AGENTS.md (Commands and Layout above all).\n      Fix those places and nothing else.\n\n      Write short. Edit the paragraph that became wrong in place; never add\n      a new one beside it to correct it. Delete what is no longer true. Say\n      what a thing is and does, not how the code does it, and no history of\n      how it got there. A paragraph you touch should come out no longer than\n      it went in unless the slice added something it must say; when you pass\n      a stale or bloated sentence next to yours, tighten it too. Keep each\n      file's own layout and wrapping (AGENTS.md wraps at 80 columns).\n\n      docs/decisions.md is a log: you do not rewrite or delete its entries.\n      Code comments and /// lines are developer's: one that is wrong goes to\n      developer.\n\n      When done: check that what you wrote names no home directory, commit\n      locally with a conventional message (docs:) and no trailers, never\n      push, and tell the lead the commit and the files in one line. If the\n      slice changed nothing a doc says, tell the lead that instead.\n"
+ },
+ {
+  "name": "quoting 0",
+  "value": {
+   "description": "yes",
+   "lead": {
+    "agent": "yes"
+   },
+   "members": [
+    {
+     "name": "yes",
+     "role": "yes"
+    }
+   ]
+  },
+  "yaml": "description: yes\nlead:\n  agent: yes\nmembers:\n  - name: yes\n    role: yes\n"
+ },
+ {
+  "name": "quoting 1",
+  "value": {
+   "description": "no",
+   "lead": {
+    "agent": "no"
+   },
+   "members": [
+    {
+     "name": "no",
+     "role": "no"
+    }
+   ]
+  },
+  "yaml": "description: no\nlead:\n  agent: no\nmembers:\n  - name: no\n    role: no\n"
+ },
+ {
+  "name": "quoting 2",
+  "value": {
+   "description": "on",
+   "lead": {
+    "agent": "on"
+   },
+   "members": [
+    {
+     "name": "on",
+     "role": "on"
+    }
+   ]
+  },
+  "yaml": "description: on\nlead:\n  agent: on\nmembers:\n  - name: on\n    role: on\n"
+ },
+ {
+  "name": "quoting 3",
+  "value": {
+   "description": "off",
+   "lead": {
+    "agent": "off"
+   },
+   "members": [
+    {
+     "name": "off",
+     "role": "off"
+    }
+   ]
+  },
+  "yaml": "description: off\nlead:\n  agent: off\nmembers:\n  - name: off\n    role: off\n"
+ },
+ {
+  "name": "quoting 4",
+  "value": {
+   "description": "true",
+   "lead": {
+    "agent": "true"
+   },
+   "members": [
+    {
+     "name": "true",
+     "role": "true"
+    }
+   ]
+  },
+  "yaml": "description: \"true\"\nlead:\n  agent: \"true\"\nmembers:\n  - name: \"true\"\n    role: \"true\"\n"
+ },
+ {
+  "name": "quoting 5",
+  "value": {
+   "description": "False",
+   "lead": {
+    "agent": "False"
+   },
+   "members": [
+    {
+     "name": "False",
+     "role": "False"
+    }
+   ]
+  },
+  "yaml": "description: \"False\"\nlead:\n  agent: \"False\"\nmembers:\n  - name: \"False\"\n    role: \"False\"\n"
+ },
+ {
+  "name": "quoting 6",
+  "value": {
+   "description": "TRUE",
+   "lead": {
+    "agent": "TRUE"
+   },
+   "members": [
+    {
+     "name": "TRUE",
+     "role": "TRUE"
+    }
+   ]
+  },
+  "yaml": "description: \"TRUE\"\nlead:\n  agent: \"TRUE\"\nmembers:\n  - name: \"TRUE\"\n    role: \"TRUE\"\n"
+ },
+ {
+  "name": "quoting 7",
+  "value": {
+   "description": "null",
+   "lead": {
+    "agent": "null"
+   },
+   "members": [
+    {
+     "name": "null",
+     "role": "null"
+    }
+   ]
+  },
+  "yaml": "description: \"null\"\nlead:\n  agent: \"null\"\nmembers:\n  - name: \"null\"\n    role: \"null\"\n"
+ },
+ {
+  "name": "quoting 8",
+  "value": {
+   "description": "Null",
+   "lead": {
+    "agent": "Null"
+   },
+   "members": [
+    {
+     "name": "Null",
+     "role": "Null"
+    }
+   ]
+  },
+  "yaml": "description: \"Null\"\nlead:\n  agent: \"Null\"\nmembers:\n  - name: \"Null\"\n    role: \"Null\"\n"
+ },
+ {
+  "name": "quoting 9",
+  "value": {
+   "description": "~",
+   "lead": {
+    "agent": "~"
+   },
+   "members": [
+    {
+     "name": "~",
+     "role": "~"
+    }
+   ]
+  },
+  "yaml": "description: \"~\"\nlead:\n  agent: \"~\"\nmembers:\n  - name: \"~\"\n    role: \"~\"\n"
+ },
+ {
+  "name": "quoting 10",
+  "value": {
+   "description": "",
+   "lead": {
+    "agent": ""
+   },
+   "members": [
+    {
+     "name": "",
+     "role": ""
+    }
+   ]
+  },
+  "yaml": "description: \"\"\nlead:\n  agent: \"\"\nmembers:\n  - name: \"\"\n    role: \"\"\n"
+ },
+ {
+  "name": "quoting 11",
+  "value": {
+   "description": "123",
+   "lead": {
+    "agent": "123"
+   },
+   "members": [
+    {
+     "name": "123",
+     "role": "123"
+    }
+   ]
+  },
+  "yaml": "description: \"123\"\nlead:\n  agent: \"123\"\nmembers:\n  - name: \"123\"\n    role: \"123\"\n"
+ },
+ {
+  "name": "quoting 12",
+  "value": {
+   "description": "-7",
+   "lead": {
+    "agent": "-7"
+   },
+   "members": [
+    {
+     "name": "-7",
+     "role": "-7"
+    }
+   ]
+  },
+  "yaml": "description: \"-7\"\nlead:\n  agent: \"-7\"\nmembers:\n  - name: \"-7\"\n    role: \"-7\"\n"
+ },
+ {
+  "name": "quoting 13",
+  "value": {
+   "description": "+3",
+   "lead": {
+    "agent": "+3"
+   },
+   "members": [
+    {
+     "name": "+3",
+     "role": "+3"
+    }
+   ]
+  },
+  "yaml": "description: \"+3\"\nlead:\n  agent: \"+3\"\nmembers:\n  - name: \"+3\"\n    role: \"+3\"\n"
+ },
+ {
+  "name": "quoting 14",
+  "value": {
+   "description": "0o17",
+   "lead": {
+    "agent": "0o17"
+   },
+   "members": [
+    {
+     "name": "0o17",
+     "role": "0o17"
+    }
+   ]
+  },
+  "yaml": "description: \"0o17\"\nlead:\n  agent: \"0o17\"\nmembers:\n  - name: \"0o17\"\n    role: \"0o17\"\n"
+ },
+ {
+  "name": "quoting 15",
+  "value": {
+   "description": "0x1F",
+   "lead": {
+    "agent": "0x1F"
+   },
+   "members": [
+    {
+     "name": "0x1F",
+     "role": "0x1F"
+    }
+   ]
+  },
+  "yaml": "description: \"0x1F\"\nlead:\n  agent: \"0x1F\"\nmembers:\n  - name: \"0x1F\"\n    role: \"0x1F\"\n"
+ },
+ {
+  "name": "quoting 16",
+  "value": {
+   "description": "1e3",
+   "lead": {
+    "agent": "1e3"
+   },
+   "members": [
+    {
+     "name": "1e3",
+     "role": "1e3"
+    }
+   ]
+  },
+  "yaml": "description: \"1e3\"\nlead:\n  agent: \"1e3\"\nmembers:\n  - name: \"1e3\"\n    role: \"1e3\"\n"
+ },
+ {
+  "name": "quoting 17",
+  "value": {
+   "description": ".5",
+   "lead": {
+    "agent": ".5"
+   },
+   "members": [
+    {
+     "name": ".5",
+     "role": ".5"
+    }
+   ]
+  },
+  "yaml": "description: \".5\"\nlead:\n  agent: \".5\"\nmembers:\n  - name: \".5\"\n    role: \".5\"\n"
+ },
+ {
+  "name": "quoting 18",
+  "value": {
+   "description": "3.",
+   "lead": {
+    "agent": "3."
+   },
+   "members": [
+    {
+     "name": "3.",
+     "role": "3."
+    }
+   ]
+  },
+  "yaml": "description: \"3.\"\nlead:\n  agent: \"3.\"\nmembers:\n  - name: \"3.\"\n    role: \"3.\"\n"
+ },
+ {
+  "name": "quoting 19",
+  "value": {
+   "description": ".inf",
+   "lead": {
+    "agent": ".inf"
+   },
+   "members": [
+    {
+     "name": ".inf",
+     "role": ".inf"
+    }
+   ]
+  },
+  "yaml": "description: \".inf\"\nlead:\n  agent: \".inf\"\nmembers:\n  - name: \".inf\"\n    role: \".inf\"\n"
+ },
+ {
+  "name": "quoting 20",
+  "value": {
+   "description": "-.Inf",
+   "lead": {
+    "agent": "-.Inf"
+   },
+   "members": [
+    {
+     "name": "-.Inf",
+     "role": "-.Inf"
+    }
+   ]
+  },
+  "yaml": "description: \"-.Inf\"\nlead:\n  agent: \"-.Inf\"\nmembers:\n  - name: \"-.Inf\"\n    role: \"-.Inf\"\n"
+ },
+ {
+  "name": "quoting 21",
+  "value": {
+   "description": ".nan",
+   "lead": {
+    "agent": ".nan"
+   },
+   "members": [
+    {
+     "name": ".nan",
+     "role": ".nan"
+    }
+   ]
+  },
+  "yaml": "description: \".nan\"\nlead:\n  agent: \".nan\"\nmembers:\n  - name: \".nan\"\n    role: \".nan\"\n"
+ },
+ {
+  "name": "quoting 22",
+  "value": {
+   "description": "a: b",
+   "lead": {
+    "agent": "a: b"
+   },
+   "members": [
+    {
+     "name": "a: b",
+     "role": "a: b"
+    }
+   ]
+  },
+  "yaml": "description: \"a: b\"\nlead:\n  agent: \"a: b\"\nmembers:\n  - name: \"a: b\"\n    role: \"a: b\"\n"
+ },
+ {
+  "name": "quoting 23",
+  "value": {
+   "description": "a:b",
+   "lead": {
+    "agent": "a:b"
+   },
+   "members": [
+    {
+     "name": "a:b",
+     "role": "a:b"
+    }
+   ]
+  },
+  "yaml": "description: a:b\nlead:\n  agent: a:b\nmembers:\n  - name: a:b\n    role: a:b\n"
+ },
+ {
+  "name": "quoting 24",
+  "value": {
+   "description": "a:",
+   "lead": {
+    "agent": "a:"
+   },
+   "members": [
+    {
+     "name": "a:",
+     "role": "a:"
+    }
+   ]
+  },
+  "yaml": "description: \"a:\"\nlead:\n  agent: \"a:\"\nmembers:\n  - name: \"a:\"\n    role: \"a:\"\n"
+ },
+ {
+  "name": "quoting 25",
+  "value": {
+   "description": " a #b",
+   "lead": {
+    "agent": " a #b"
+   },
+   "members": [
+    {
+     "name": " a #b",
+     "role": " a #b"
+    }
+   ]
+  },
+  "yaml": "description: \" a #b\"\nlead:\n  agent: \" a #b\"\nmembers:\n  - name: \" a #b\"\n    role: \" a #b\"\n"
+ },
+ {
+  "name": "quoting 26",
+  "value": {
+   "description": "a #b",
+   "lead": {
+    "agent": "a #b"
+   },
+   "members": [
+    {
+     "name": "a #b",
+     "role": "a #b"
+    }
+   ]
+  },
+  "yaml": "description: \"a #b\"\nlead:\n  agent: \"a #b\"\nmembers:\n  - name: \"a #b\"\n    role: \"a #b\"\n"
+ },
+ {
+  "name": "quoting 27",
+  "value": {
+   "description": "a#b",
+   "lead": {
+    "agent": "a#b"
+   },
+   "members": [
+    {
+     "name": "a#b",
+     "role": "a#b"
+    }
+   ]
+  },
+  "yaml": "description: a#b\nlead:\n  agent: a#b\nmembers:\n  - name: a#b\n    role: a#b\n"
+ },
+ {
+  "name": "quoting 28",
+  "value": {
+   "description": "#a",
+   "lead": {
+    "agent": "#a"
+   },
+   "members": [
+    {
+     "name": "#a",
+     "role": "#a"
+    }
+   ]
+  },
+  "yaml": "description: \"#a\"\nlead:\n  agent: \"#a\"\nmembers:\n  - name: \"#a\"\n    role: \"#a\"\n"
+ },
+ {
+  "name": "quoting 29",
+  "value": {
+   "description": "@a",
+   "lead": {
+    "agent": "@a"
+   },
+   "members": [
+    {
+     "name": "@a",
+     "role": "@a"
+    }
+   ]
+  },
+  "yaml": "description: \"@a\"\nlead:\n  agent: \"@a\"\nmembers:\n  - name: \"@a\"\n    role: \"@a\"\n"
+ },
+ {
+  "name": "quoting 30",
+  "value": {
+   "description": "`a",
+   "lead": {
+    "agent": "`a"
+   },
+   "members": [
+    {
+     "name": "`a",
+     "role": "`a"
+    }
+   ]
+  },
+  "yaml": "description: \"`a\"\nlead:\n  agent: \"`a\"\nmembers:\n  - name: \"`a\"\n    role: \"`a\"\n"
+ },
+ {
+  "name": "quoting 31",
+  "value": {
+   "description": "- a",
+   "lead": {
+    "agent": "- a"
+   },
+   "members": [
+    {
+     "name": "- a",
+     "role": "- a"
+    }
+   ]
+  },
+  "yaml": "description: \"- a\"\nlead:\n  agent: \"- a\"\nmembers:\n  - name: \"- a\"\n    role: \"- a\"\n"
+ },
+ {
+  "name": "quoting 32",
+  "value": {
+   "description": "-",
+   "lead": {
+    "agent": "-"
+   },
+   "members": [
+    {
+     "name": "-",
+     "role": "-"
+    }
+   ]
+  },
+  "yaml": "description: \"-\"\nlead:\n  agent: \"-\"\nmembers:\n  - name: \"-\"\n    role: \"-\"\n"
+ },
+ {
+  "name": "quoting 33",
+  "value": {
+   "description": "-a",
+   "lead": {
+    "agent": "-a"
+   },
+   "members": [
+    {
+     "name": "-a",
+     "role": "-a"
+    }
+   ]
+  },
+  "yaml": "description: -a\nlead:\n  agent: -a\nmembers:\n  - name: -a\n    role: -a\n"
+ },
+ {
+  "name": "quoting 34",
+  "value": {
+   "description": "? a",
+   "lead": {
+    "agent": "? a"
+   },
+   "members": [
+    {
+     "name": "? a",
+     "role": "? a"
+    }
+   ]
+  },
+  "yaml": "description: \"? a\"\nlead:\n  agent: \"? a\"\nmembers:\n  - name: \"? a\"\n    role: \"? a\"\n"
+ },
+ {
+  "name": "quoting 35",
+  "value": {
+   "description": "?",
+   "lead": {
+    "agent": "?"
+   },
+   "members": [
+    {
+     "name": "?",
+     "role": "?"
+    }
+   ]
+  },
+  "yaml": "description: \"?\"\nlead:\n  agent: \"?\"\nmembers:\n  - name: \"?\"\n    role: \"?\"\n"
+ },
+ {
+  "name": "quoting 36",
+  "value": {
+   "description": "?a",
+   "lead": {
+    "agent": "?a"
+   },
+   "members": [
+    {
+     "name": "?a",
+     "role": "?a"
+    }
+   ]
+  },
+  "yaml": "description: ?a\nlead:\n  agent: ?a\nmembers:\n  - name: ?a\n    role: ?a\n"
+ },
+ {
+  "name": "quoting 37",
+  "value": {
+   "description": "[a]",
+   "lead": {
+    "agent": "[a]"
+   },
+   "members": [
+    {
+     "name": "[a]",
+     "role": "[a]"
+    }
+   ]
+  },
+  "yaml": "description: \"[a]\"\nlead:\n  agent: \"[a]\"\nmembers:\n  - name: \"[a]\"\n    role: \"[a]\"\n"
+ },
+ {
+  "name": "quoting 38",
+  "value": {
+   "description": "{a}",
+   "lead": {
+    "agent": "{a}"
+   },
+   "members": [
+    {
+     "name": "{a}",
+     "role": "{a}"
+    }
+   ]
+  },
+  "yaml": "description: \"{a}\"\nlead:\n  agent: \"{a}\"\nmembers:\n  - name: \"{a}\"\n    role: \"{a}\"\n"
+ },
+ {
+  "name": "quoting 39",
+  "value": {
+   "description": "a, b",
+   "lead": {
+    "agent": "a, b"
+   },
+   "members": [
+    {
+     "name": "a, b",
+     "role": "a, b"
+    }
+   ]
+  },
+  "yaml": "description: a, b\nlead:\n  agent: a, b\nmembers:\n  - name: a, b\n    role: a, b\n"
+ },
+ {
+  "name": "quoting 40",
+  "value": {
+   "description": "&a",
+   "lead": {
+    "agent": "&a"
+   },
+   "members": [
+    {
+     "name": "&a",
+     "role": "&a"
+    }
+   ]
+  },
+  "yaml": "description: \"&a\"\nlead:\n  agent: \"&a\"\nmembers:\n  - name: \"&a\"\n    role: \"&a\"\n"
+ },
+ {
+  "name": "quoting 41",
+  "value": {
+   "description": "*a",
+   "lead": {
+    "agent": "*a"
+   },
+   "members": [
+    {
+     "name": "*a",
+     "role": "*a"
+    }
+   ]
+  },
+  "yaml": "description: \"*a\"\nlead:\n  agent: \"*a\"\nmembers:\n  - name: \"*a\"\n    role: \"*a\"\n"
+ },
+ {
+  "name": "quoting 42",
+  "value": {
+   "description": "!a",
+   "lead": {
+    "agent": "!a"
+   },
+   "members": [
+    {
+     "name": "!a",
+     "role": "!a"
+    }
+   ]
+  },
+  "yaml": "description: \"!a\"\nlead:\n  agent: \"!a\"\nmembers:\n  - name: \"!a\"\n    role: \"!a\"\n"
+ },
+ {
+  "name": "quoting 43",
+  "value": {
+   "description": "|a",
+   "lead": {
+    "agent": "|a"
+   },
+   "members": [
+    {
+     "name": "|a",
+     "role": "|a"
+    }
+   ]
+  },
+  "yaml": "description: \"|a\"\nlead:\n  agent: \"|a\"\nmembers:\n  - name: \"|a\"\n    role: \"|a\"\n"
+ },
+ {
+  "name": "quoting 44",
+  "value": {
+   "description": ">a",
+   "lead": {
+    "agent": ">a"
+   },
+   "members": [
+    {
+     "name": ">a",
+     "role": ">a"
+    }
+   ]
+  },
+  "yaml": "description: \">a\"\nlead:\n  agent: \">a\"\nmembers:\n  - name: \">a\"\n    role: \">a\"\n"
+ },
+ {
+  "name": "quoting 45",
+  "value": {
+   "description": "'a",
+   "lead": {
+    "agent": "'a"
+   },
+   "members": [
+    {
+     "name": "'a",
+     "role": "'a"
+    }
+   ]
+  },
+  "yaml": "description: \"'a\"\nlead:\n  agent: \"'a\"\nmembers:\n  - name: \"'a\"\n    role: \"'a\"\n"
+ },
+ {
+  "name": "quoting 46",
+  "value": {
+   "description": "\"a",
+   "lead": {
+    "agent": "\"a"
+   },
+   "members": [
+    {
+     "name": "\"a",
+     "role": "\"a"
+    }
+   ]
+  },
+  "yaml": "description: '\"a'\nlead:\n  agent: '\"a'\nmembers:\n  - name: '\"a'\n    role: '\"a'\n"
+ },
+ {
+  "name": "quoting 47",
+  "value": {
+   "description": "it's",
+   "lead": {
+    "agent": "it's"
+   },
+   "members": [
+    {
+     "name": "it's",
+     "role": "it's"
+    }
+   ]
+  },
+  "yaml": "description: it's\nlead:\n  agent: it's\nmembers:\n  - name: it's\n    role: it's\n"
+ },
+ {
+  "name": "quoting 48",
+  "value": {
+   "description": "say \"hi\"",
+   "lead": {
+    "agent": "say \"hi\""
+   },
+   "members": [
+    {
+     "name": "say \"hi\"",
+     "role": "say \"hi\""
+    }
+   ]
+  },
+  "yaml": "description: say \"hi\"\nlead:\n  agent: say \"hi\"\nmembers:\n  - name: say \"hi\"\n    role: say \"hi\"\n"
+ },
+ {
+  "name": "quoting 49",
+  "value": {
+   "description": "both ' and \"",
+   "lead": {
+    "agent": "both ' and \""
+   },
+   "members": [
+    {
+     "name": "both ' and \"",
+     "role": "both ' and \""
+    }
+   ]
+  },
+  "yaml": "description: both ' and \"\nlead:\n  agent: both ' and \"\nmembers:\n  - name: both ' and \"\n    role: both ' and \"\n"
+ },
+ {
+  "name": "quoting 50",
+  "value": {
+   "description": "%a",
+   "lead": {
+    "agent": "%a"
+   },
+   "members": [
+    {
+     "name": "%a",
+     "role": "%a"
+    }
+   ]
+  },
+  "yaml": "description: \"%a\"\nlead:\n  agent: \"%a\"\nmembers:\n  - name: \"%a\"\n    role: \"%a\"\n"
+ },
+ {
+  "name": "quoting 51",
+  "value": {
+   "description": "---",
+   "lead": {
+    "agent": "---"
+   },
+   "members": [
+    {
+     "name": "---",
+     "role": "---"
+    }
+   ]
+  },
+  "yaml": "description: ---\nlead:\n  agent: ---\nmembers:\n  - name: ---\n    role: ---\n"
+ },
+ {
+  "name": "quoting 52",
+  "value": {
+   "description": "--- a",
+   "lead": {
+    "agent": "--- a"
+   },
+   "members": [
+    {
+     "name": "--- a",
+     "role": "--- a"
+    }
+   ]
+  },
+  "yaml": "description: --- a\nlead:\n  agent: --- a\nmembers:\n  - name: --- a\n    role: --- a\n"
+ },
+ {
+  "name": "quoting 53",
+  "value": {
+   "description": "...",
+   "lead": {
+    "agent": "..."
+   },
+   "members": [
+    {
+     "name": "...",
+     "role": "..."
+    }
+   ]
+  },
+  "yaml": "description: ...\nlead:\n  agent: ...\nmembers:\n  - name: ...\n    role: ...\n"
+ },
+ {
+  "name": "quoting 54",
+  "value": {
+   "description": "a\t",
+   "lead": {
+    "agent": "a\t"
+   },
+   "members": [
+    {
+     "name": "a\t",
+     "role": "a\t"
+    }
+   ]
+  },
+  "yaml": "description: \"a\\t\"\nlead:\n  agent: \"a\\t\"\nmembers:\n  - name: \"a\\t\"\n    role: \"a\\t\"\n"
+ },
+ {
+  "name": "quoting 55",
+  "value": {
+   "description": " a",
+   "lead": {
+    "agent": " a"
+   },
+   "members": [
+    {
+     "name": " a",
+     "role": " a"
+    }
+   ]
+  },
+  "yaml": "description: \" a\"\nlead:\n  agent: \" a\"\nmembers:\n  - name: \" a\"\n    role: \" a\"\n"
+ },
+ {
+  "name": "quoting 56",
+  "value": {
+   "description": "a ",
+   "lead": {
+    "agent": "a "
+   },
+   "members": [
+    {
+     "name": "a ",
+     "role": "a "
+    }
+   ]
+  },
+  "yaml": "description: \"a \"\nlead:\n  agent: \"a \"\nmembers:\n  - name: \"a \"\n    role: \"a \"\n"
+ },
+ {
+  "name": "quoting 57",
+  "value": {
+   "description": "tab\there",
+   "lead": {
+    "agent": "tab\there"
+   },
+   "members": [
+    {
+     "name": "tab\there",
+     "role": "tab\there"
+    }
+   ]
+  },
+  "yaml": "description: tab\there\nlead:\n  agent: tab\there\nmembers:\n  - name: tab\there\n    role: tab\there\n"
+ },
+ {
+  "name": "quoting 58",
+  "value": {
+   "description": "bell\u0007",
+   "lead": {
+    "agent": "bell\u0007"
+   },
+   "members": [
+    {
+     "name": "bell\u0007",
+     "role": "bell\u0007"
+    }
+   ]
+  },
+  "yaml": "description: \"bell\\a\"\nlead:\n  agent: \"bell\\a\"\nmembers:\n  - name: \"bell\\a\"\n    role: \"bell\\a\"\n"
+ },
+ {
+  "name": "quoting 59",
+  "value": {
+   "description": "esc\u001b",
+   "lead": {
+    "agent": "esc\u001b"
+   },
+   "members": [
+    {
+     "name": "esc\u001b",
+     "role": "esc\u001b"
+    }
+   ]
+  },
+  "yaml": "description: \"esc\\e\"\nlead:\n  agent: \"esc\\e\"\nmembers:\n  - name: \"esc\\e\"\n    role: \"esc\\e\"\n"
+ },
+ {
+  "name": "quoting 60",
+  "value": {
+   "description": "nul\u0000",
+   "lead": {
+    "agent": "nul\u0000"
+   },
+   "members": [
+    {
+     "name": "nul\u0000",
+     "role": "nul\u0000"
+    }
+   ]
+  },
+  "yaml": "description: \"nul\\0\"\nlead:\n  agent: \"nul\\0\"\nmembers:\n  - name: \"nul\\0\"\n    role: \"nul\\0\"\n"
+ },
+ {
+  "name": "quoting 61",
+  "value": {
+   "description": "del",
+   "lead": {
+    "agent": "del"
+   },
+   "members": [
+    {
+     "name": "del",
+     "role": "del"
+    }
+   ]
+  },
+  "yaml": "description: \"del\"\nlead:\n  agent: \"del\"\nmembers:\n  - name: \"del\"\n    role: \"del\"\n"
+ },
+ {
+  "name": "quoting 62",
+  "value": {
+   "description": "nel",
+   "lead": {
+    "agent": "nel"
+   },
+   "members": [
+    {
+     "name": "nel",
+     "role": "nel"
+    }
+   ]
+  },
+  "yaml": "description: \"nel\"\nlead:\n  agent: \"nel\"\nmembers:\n  - name: \"nel\"\n    role: \"nel\"\n"
+ },
+ {
+  "name": "quoting 63",
+  "value": {
+   "description": "nbsp x",
+   "lead": {
+    "agent": "nbsp x"
+   },
+   "members": [
+    {
+     "name": "nbsp x",
+     "role": "nbsp x"
+    }
+   ]
+  },
+  "yaml": "description: nbsp x\nlead:\n  agent: nbsp x\nmembers:\n  - name: nbsp x\n    role: nbsp x\n"
+ },
+ {
+  "name": "quoting 64",
+  "value": {
+   "description": "ls x",
+   "lead": {
+    "agent": "ls x"
+   },
+   "members": [
+    {
+     "name": "ls x",
+     "role": "ls x"
+    }
+   ]
+  },
+  "yaml": "description: ls x\nlead:\n  agent: ls x\nmembers:\n  - name: ls x\n    role: ls x\n"
+ },
+ {
+  "name": "quoting 65",
+  "value": {
+   "description": "é界😀",
+   "lead": {
+    "agent": "é界😀"
+   },
+   "members": [
+    {
+     "name": "é界😀",
+     "role": "é界😀"
+    }
+   ]
+  },
+  "yaml": "description: é界😀\nlead:\n  agent: é界😀\nmembers:\n  - name: é界😀\n    role: é界😀\n"
+ },
+ {
+  "name": "quoting 66",
+  "value": {
+   "description": "back\\slash",
+   "lead": {
+    "agent": "back\\slash"
+   },
+   "members": [
+    {
+     "name": "back\\slash",
+     "role": "back\\slash"
+    }
+   ]
+  },
+  "yaml": "description: back\\slash\nlead:\n  agent: back\\slash\nmembers:\n  - name: back\\slash\n    role: back\\slash\n"
+ },
+ {
+  "name": "quoting 67",
+  "value": {
+   "description": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "lead": {
+    "agent": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   },
+   "members": [
+    {
+     "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "role": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+   ]
+  },
+  "yaml": "description: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nlead:\n  agent: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nmembers:\n  - name: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n    role: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n"
+ },
+ {
+  "name": "quoting 68",
+  "value": {
+   "description": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word end",
+   "lead": {
+    "agent": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word end"
+   },
+   "members": [
+    {
+     "name": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word end",
+     "role": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word end"
+    }
+   ]
+  },
+  "yaml": "description: word word word word word word word word word word word word word\n  word word word word word word word word word word word word word word word\n  word word end\nlead:\n  agent: word word word word word word word word word word word word word word\n    word word word word word word word word word word word word word word word\n    word end\nmembers:\n  - name: word word word word word word word word word word word word word word word\n      word word word word word word word word word word word word word word word\n      end\n    role: word word word word word word word word word word word word word word word\n      word word word word word word word word word word word word word word word\n      end\n"
+ },
+ {
+  "name": "quoting 69",
+  "value": {
+   "description": "quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" end",
+   "lead": {
+    "agent": "quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" end"
+   },
+   "members": [
+    {
+     "name": "quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" end",
+     "role": "quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" end"
+    }
+   ]
+  },
+  "yaml": "description: quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted\n  \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\"\n  end\nlead:\n  agent: quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\"\n    quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" end\nmembers:\n  - name: quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\"\n      quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" end\n    role: quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\"\n      quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" quoted \"word\" end\n"
+ },
+ {
+  "name": "quoting 70",
+  "value": {
+   "description": "#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag ",
+   "lead": {
+    "agent": "#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag "
+   },
+   "members": [
+    {
+     "name": "#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag ",
+     "role": "#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag "
+    }
+   ]
+  },
+  "yaml": "description: \"#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag\n  #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag \"\nlead:\n  agent: \"#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag\n    #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag \"\nmembers:\n  - name: \"#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag\n      #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag \"\n    role: \"#tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag\n      #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag #tag \"\n"
+ },
+ {
+  "name": "quoting 71",
+  "value": {
+   "description": "a: long long long long long long long long long long long long long long long long long long long long long long long long long ",
+   "lead": {
+    "agent": "a: long long long long long long long long long long long long long long long long long long long long long long long long long "
+   },
+   "members": [
+    {
+     "name": "a: long long long long long long long long long long long long long long long long long long long long long long long long long ",
+     "role": "a: long long long long long long long long long long long long long long long long long long long long long long long long long "
+    }
+   ]
+  },
+  "yaml": "description: \"a: long long long long long long long long long long long long\n  long long long long long long long long long long long long long \"\nlead:\n  agent: \"a: long long long long long long long long long long long long long long\n    long long long long long long long long long long long \"\nmembers:\n  - name: \"a: long long long long long long long long long long long long long long\n      long long long long long long long long long long long \"\n    role: \"a: long long long long long long long long long long long long long long\n      long long long long long long long long long long long \"\n"
+ },
+ {
+  "name": "block 0",
+  "value": {
+   "description": "one\n",
+   "lead": {
+    "instructions": "one\n"
+   },
+   "members": [
+    {
+     "instructions": "one\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  one\nlead:\n  instructions: |\n    one\nmembers:\n  - instructions: |\n      one\n"
+ },
+ {
+  "name": "block 1",
+  "value": {
+   "description": "one",
+   "lead": {
+    "instructions": "one"
+   },
+   "members": [
+    {
+     "instructions": "one"
+    }
+   ]
+  },
+  "yaml": "description: one\nlead:\n  instructions: one\nmembers:\n  - instructions: one\n"
+ },
+ {
+  "name": "block 2",
+  "value": {
+   "description": "one\n\n",
+   "lead": {
+    "instructions": "one\n\n"
+   },
+   "members": [
+    {
+     "instructions": "one\n\n"
+    }
+   ]
+  },
+  "yaml": "description: |+\n  one\n\nlead:\n  instructions: |+\n    one\n\nmembers:\n  - instructions: |+\n      one\n\n"
+ },
+ {
+  "name": "block 3",
+  "value": {
+   "description": "one\n\n\n",
+   "lead": {
+    "instructions": "one\n\n\n"
+   },
+   "members": [
+    {
+     "instructions": "one\n\n\n"
+    }
+   ]
+  },
+  "yaml": "description: |+\n  one\n\n\nlead:\n  instructions: |+\n    one\n\n\nmembers:\n  - instructions: |+\n      one\n\n\n"
+ },
+ {
+  "name": "block 4",
+  "value": {
+   "description": "\none\n",
+   "lead": {
+    "instructions": "\none\n"
+   },
+   "members": [
+    {
+     "instructions": "\none\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  \n  one\nlead:\n  instructions: |\n    \n    one\nmembers:\n  - instructions: |\n      \n      one\n"
+ },
+ {
+  "name": "block 5",
+  "value": {
+   "description": "  indented\nnext\n",
+   "lead": {
+    "instructions": "  indented\nnext\n"
+   },
+   "members": [
+    {
+     "instructions": "  indented\nnext\n"
+    }
+   ]
+  },
+  "yaml": "description: |2\n    indented\n  next\nlead:\n  instructions: |2\n      indented\n    next\nmembers:\n  - instructions: |2\n        indented\n      next\n"
+ },
+ {
+  "name": "block 6",
+  "value": {
+   "description": "one\n  more\nback\n",
+   "lead": {
+    "instructions": "one\n  more\nback\n"
+   },
+   "members": [
+    {
+     "instructions": "one\n  more\nback\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  one\n    more\n  back\nlead:\n  instructions: |\n    one\n      more\n    back\nmembers:\n  - instructions: |\n      one\n        more\n      back\n"
+ },
+ {
+  "name": "block 7",
+  "value": {
+   "description": "one\n\ntwo\n",
+   "lead": {
+    "instructions": "one\n\ntwo\n"
+   },
+   "members": [
+    {
+     "instructions": "one\n\ntwo\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  one\n\n  two\nlead:\n  instructions: |\n    one\n\n    two\nmembers:\n  - instructions: |\n      one\n\n      two\n"
+ },
+ {
+  "name": "block 8",
+  "value": {
+   "description": "tab\tinside\nline\n",
+   "lead": {
+    "instructions": "tab\tinside\nline\n"
+   },
+   "members": [
+    {
+     "instructions": "tab\tinside\nline\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  tab\tinside\n  line\nlead:\n  instructions: |\n    tab\tinside\n    line\nmembers:\n  - instructions: |\n      tab\tinside\n      line\n"
+ },
+ {
+  "name": "block 9",
+  "value": {
+   "description": "trailing \nspace\n",
+   "lead": {
+    "instructions": "trailing \nspace\n"
+   },
+   "members": [
+    {
+     "instructions": "trailing \nspace\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  trailing \n  space\nlead:\n  instructions: |\n    trailing \n    space\nmembers:\n  - instructions: |\n      trailing \n      space\n"
+ },
+ {
+  "name": "block 10",
+  "value": {
+   "description": "one\n ",
+   "lead": {
+    "instructions": "one\n "
+   },
+   "members": [
+    {
+     "instructions": "one\n "
+    }
+   ]
+  },
+  "yaml": "description: \"one\\n \"\nlead:\n  instructions: \"one\\n \"\nmembers:\n  - instructions: \"one\\n \"\n"
+ },
+ {
+  "name": "block 11",
+  "value": {
+   "description": "one\n\t",
+   "lead": {
+    "instructions": "one\n\t"
+   },
+   "members": [
+    {
+     "instructions": "one\n\t"
+    }
+   ]
+  },
+  "yaml": "description: \"one\\n\\t\"\nlead:\n  instructions: \"one\\n\\t\"\nmembers:\n  - instructions: \"one\\n\\t\"\n"
+ },
+ {
+  "name": "block 12",
+  "value": {
+   "description": "\n",
+   "lead": {
+    "instructions": "\n"
+   },
+   "members": [
+    {
+     "instructions": "\n"
+    }
+   ]
+  },
+  "yaml": "description: |+\n  \nlead:\n  instructions: |+\n    \nmembers:\n  - instructions: |+\n      \n"
+ },
+ {
+  "name": "block 13",
+  "value": {
+   "description": "\n\n",
+   "lead": {
+    "instructions": "\n\n"
+   },
+   "members": [
+    {
+     "instructions": "\n\n"
+    }
+   ]
+  },
+  "yaml": "description: |+\n  \n\nlead:\n  instructions: |+\n    \n\nmembers:\n  - instructions: |+\n      \n\n"
+ },
+ {
+  "name": "block 14",
+  "value": {
+   "description": "a\n---\nb\n",
+   "lead": {
+    "instructions": "a\n---\nb\n"
+   },
+   "members": [
+    {
+     "instructions": "a\n---\nb\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  a\n  ---\n  b\nlead:\n  instructions: |\n    a\n    ---\n    b\nmembers:\n  - instructions: |\n      a\n      ---\n      b\n"
+ },
+ {
+  "name": "block 15",
+  "value": {
+   "description": "a\n...\nb\n",
+   "lead": {
+    "instructions": "a\n...\nb\n"
+   },
+   "members": [
+    {
+     "instructions": "a\n...\nb\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  a\n  ...\n  b\nlead:\n  instructions: |\n    a\n    ...\n    b\nmembers:\n  - instructions: |\n      a\n      ...\n      b\n"
+ },
+ {
+  "name": "block 16",
+  "value": {
+   "description": "%a\nb\n",
+   "lead": {
+    "instructions": "%a\nb\n"
+   },
+   "members": [
+    {
+     "instructions": "%a\nb\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  %a\n  b\nlead:\n  instructions: |\n    %a\n    b\nmembers:\n  - instructions: |\n      %a\n      b\n"
+ },
+ {
+  "name": "block 17",
+  "value": {
+   "description": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \nshort\n",
+   "lead": {
+    "instructions": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \nshort\n"
+   },
+   "members": [
+    {
+     "instructions": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \nshort\n"
+    }
+   ]
+  },
+  "yaml": "description: >\n  long long long long long long long long long long long long long long long\n  long long long long long long long long long long long long long long long \n\n  short\nlead:\n  instructions: >\n    long long long long long long long long long long long long long long long\n    long long long long long long long long long long long long long long long \n\n    short\nmembers:\n  - instructions: >\n      long long long long long long long long long long long long long long long\n      long long long long long long long long long long long long long long\n      long \n\n      short\n"
+ },
+ {
+  "name": "block 18",
+  "value": {
+   "description": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \n",
+   "lead": {
+    "instructions": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \n"
+   },
+   "members": [
+    {
+     "instructions": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long \n"
+    }
+   ]
+  },
+  "yaml": "description: >\n  long long long long long long long long long long long long long long long\n  long long long long long long long long long long long long long long long \nlead:\n  instructions: >\n    long long long long long long long long long long long long long long long\n    long long long long long long long long long long long long long long long \nmembers:\n  - instructions: >\n      long long long long long long long long long long long long long long long\n      long long long long long long long long long long long long long long\n      long \n"
+ },
+ {
+  "name": "block 19",
+  "value": {
+   "description": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long ",
+   "lead": {
+    "instructions": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long "
+   },
+   "members": [
+    {
+     "instructions": "long long long long long long long long long long long long long long long long long long long long long long long long long long long long long long "
+    }
+   ]
+  },
+  "yaml": "description: \"long long long long long long long long long long long long long\n  long long long long long long long long long long long long long long long\n  long long \"\nlead:\n  instructions: \"long long long long long long long long long long long long long\n    long long long long long long long long long long long long long long long\n    long long \"\nmembers:\n  - instructions: \"long long long long long long long long long long long long long\n      long long long long long long long long long long long long long long long\n      long long \"\n"
+ },
+ {
+  "name": "block 20",
+  "value": {
+   "description": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nnext\n",
+   "lead": {
+    "instructions": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nnext\n"
+   },
+   "members": [
+    {
+     "instructions": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nnext\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n  next\nlead:\n  instructions: |\n    xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n    next\nmembers:\n  - instructions: |\n      xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n      next\n"
+ },
+ {
+  "name": "block 21",
+  "value": {
+   "description": "- item\n- item\n",
+   "lead": {
+    "instructions": "- item\n- item\n"
+   },
+   "members": [
+    {
+     "instructions": "- item\n- item\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  - item\n  - item\nlead:\n  instructions: |\n    - item\n    - item\nmembers:\n  - instructions: |\n      - item\n      - item\n"
+ },
+ {
+  "name": "block 22",
+  "value": {
+   "description": "# heading\n\ntext\n",
+   "lead": {
+    "instructions": "# heading\n\ntext\n"
+   },
+   "members": [
+    {
+     "instructions": "# heading\n\ntext\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  # heading\n\n  text\nlead:\n  instructions: |\n    # heading\n\n    text\nmembers:\n  - instructions: |\n      # heading\n\n      text\n"
+ },
+ {
+  "name": "block 23",
+  "value": {
+   "description": "key: value\nother: thing\n",
+   "lead": {
+    "instructions": "key: value\nother: thing\n"
+   },
+   "members": [
+    {
+     "instructions": "key: value\nother: thing\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  key: value\n  other: thing\nlead:\n  instructions: |\n    key: value\n    other: thing\nmembers:\n  - instructions: |\n      key: value\n      other: thing\n"
+ },
+ {
+  "name": "block 24",
+  "value": {
+   "description": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a \n  b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b \n",
+   "lead": {
+    "instructions": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a \n  b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b \n"
+   },
+   "members": [
+    {
+     "instructions": "a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a \n  b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b \n"
+    }
+   ]
+  },
+  "yaml": "description: >\n  a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a\n  a a a a a a a a a a a \n    b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b \nlead:\n  instructions: >\n    a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a\n    a a a a a a a a a a a a \n      b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b \nmembers:\n  - instructions: >\n      a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a\n      a a a a a a a a a a a a a \n        b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b \n"
+ },
+ {
+  "name": "block 25",
+  "value": {
+   "description": "é界😀\nline\n",
+   "lead": {
+    "instructions": "é界😀\nline\n"
+   },
+   "members": [
+    {
+     "instructions": "é界😀\nline\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  é界😀\n  line\nlead:\n  instructions: |\n    é界😀\n    line\nmembers:\n  - instructions: |\n      é界😀\n      line\n"
+ },
+ {
+  "name": "block 26",
+  "value": {
+   "description": "with \"quotes\" and 'single'\nnext\n",
+   "lead": {
+    "instructions": "with \"quotes\" and 'single'\nnext\n"
+   },
+   "members": [
+    {
+     "instructions": "with \"quotes\" and 'single'\nnext\n"
+    }
+   ]
+  },
+  "yaml": "description: |\n  with \"quotes\" and 'single'\n  next\nlead:\n  instructions: |\n    with \"quotes\" and 'single'\n    next\nmembers:\n  - instructions: |\n      with \"quotes\" and 'single'\n      next\n"
+ },
+ {
+  "name": "empty map and list",
+  "value": {
+   "lead": {},
+   "members": []
+  },
+  "yaml": "lead: {}\nmembers: []\n"
+ }
+]

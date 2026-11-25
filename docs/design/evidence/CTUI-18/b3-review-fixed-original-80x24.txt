@@ -1,0 +1,24 @@
+
+ › reviewpermission
+
+ ⏺ Run(a reviewed action)
+   ⎿  Reviewed: caution
+
+ ››› Waiting for permission… (10s · denied in 4m 49s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Run a reviewed action                                                        │
+│                                                                              │
+│ The safety review held this:                                                 │
+│ Fixture safety review: caution.                                              │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

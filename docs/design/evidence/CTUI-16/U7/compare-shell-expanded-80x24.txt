@@ -1,0 +1,25 @@
+Original shell-expanded-80x24.txt | U7 live shell-expanded-80x24.txt
+ ▀▄     chord v0.71.0                                                            |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-shell-80                                   |  › shell
+ ▀▀     ? for shortcuts · /help                                                  | 
+                                                                                 |  ⏺ Run(bun dev test)
+ › shell                                                                         |    ⎿  Task test deno test
+                                                                                 |       running 3 tests
+ ⏺ Run(bun dev test)                                                             |       3/3
+   ⎿  Task test deno test                                                        |       ok | 2 passed
+      running 3 tests                                                            |       FAILED | 1 failed
+      3/3                                                                        |       Exit code 1
+      ok | 2 passed                                                              | 
+      FAILED | 1 failed                                                          |  ⏺ The tests failed.
+      Exit code 1                                                                | 
+                                                                                 | 
+ ⏺ The tests failed.                                                             | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |  ctrl+c or ctrl+d to quit

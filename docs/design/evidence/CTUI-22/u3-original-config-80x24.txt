@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.designer-u3
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Settings                                                                     │
+│ Change fake's settings for this session.                                     │
+│                                                                              │
+│ ❯ 1. Effort  Medium                                                          │
+│                                                                              │
+│ Enter to choose · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

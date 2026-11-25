@@ -1,0 +1,24 @@
+
+ [2m›[0m /cost
+   [2m⎿[0m  fake has not reported what this session has used.
+   [2m [0m  [2mSession time:[0m 7s
+
+ [2m›[0m hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:[0m   $0.0047 (chord's estimate)
+   [2m [0m  [2mTokens in:[0m    1,000
+   [2m [0m  [2mTokens out:[0m   200
+   [2m [0m  [2mCache read:[0m   800
+   [2m [0m  [2mSession time:[0m 18s
+
+ [2m›[0m /context
+   [2m⎿[0m  [2mUsed:[0m 2,000 of 400,000 tokens (1%) (chord's estimate)
+   [2m [0m  [2mFree:[0m 398,000 tokens (99%) (chord's estimate)
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m             [2mGPT-5.3 Codex · medium effort · ~1% context used[0m

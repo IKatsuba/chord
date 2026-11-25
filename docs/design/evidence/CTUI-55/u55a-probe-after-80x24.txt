@@ -1,0 +1,24 @@
+ Markdown  dark, 100%
+Late work 1. A first chunk that starts with a space, as an agent streams it,
+long enough to wrap at eighty.
+
+a hard break follows
+b, after three spaces and a soft line indented by three, then more words so that
+this paragraph wraps in the narrow window too.
+
+b x, strong after a leading space
+
+- i
+
+  x, the loose item's second paragraph
+
+│ quote line continued with indent
+
+┌───────────────────┐
+│   indented code   │
+│     kept two more │
+└───────────────────┘
+
+┌─────────────────┐
+│   fenced        │
+ctrl+s Stream again  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedo…

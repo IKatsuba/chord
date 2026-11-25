@@ -1,0 +1,41 @@
+ORIGINAL             | PORT
+ › thought           |  › thought
+                     | 
+ ∴ Thinking…         |  ∴ Thinking…
+                     | 
+ ⏺ Here is the       |  ⏺ Here is the
+   answer.           |    answer.
+                     | 
+ › plan              |  › plan
+                     | 
+ ⏺ Planned. Step 2   |  ⏺ Planned. Step 2
+   done. Step 3      |    done. Step 3
+   done.             |    done.
+                     | 
+ ⏺ Plan              |  ⏺ Plan
+   ⎿  ☒ Read...code  |    ⎿  ☒ Read...code
+      ☒Writ...hange  |       ☒ Writ...ange
+      ☒ Run ...ests  |       ☒ Run ...ests
+                     | 
+ › permission        |  › permission
+                     | 
+ ⏺ Write(notes.txt)  |  ⏺ Write(notes.txt)
+   ⎿  Allowed Write  |    ⎿  Allowed Write
+      notes.txt ·    |       notes.txt ·
+      Allow          |       Allow
+                     | 
+ ⏺ Permission:       |  ⏺ Permission:
+   allow.            |    allow.
+                     | 
+ › error             |  › error
+                     | 
+ ⏺ About to fail.    |  ⏺ About to fail.
+                     | 
+ ⏺ The fake agent    |  ⏺ The fake agent
+   failed on         |    failed on
+   purpose.          |    purpose.
+                     | 
+╭──────────────────╮ | ╭──────────────────╮
+│ ›                │ | │ ›                │
+╰──────────────────╯ | ╰──────────────────╯
+   Fake… · 1% used   |    Fake… · 1% used

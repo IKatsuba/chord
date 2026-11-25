@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · GPT-5.3 Codex
+ ▄▀▀▀   /private/tmp/ctui29e-look/wT
+ ▀▀     ? for shortcuts · /help
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      Session time: 9s
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  /clear    Start a new session with an empty transcript
+  /config   Change the agent's settings for this session, such as effort
+  /context  Show how full the agent's context window is
+  /cost     Show the tokens and cost this session has spent
+  /echo     Repeat what follows the command
+  /mcp      Show the MCP servers chord passed to the agent
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /c                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                                                 GPT-5.3 Codex · medium effort

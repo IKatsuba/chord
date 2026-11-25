@@ -1,0 +1,24 @@
+[38;2;71;231;165m Markdown  dark, 100%[39m
+ Late work 1. A first chunk that starts with a space, as an agent streams it,
+long enough to wrap at eighty.
+
+a hard break follows
+   b, after three spaces and a soft line indented by three, then more words so
+that this paragraph wraps in the narrow window too.
+
+ [1mb[0m x, strong after a leading space
+
+[2m- [0mi
+[2m  [0m
+[2m  [0m x, the loose item's second paragraph
+
+[2m│ [3mquote line continued with indent[0m
+
+[38;5;244m┌───────────────────┐[39m
+[38;5;244m│[39m   indented code   [38;5;244m│[39m
+[38;5;244m│[39m     kept two more [38;5;244m│[39m
+[38;5;244m└───────────────────┘[39m
+
+[38;5;244m┌─────────────────┐[39m
+[38;5;244m│[39m   fenced        [38;5;244m│[39m
+[1mctrl+s[0;2m Stream again[0m  [1mctrl+t[0;2m Theme[0m  [1mctrl+q[0;2m Quit[0m  [1mpageup[0;2m Scroll up a page[0m  [1mpagedo…

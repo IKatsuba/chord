@@ -1,0 +1,40 @@
+   [2m165. [0mLine 165 of 200, streamed one at a time.
+   [2m166. [0mLine 166 of 200, streamed one at a time.
+   [2m167. [0mLine 167 of 200, streamed one at a time.
+   [2m168. [0mLine 168 of 200, streamed one at a time.
+   [2m169. [0mLine 169 of 200, streamed one at a time.
+   [2m170. [0mLine 170 of 200, streamed one at a time.
+   [2m171. [0mLine 171 of 200, streamed one at a time.
+   [2m172. [0mLine 172 of 200, streamed one at a time.
+   [2m173. [0mLine 173 of 200, streamed one at a time.
+   [2m174. [0mLine 174 of 200, streamed one at a time.
+   [2m175. [0mLine 175 of 200, streamed one at a time.
+   [2m176. [0mLine 176 of 200, streamed one at a time.
+   [2m177. [0mLine 177 of 200, streamed one at a time.
+   [2m178. [0mLine 178 of 200, streamed one at a time.
+   [2m179. [0mLine 179 of 200, streamed one at a time.
+   [2m180. [0mLine 180 of 200, streamed one at a time.
+   [2m181. [0mLine 181 of 200, streamed one at a time.
+   [2m182. [0mLine 182 of 200, streamed one at a time.
+   [2m183. [0mLine 183 of 200, streamed one at a time.
+   [2m184. [0mLine 184 of 200, streamed one at a time.
+   [2m185. [0mLine 185 of 200, streamed one at a time.
+   [2m186. [0mLine 186 of 200, streamed one at a time.
+   [2m187. [0mLine 187 of 200, streamed one at a time.
+   [2m188. [0mLine 188 of 200, streamed one at a time.
+   [2m189. [0mLine 189 of 200, streamed one at a time.
+   [2m190. [0mLine 190 of 200, streamed one at a time.
+   [2m191. [0mLine 191 of 200, streamed one at a time.
+ [2m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [2menter to send                         esc to interrupt                     enter to pick the highlighted choice[0m
+  [2mshift or \ + enter for a newline      ctrl + o for verbose output          esc to reject a permission[0m
+  [2malt + ← → to move by word             ctrl + c to clear input              esc to leave a picker or shortcuts[0m
+  [2m↑ ↓ for prompts                       ctrl + d or ctrl + c twice to quit   ? for shortcuts[0m
+  [2mpgup pgdn to scroll                   ctrl + x a for what waits on you     any key to quit the crash screen[0m
+  [2mshift + ↑ ↓ to scroll a line          1–9 to pick a choice[0m
+  [2mhome end for the top and the bottom   ↑ ↓ j k to move or change a value[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

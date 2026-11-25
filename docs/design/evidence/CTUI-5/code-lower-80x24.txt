@@ -1,0 +1,24 @@
+ Code  plain, numbers off, wrap on
+    }
+  }
+
+ python
+  @cached
+  def area(r: float = 1.0) -> str:
+      """Doc."""
+      return f"{3.14159 * r * r:.2f}"  # rounded
+
+
+ sh, with a tab
+  for f in *.txt; do
+    echo "$f" | grep -v x > /dev/null
+  done
+
+ no language
+  plain text, as it is
+
+    indented after a blank line
+
+ empty
+
+ctrl+n Line numbers  ctrl+w Wrap  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a…

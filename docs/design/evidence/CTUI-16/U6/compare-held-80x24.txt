@@ -1,0 +1,25 @@
+Original paused long reply | U6 held fixture
+   7. Line 7 of 200, streamed one at a time.                                     | 
+   8. Line 8 of 200, streamed one at a time.                                     |  ⏺ New output 115
+   9. Line 9 of 200, streamed one at a time.                                     | 
+   10. Line 10 of 200, streamed one at a time.                                   |  ⏺ New output 116
+   11. Line 11 of 200, streamed one at a time.                                   | 
+   12. Line 12 of 200, streamed one at a time.                                   |  ⏺ New output 117
+   13. Line 13 of 200, streamed one at a time.                                   | 
+   14. Line 14 of 200, streamed one at a time.                                   |  ⏺ New output 118
+   15. Line 15 of 200, streamed one at a time.                                   | 
+   16. Line 16 of 200, streamed one at a time.                                   |  ⏺ New output 119
+   17. Line 17 of 200, streamed one at a time.                                   | 
+   18. Line 18 of 200, streamed one at a time.                                   |  ⏺ New output 120
+   19. Line 19 of 200, streamed one at a time.                                   | 
+   20. Line 20 of 200, streamed one at a time.                                   |  ⏺ New output 121
+   21. Line 21 of 200, streamed one at a time.                                   | 
+   22. Line 22 of 200, streamed one at a time.                                   |  ⏺ New output 122
+ ── ↓ new output · 5 lines below · end to jump to the bottom ──────────────────  | 
+                                                                                 |  ⏺ New output 123
+ ››› Working… (2s · esc to interrupt)                                            | 
+                                                                                 |  ⏺ New output 124
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ |  ⏺ New output 125
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ── ↓ new output · 254 lines below · end to jump to the bottom ────────────────
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |   Page up; ctrl+o toggles details; end follows; ctrl+q quits

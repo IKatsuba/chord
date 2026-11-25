@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › running
+
+ ⏺ Working
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                         esc to close completions             ctrl + x a for what waits on you
+  tab to send the oldest queued now     ! for bash mode                      1–9 to pick a choice
+  shift or \ + enter for a newline      backspace to leave bash mode         ↑ ↓ j k ← → to move or change a value
+  alt + ← → to move by word             esc to interrupt or stop a command   enter to pick the highlighted choice
+  ↑ ↓ for prompts                       shift + tab to cycle modes           esc to reject a permission
+  pgup pgdn to scroll                   ctrl + o for verbose output          esc to leave a picker or shortcuts
+  shift + ↑ ↓ to scroll a line          ctrl + c to copy                     ctrl + a to show all directories
+  home end for the top and the bottom   ctrl + x b to pick a code block      ? for shortcuts
+  ↑ ↓ to pick a completion              c r to copy or put in the prompt     any key to quit the crash screen
+  tab to complete a command             ctrl + c to clear input
+  tab enter to add a file or agent      ctrl + d or ctrl + c twice to quit
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

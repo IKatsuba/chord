@@ -1,0 +1,12 @@
+{"type":"session","version":1,"sessionId":"literal/id","agent":"fake","cwd":"fixture-project","at":0}
+{"type":"opened","at":0}
+{"type":"prompt","turnId":"turn-1","at":100,"prompt":"first\n prompt","images":0}
+{"type":"update","turnId":"turn-1","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"hello"},"_meta":{"future":[1,2.5]}}}
+{"type":"result","turnId":"turn-1","result":{"status":"completed","stopReason":"cancelled"}}
+{"type":"renamed","at":200,"title":"Named\n session"}
+{"type":"update","turnId":"turn-1","update":{"sessionUpdate":"session_info_update","title":"  "}}
+{"type":"prompt","turnId":"turn-2","at":300,"prompt":"later","images":0}
+{"type":"result","turnId":"turn-2","result":{"status":"failed","error":{"message":"no","code":"reason/text"}}}
+{"type":"future","opaque":true}
+not JSON
+{"torn"

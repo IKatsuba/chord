@@ -1,0 +1,11 @@
+Original                         │ Port
+╭──────────────────────────────╮ │ ╭──────────────────────────────╮
+│ Resume a session             │ │ │ Resume a session             │
+│                              │ │ │                              │
+│ Ctrl+a for this directory ·  │ │ │ Ctrl+a for this directory ·  │
+╰─Esc─to─close─────────────────╯ │ ╰──────────────────────────────╯
+                                 │ 
+╭──────────────────────────────╮ │ ╭──────────────────────────────╮
+│ ›                            │ │ │ ›                            │
+╰──────────────────────────────╯ │ ╰──────────────────────────────╯
+  ? for shortcuts  Fake Large…   │   ? for shortcuts  Fake Large…

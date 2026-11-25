@@ -1,0 +1,31 @@
+00:00 +0 -1: async pending pick synchronizes resize without a frame and never replays Size(120, 40) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -2: async pending pick synchronizes constraints without a frame and never replays Size(120, 40) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -3: async pending pick synchronizes exhausted without a frame and never replays Size(120, 40) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -4: async pending pick synchronizes nested input without a frame and never replays Size(120, 40) [E]
+  Expected: '@ax'
+    Actual: '@alpha '
+00:00 +0 -5: async pending pick synchronizes dispose without a frame and never replays Size(120, 40) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -6: async pending pick synchronizes resize without a frame and never replays Size(80, 24) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -7: async pending pick synchronizes constraints without a frame and never replays Size(80, 24) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -8: async pending pick synchronizes exhausted without a frame and never replays Size(80, 24) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -9: async pending pick synchronizes nested input without a frame and never replays Size(80, 24) [E]
+  Expected: '@ax'
+    Actual: '@alpha '
+00:00 +0 -10: async pending pick synchronizes dispose without a frame and never replays Size(80, 24) [E]
+  Expected: '@a'
+    Actual: '@alpha '
+00:00 +0 -10: Some tests failed.

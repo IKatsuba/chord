@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts
+
+ › Inspect the saved notes
+
+ ⏺ The saved notes are ready.
+
+ › text
+
+ ⏺ Could not keep this session's record: Bad state: fixture record write failed
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

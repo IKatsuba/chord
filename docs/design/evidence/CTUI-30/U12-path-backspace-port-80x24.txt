@@ -1,0 +1,24 @@
+ ▀▄     chord vX
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <dir>
+ ▀▀     ? for shortcuts · /help
+
+ › [Image #1]  what is this
+
+ ⏺ Received an image: image/png, 547099 bytes
+
+   Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,9 @@
+{"defaultLocale":"en-US"}
+{"locale":"en-US","sorted":["_private","-x","🙂","9run","a","Å","ä","clear","config","cost","e","é","É","effort","exit","fast","fork","help","i","İ","ı","model","new","resume","status","z","Z","σ","Σ","ς","Код","команда"]}
+{"locale":"de-DE","sorted":["_private","-x","🙂","9run","a","Å","ä","clear","config","cost","e","é","É","effort","exit","fast","fork","help","i","İ","ı","model","new","resume","status","z","Z","σ","Σ","ς","Код","команда"]}
+{"locale":"sv-SE","sorted":["_private","-x","🙂","9run","a","clear","config","cost","e","é","É","effort","exit","fast","fork","help","i","İ","ı","model","new","resume","status","z","Z","Å","ä","σ","Σ","ς","Код","команда"]}
+{"locale":"tr-TR","sorted":["_private","-x","🙂","9run","a","Å","ä","clear","config","cost","e","é","É","effort","exit","fast","fork","help","ı","i","İ","model","new","resume","status","z","Z","σ","Σ","ς","Код","команда"]}
+{"pair":["a","A"],"sign":-1}
+{"pair":["Z","z"],"sign":1}
+{"pair":["é","e"],"sign":1}
+{"pair":["_private","-x"],"sign":-1}

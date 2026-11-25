@@ -1,0 +1,41 @@
+ORIGINAL + STUB | PORT + RECORDER
+ ▀▄     chord v0.71.0                                                                                                    |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       |  ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   build/ctui48-s7-project                                                                                          |  ▄▀▀▀   build/ctui48-s7-project
+ ▀▀     ? for shortcuts · /help                                                                                          |  ▀▀     ? for shortcuts
+                                                                                                                         | 
+ ⏺ --no-mcp-servers held back 1 MCP server from fake: chord (chord's own). Without it, fake cannot start other agents    |  › markdowncode
+   or use chord's tools. /mcp lists it.                                                                                  | 
+                                                                                                                         |  ⏺ A paragraph before the code.
+ › markdowncode                                                                                                          | 
+                                                                                                                         |    ┌ typescript ──[copy]─┐
+ ⏺ A paragraph before the code.                                                                                          |    │   x                 │
+                                                                                                                         |    └─────────────────────┘
+   ┌─ typescript ─[copy]─┐                                                                                               | 
+   │ x                   │                                                                                               |    ┌ sh ────────────────────────────────────────────────────────────────────────────────[copy]─┐
+   └─────────────────────┘                                                                                               |    │   bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt │
+                                                                                                                         |    │                                                                                           │
+   ┌─ sh ───────────────────────────────────────────────────────────────────────[copy]─[run]─┐                           |    │   echo done                                                                               │
+   │ bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt │                           |    └───────────────────────────────────────────────────────────────────────────────────────────┘
+   │                                                                                         │                           | 
+   │ echo done                                                                               │                           |    - a loose item
+   └─────────────────────────────────────────────────────────────────────────────────────────┘                           | 
+                                                                                                                         |    - a loose item with a box:
+   - a loose item                                                                                                        | 
+                                                                                                                         |      ┌ sh ──────[copy]─┐
+   - a loose item with a box:                                                                                            |      │   bun dev check │
+                                                                                                                         |      └─────────────────┘
+     ┌─ sh ─[copy]─[run]─┐                                                                                               | 
+     │ bun dev check     │                                                                                               |    A paragraph after.
+     └───────────────────┘                                                                                               | 
+                                                                                                                         | 
+   A paragraph after.                                                                                                    | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  sent 13 chars to the terminal's clipboard                                                                              |   sent 13 chars to the terminal's clipboard

@@ -1,0 +1,54 @@
+baseline-test.log (handed developer log; selected lines)
+2:   Expected: '/sta'
+3:     Actual: '/t'
+5:             Expected: /sta
+6:               Actual: /t
+16:   Expected: '/sta'
+17:     Actual: '/t'
+19:             Expected: /sta
+20:               Actual: /t
+29: +0 -2: Some tests failed.
+
+initial-command-diagnostic.log (handed developer log; selected lines)
+23:   Expected: true
+24:     Actual: <false>
+25:   current command character s
+32: 00:00 +0 -1: Some tests failed.
+
+sibling-red.log (handed developer log; selected lines)
+11:   Expected: true
+12:     Actual: <false>
+29:   Expected: true
+30:     Actual: <false>
+37: +0 -2: Some tests failed.
+
+quit-chain.log (handed developer log; selected lines)
+208: QUIT_PASS_END 1 epoch=137/139 dirty=true
+237: QUIT_PASS_END 1 epoch=158/160 dirty=true
+278: QUIT_PASS_END 1 epoch=187/189 dirty=true
+288:   Expected: true
+289:     Actual: <false>
+296: +0 -1: Some tests failed.
+
+quit-chain-deltas.log (handed developer log; selected lines)
+237: QUIT_PASS_END 1 epoch=137/139 dirty=true
+271: QUIT_PASS_END 1 epoch=158/160 dirty=true
+318: QUIT_PASS_END 1 epoch=187/189 dirty=true
+328:   Expected: true
+329:     Actual: <false>
+336: +0 -1: Some tests failed.
+
+quit-diagnostic.log (handed developer log; selected lines)
+2: KEY_GEOMETRY_MISS ctrl+c
+4:   Expected: true
+5:     Actual: <false>
+13: KEY_GEOMETRY_MISS ctrl+c
+15:   Expected: true
+16:     Actual: <false>
+23: +0 -2: Some tests failed.
+
+root-final.log (handed developer log; selected lines)
+54: +823: All tests passed!
+
+port-final.log (handed developer log; selected lines)
+1: +394: All tests passed!

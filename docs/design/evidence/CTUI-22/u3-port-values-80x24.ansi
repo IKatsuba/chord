@@ -1,0 +1,24 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m~/projects/ikatsuba/chorded-tui-worktrees/CTUI-22[0m
+ █▀     [2m? for shortcuts[0m
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mSet Effort[0m                                                                   [2m│
+│[0m [2mChoose fake's Effort for this session.[0m                                       [2m│
+│[0m                                                                              [2m│
+│[0m [1m [0m 1. Low                                                                     [2m│
+│[0m [1m❯[0m [1m2.[0m [1mMedium ✔[0m                                                                [2m│
+│[0m [1m [0m 3. High                                                                    [2m│
+│[0m                                                                              [2m│
+│[0m [2mEnter to set · Esc to go back[0m                                                [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

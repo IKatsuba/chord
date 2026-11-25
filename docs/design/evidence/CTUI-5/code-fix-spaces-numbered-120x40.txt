@@ -1,0 +1,40 @@
+ Code  dark, numbers on, wrap on
+2    * over three lines. */
+3   export class Cache<T> extends Map<string, T> {
+4     private hits = 0; // counted
+5     get(key: string): T | undefined {
+6       return super.get(key) ?? undefined;
+7     }
+8   }
+
+ python
+1   @cached
+2   def area(r: float = 1.0) -> str:
+3       """Doc."""
+4       return f"{3.14159 * r * r:.2f}"  # rounded
+5
+
+ sh, with a tab
+1   for f in *.txt; do
+2     echo "$f" | grep -v x > /dev/null
+3   done
+
+ no language
+1   plain text, as it is
+2
+3     indented after a blank line
+
+ empty
+1
+
+ spaces kept, 7 cells wide
+1   a
+  ↪   b
+
+ spaces kept, 12 cells wide
+1   x      y
+2
+  ↪
+  ↪ indented
+  ↪  ten
+ctrl+n Line numbers  ctrl+w Wrap  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedown Scroll down a page  up S…

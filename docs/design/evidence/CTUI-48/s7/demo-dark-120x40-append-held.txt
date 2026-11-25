@@ -1,0 +1,40 @@
+Selection area · immutable source log
+Known coverage: true · overlay: false · held: true · following: false
+
+┌ dart ───────────[copy]─┐
+│     print("record 7"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+Record 8 · 日本語 👩‍💻 é
+
+┌ dart ───────────[copy]─┐
+│     print("record 8"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+Record 9 · 日本語 👩‍💻 é
+
+┌ dart ───────────[copy]─┐
+│     print("record 9"); │
+│                        │
+│   end                  │
+└────────────────────────┘
+Record 10 · 日本語 👩‍💻 é
+
+┌ dart ────────────[copy]─┐
+│     print("record 10"); │
+│                         │
+│   end                   │
+└─────────────────────────┘
+Record 11 · 日本語 👩‍💻 é
+
+┌ dart ────────────[copy]─┐
+│     print("record 11"); │
+│                         │
+│   end                   │
+└─────────────────────────┘
+draft stays focused
+Drag header, log or draft; no clipboard is used.
+C-l clear · C-s snapshot · C-o overlay · C-u coverage · C-t theme · C-r reveal · C-b code · F2 append · S-↑/↓ scroll ·
+PgUp/PgDn · C-q quit

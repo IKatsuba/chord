@@ -1,0 +1,24 @@
+
+› Earlier request
+
+⏺ Earlier answer.
+
+› Personal message accepted into this turn
+
+⏺ Visible self-started work 界😀 é 👩‍💻. Late work 1.
+  ⎿  Interrupted · the agent started this on its own; your message goes as the…
+
+› Queued message goes as the next turn
+
+
+
+
+
+
+
+
+
+
+
+── ↓ 1 line below · end to jump to the bottom ──────────────────────────────────
+ctrl+t empty · ctrl+n late · ctrl+p next · ctrl+r reset · ctrl+s source · ctrl+q

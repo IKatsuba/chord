@@ -1,0 +1,25 @@
+Original installed agents | Port synthetic fixture (80x24; inventories/version/directory differ)
+                            ▀▄                                                   |                             ▀▄
+                            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄                            |                             ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀                            |                             ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            ▀▀                                                   |                             ▀▀
+                 v0.71.0 · /tmp/chord-qa.designer-ship13-c3color                 |         v0.0.1 · /workspace/packages/terminal/interfaces/example/project
+                                                                                 | 
+          Select agent                                                           |           Select agent
+                                                                                 | 
+              1.  agoragentic-acp · Agoragentic                                  |           ❯   1.  claude
+              2.  auggie · Auggie CLI                                            |               2.  codex
+              3.  bob · Bob                                                      |               3.  pi · not on PATH
+          ❯   4.  claude · Claude Agent                                          |               4.  agent-3 · Coding agent 3
+              5.  cline · Cline                                                  |               5.  agent-4 · Coding agent 4
+              6.  codebuddy-code · Codebuddy Code                                |               6.  agent-5 · Coding agent 5
+              7.  codex · Codex                                                  |               7.  agent-6 · Coding agent 6
+              8.  cursor-cloud · Cursor Cloud Agents                             |               8.  agent-7 · Coding agent 7
+              9.  deepagents · DeepAgents                                        |               9.  agent-8 · Coding agent 8
+              10. dimcode · DimCode                                              |               10. agent-9 · Coding agent 9
+              11. dirac · Dirac                                                  |               11. agent-10 · Coding agent 10
+            ↓ 12. factory-droid · Factory Droid                                  |             ↓ 12. agent-11 · Coding agent 11
+              … +17 more                                                         |               … +16 more
+                                                                                 | 
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel             |           ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+                                                                                 | 

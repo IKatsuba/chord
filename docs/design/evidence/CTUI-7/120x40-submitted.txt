@@ -1,0 +1,40 @@
+Text area
+
+line 1
+line 2
+line 3
+line 4
+line 5
+line 6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │  Write a message                                                                                                   │
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+line 1, column 1 · rows 1–1 of 1
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter Insert newline  ctrl+j Insert newline  l…

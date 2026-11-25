@@ -1,0 +1,4 @@
+Filter: 14
+❯ ↓ 1. Choice 14, with a second line
+Chosen: nothing yet
+enter Finish editing filter  escape Finish editing filter  ctrl+q Quit

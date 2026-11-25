@@ -1,0 +1,31 @@
+import 'dart:io';
+import 'package:cancellation_token/cancellation_token.dart';
+import 'package:chord/files.dart';
+import 'package:path/path.dart' as p;
+Future<void> main() async {
+  final dir = await Directory.systemTemp.createTemp('chord-core-aot-');
+  try {
+    Future<void> put(String name, [String text = '']) async {
+      final f = File(p.join(dir.path, name)); await f.parent.create(recursive: true); await f.writeAsString(text);
+    }
+    await put('.gitignore','*.log\n');
+    await put('sub/.gitignore','!keep.log\n');
+    await put('.hidden'); await put('space name.md');
+    await put('sub/keep.log'); await put('sub/drop.log'); await put('.git/config');
+    await Link(p.join(dir.path,'broken')).create('absent');
+    final files = await listFiles(dir.path);
+    final expected = ['.gitignore','.hidden','space name.md','sub/.gitignore','sub/keep.log'];
+    if (files.join('\n') != expected.join('\n')) throw StateError('$files');
+    final links = await mentionLinks(['space name.md','sub/keep.log','space name.md','sub','../outside','sub/drop.log'], dir.path);
+    if (links.length != 2 || links.first.toJson()['name'] != 'space name.md' || !('${links.first.toJson()['uri']}'.endsWith('space%20name.md'))) throw StateError('links');
+    final token = CancellationToken();
+    final pending = listFiles(dir.path, cancellationToken: token); token.cancel();
+    try {await pending; throw StateError('cancellation did not cancel');} on CancelledException { }
+    if ((await mentionLinks(['space name.md'], dir.path,cancellationToken: token)).isNotEmpty) throw StateError('cancelled links');
+    print('PASS AOT: nested ignores, dotfiles/nonrepo, broken links, URI order/dedup, cancellable-isolate walk and cancelled links');
+  } finally {
+    await dir.delete(recursive: true);
+    if (await dir.exists()) throw StateError('fixture leaked');
+    print('PASS fixture cleanup');
+  }
+}

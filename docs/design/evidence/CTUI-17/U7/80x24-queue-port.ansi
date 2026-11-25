@@ -1,0 +1,24 @@
+ [1mchord[0;2m v0.0.1 · fake · [task directory]
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m queued second
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m readsheld
+
+ ⏺ Working
+   [2m⎿[0m  Interrupted by user
+
+ [2m›[0m readsheld
+
+ ⏺ Working
+ [2m›[0m [2mnarrow queued 1 …[0m
+ [2m›[0m [2mA long queued prompt preserves its e...board keyboard keyboard keyboard tail[0m
+ [2m›[0m [2mnarrow queued 3[0m
+ [2m›[0m [2m… +3 more[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › narrow draft[7m [0m                                                              [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m [2mctrl+c or ctrl+d to quit[0m

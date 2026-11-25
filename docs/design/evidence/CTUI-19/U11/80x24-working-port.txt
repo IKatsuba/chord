@@ -1,0 +1,24 @@
+ chord v0.0.1 · fake · [task directory]
+
+ ⏺ Holding on.
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Interrupted by user
+
+ › status
+
+ ⏺ Status sent.
+
+ › ignorescancel
+
+ ⏺ Holding on.
+
+ ››› Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · medium · 1% used

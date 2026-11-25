@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                                                         │
+│ Switch fixture-界👩‍💻long界👩‍💻long界👩‍💻long界👩‍💻long界👩‍💻long...ng界👩‍💻long界👩‍💻long界👩‍💻long-tail's model for this session.  │
+│                                                                                                                      │
+│ ❯ 1. Model long label 界👩‍💻 long label 界👩‍💻 long label 界... long label 界👩‍💻 long label 界👩‍💻 long label 界👩‍💻  tail ✔  │
+│   2. Short model                                                                                                     │
+│                                                                                                                      │
+│ Value long label 界👩‍💻 long label 界👩‍💻 long label 界👩‍💻 long label 界👩‍💻 long label 界👩‍💻 long label 界👩‍💻 long label 界… │
+│                                                                                                                      │
+│ Enter to switch · ←/→ effort · Esc to close                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

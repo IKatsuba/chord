@@ -1,0 +1,5 @@
+name: ctui22_collation_trial
+environment:
+  sdk: ^3.10.0
+dependencies:
+  intl4x: 1.0.1

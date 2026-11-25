@@ -1,0 +1,40 @@
+ chorded-tui demo                                                              dark: the terminal did not say, no colour
+╭ log ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ accent link code success warning error  + added  - removed                                                           │
+│     and more                                                                                                         │
+│ 132 line 132, and more, and more, and more, and more, and more, and more, and more, and more, and more,    118 cells │
+│     and more, and more                                                                                               │
+│ 133 line 133                                                                                                 8 cells │
+│ 134 line 134, and more                                                                                      18 cells │
+│ 135 line 135, and more, and more                                                                            28 cells │
+│ 136 line 136, and more, and more, and more                                                                  38 cells │
+│ 137 line 137, and more, and more, and more, and more                                                        48 cells │
+│ 138 line 138, and more, and more, and more, and more, and more                                              58 cells │
+│ 139 line 139, and more, and more, and more, and more, and more, and more                                    68 cells │
+│ 140 line 140, and more, and more, and more, and more, and more, and more, and more                          78 cells │
+│ 141 line 141, and more, and more, and more, and more, and more, and more, and more, and more                88 cells │
+│ 142 line 142, and more, and more, and more, and more, and more, and more, and more, and more, and more      98 cells │
+│ 143 line 143, and more, and more, and more, and more, and more, and more, and more, and more, and more,    108 cells │
+│     and more                                                                                                         │
+│ 144 line 144, and more, and more, and more, and more, and more, and more, and more, and more, and more,    118 cells │
+│     and more, and more                                                                                               │
+│ 145 line 145                                                                                                 8 cells │
+│ 146 line 146, and more                                                                                      18 cells │
+│ 147 line 147, and more, and more                                                                            28 cells │
+│ 148 line 148, and more, and more, and more                                                                  38 cells │
+│ 149 line 149, and more, and more, and more, and more                                                        48 cells │
+│ 150 line 150, and more, and more, and more, and more, and more                                              58 cells │
+│ 151 line 151, and more, and more, and more, and more, and more, and more                                    68 cells │
+│ 152 line 152, and more, and more, and more, and more, and more, and more, and more                          78 cells │
+│ 153 line 153, and more, and more, and more, and more, and more, and more, and more, and more                88 cells │
+│ 154 line 154, and more, and more, and more, and more, and more, and more, and more, and more, and more      98 cells │
+│ 155 line 155, and more, and more, and more, and more, and more, and more, and more, and more, and more,    108 cells │
+│     and more                                                                                                         │
+│ 156 line 156, and more, and more, and more, and more, and more, and more, and more, and more, and more,    118 cells │
+│     and more, and more                                                                                               │
+│ 157 line 157                                                                                                 8 cells │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│>  Say something                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl+o Toggle details  ctrl+t Theme  ctrl+x b Toggle busy  ctrl+x c Clear  ctrl+x f Fill the log  ctrl+q Quit  pageup…

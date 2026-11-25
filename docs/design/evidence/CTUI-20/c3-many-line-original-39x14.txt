@@ -1,0 +1,14 @@
+ chord v0.71.0 · …a.designer-ship13-c3
+
+  Select agent
+
+  ❯ ↑ 4.  claude · Claude Agent
+      5.  cline · Cline
+      6.  codebuddy-...Codebuddy Code
+      7.  codex · Codex
+    ↓ 8.  cursor-clo...r Cloud Agents
+      … +24 more
+
+  ↑↓ or j/k to move · Enter or 1–9 to
+  select · Esc to cancel
+

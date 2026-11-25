@@ -1,0 +1,18 @@
+
+     ┌─ sh ─[copy]─[run]─┐
+     │ bun dev check     │
+     └───────────────────┘
+
+   A paragraph after.
+
+ › true
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ! true
+   ⎿  (No output)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -77,7 +77,7 @@ export interface PackageSteps {
 export interface FoundPackage {
   /** Its npm name without the scope: `chord`. */
   readonly name: string;
-  /** Its folder from the root, `.` for the root's own. */
+  /** Its folder from the root. */
   readonly folder: string;
   readonly steps: PackageSteps;
 }
@@ -94,8 +94,8 @@ export function isPublish(stage: Stage | Publish): stage is Publish {
 }
 
 /**
- * The root's package and its workspaces', in that order, each with its
- * `steps.ts` imported; anything `bun dev` could not tell apart or run
+ * The root's workspaces' packages, in order, each with its `steps.ts`
+ * imported; the root itself is never a package. Anything `bun dev` could not tell apart or run
  * stops here, naming the folder.
  */
 export async function packages(root: string): Promise<FoundPackage[]> {
@@ -103,16 +103,13 @@ export async function packages(root: string): Promise<FoundPackage[]> {
   const patterns = Array.isArray(manifest.workspaces)
     ? manifest.workspaces
     : (manifest.workspaces?.packages ?? []);
-  const folders = [
-    '.',
-    ...(
-      await globby(patterns, {
-        cwd: root,
-        onlyDirectories: true,
-        expandDirectories: false,
-      })
-    ).toSorted(),
-  ];
+  const folders = (
+    await globby(patterns, {
+      cwd: root,
+      onlyDirectories: true,
+      expandDirectories: false,
+    })
+  ).toSorted();
   const found: FoundPackage[] = [];
 
   for (const folder of folders) {

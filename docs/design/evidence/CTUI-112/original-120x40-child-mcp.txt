@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 16s ago
+
+ ← from @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Always allow
+
+ ⏺ Permission: always.
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord's MCP servers for fake. ACP does not say whether fake connected to the ones it was passed.                     │
+│                                                                                                                      │
+│ Name   Transport  Command or URL              Defined in                                                             │
+│ chord  http       http://127.0.0.1:49488/mcp  chord itself                                                           │
+│                                                                                                                      │
+│ chord's server gives fake list_agents, get_budgets, spawn_task, close_agent for its own tasks, monitor, stop_monitor │
+│ and list_monitors, and send_message to main only.                                                                    │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 11s
+    parser  fake · Fake Small · medium                           ◦ idle 13s  ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ◦ idle 3s

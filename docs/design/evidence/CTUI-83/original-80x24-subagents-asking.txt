@@ -1,0 +1,24 @@
+   │     API Error: 529 Overloaded
+   ├─ Agent(Run the tests) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(Watch the build) · 1 tool use · 0s
+      ⎿  Untracked
+
+ ››› Waiting for permission… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Find the session layer) asks                                           │
+│ Write notes/routing.md                                                       │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    background  ● main's agent asking · ? main's agent untracked

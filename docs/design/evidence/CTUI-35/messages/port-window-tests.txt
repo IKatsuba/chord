@@ -1,0 +1,396 @@
+=== a message comes in as ← from @main and one sent goes out as → to @main · queued, at Size(120, 40)
+ parser · fake · opened by main … ago
+
+ ← from @main
+   ⎿  Run the parser tests now.
+
+ → to @main · queued
+   ⎿  Ran them: 2 failures.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ✻ working 0s  ← new message
+=== ← from @lexer and → to @lexer take lexer's colour, at Size(120, 40)
+ parser · fake · opened by main … ago
+
+ ← from @lexer · fake
+   ⎿  Tokens are ready.
+
+ → to @lexer
+   ⎿  Thanks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ✻ working 0s  ← new message
+    lexer   fake  ◦ idle 0s
+=== a message comes in as ← from @main and one sent goes out as → to @main · queued, at Size(80, 24)
+ parser · fake · opened by main … ago
+
+ ← from @main
+   ⎿  Run the parser tests now.
+
+ → to @main · queued
+   ⎿  Ran them: 2 failures.
+
+
+
+
+
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ✻ working 0s  ← new message
+=== main and chord stay uncoloured beside a coloured lexer, at Size(120, 40)
+ parser · fake · opened by main … ago
+
+ ← from @main
+   ⎿  Run the parser tests.
+
+ ← from chord
+   ⎿  lexer is idle.
+
+ ← from @lexer
+   ⎿  Done.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s  ✓ new reply
+    lexer   fake  ◦ idle 0s
+=== a failed arrow stays in the error colour, its name in lexer's, at Size(120, 40)
+ parser · fake · opened by main … ago
+
+ ← from @lexer · failed
+   ⎿  It broke.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ✻ working 0s  ← new message
+    lexer   fake  ◦ idle 0s
+=== a refused send's arrow stays in the error colour, its name in lexer's, at Size(120, 40)
+ parser · fake · opened by main … ago
+
+ → to @lexer
+   ⎿  Hello.
+      No agent is named lexer.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s
+    lexer   fake  ◦ idle 0s
+=== a pending send's arrow stays dim, its name in lexer's, at Size(120, 40)
+ parser · fake · opened by main … ago
+
+ → to @lexer
+   ⎿  Hello.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s
+    lexer   fake  ◦ idle 0s
+=== ← from @lexer and → to @lexer take lexer's colour, at Size(80, 24)
+ parser · fake · opened by main … ago
+
+ ← from @lexer · fake
+   ⎿  Tokens are ready.
+
+ → to @lexer
+   ⎿  Thanks.
+
+
+
+
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ✻ working 0s  ← new message
+    lexer   fake  ◦ idle 0s
+=== main and chord stay uncoloured beside a coloured lexer, at Size(80, 24)
+ parser · fake · opened by main … ago
+
+ ← from @main
+   ⎿  Run the parser tests.
+
+ ← from chord
+   ⎿  lexer is idle.
+
+ ← from @lexer
+   ⎿  Done.
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s  ✓ new reply
+    lexer   fake  ◦ idle 0s
+=== a failed arrow stays in the error colour, its name in lexer's, at Size(80, 24)
+ parser · fake · opened by main … ago
+
+ ← from @lexer · failed
+   ⎿  It broke.
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ✻ working 0s  ← new message
+    lexer   fake  ◦ idle 0s
+=== a refused send's arrow stays in the error colour, its name in lexer's, at Size(80, 24)
+ parser · fake · opened by main … ago
+
+ → to @lexer
+   ⎿  Hello.
+      No agent is named lexer.
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s
+    lexer   fake  ◦ idle 0s
+=== a pending send's arrow stays dim, its name in lexer's, at Size(80, 24)
+ parser · fake · opened by main … ago
+
+ → to @lexer
+   ⎿  Hello.
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s
+    lexer   fake  ◦ idle 0s

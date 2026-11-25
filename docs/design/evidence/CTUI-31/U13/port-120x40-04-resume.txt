@@ -1,0 +1,40 @@
+
+
+
+
+                                ██▄
+                                ████▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗
+                                ██████▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗
+                                 ▀██████▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║
+                                 ▄██████▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║
+                                ██████▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝
+                                ████▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝
+                                ██▀
+
+                                          One terminal for every coding agent.
+                                     v0.0.1 · fake · ~/project
+
+                  ╭──────────────────────────────────────────────────────────────────────────────────╮
+                  │ Resume a session                                                                 │
+                  │ Pick one of fake's earlier sessions to open.                                     │
+                  │                                                                                  │
+                  │ ❯ 1.  18 minutes ago  edit                                                       │
+                  │   2.  19 minutes ago  edit                                                       │
+                  │   3.  28 minutes ago  hello big world                                            │
+                  │   4.  28 minutes ago  hello big world                                            │
+                  │   5.  1 hour ago      shell                                                      │
+                  │   6.  1 hour ago      shell                                                      │
+                  │   7.  1 hour ago      first second                                               │
+                  │   8.  1 hour ago      first second                                               │
+                  │   9.  1 hour ago      edit                                                       │
+                  │   10. 1 hour ago      edit                                                       │
+                  │   11. 1 hour ago      tools                                                      │
+                  │   12. 1 hour ago      tools                                                      │
+                  │                                                                                  │
+                  │ Enter to resume · Ctrl+t for all directories · Q to quit                         │
+                  ╰──────────────────────────────────────────────────────────────────────────────────╯
+
+
+
+
+

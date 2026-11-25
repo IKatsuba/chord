@@ -1,0 +1,24 @@
+ [2m›[0m deploy it
+
+ [38;2;10;116;112m›››[39m [38;2;71;231;165mWaiting for your input…[39m [2m(498623h 5m)[0m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mmain asks you to open a link[0;2m · between turns[0m                                 [38;2;177;185;249m│
+│[39m Line 1 of why the agent needs you to sign in before it goes on.              [38;2;177;185;249m│
+│[39m Line 2 of why the agent needs you to sign in before it goes on.              [38;2;177;185;249m│
+│[39m Line 3 of why the agent needs you to sign in before it goes on.              [38;2;177;185;249m│
+│[39m Line 4 of why the agent needs you to sign in before it goes on.              [38;2;177;185;249m│
+│[39m Line 5 of why the agent needs you to sign in before it goes on.              [38;2;177;185;249m│
+│[39m Line 6 of why the agent needs you to sign in before it goes on.              [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m   [38;2;140;200;255mhttps://example.com/oauth/authorize?client=chord&scope=read:project,read:[39m  [38;2;177;185;249m│
+│[39m   [38;2;140;200;255mproject,read:project,read:project,read:project,read:project,read:project,[39m  [38;2;177;185;249m│
+│[39m   [38;2;140;200;255mread:project,read:project,read:project,read:project,read:project,write[39m     [38;2;177;185;249m│
+│[39m   [2mOpens [1mexample.com[0m                                                          [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [1m[38;2;177;185;249m1. Open in the browser[0m                                                     [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. Decline                                                                 [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [2mEnter to choose · Esc to cancel[0m                                              [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m? for shortcuts[0m

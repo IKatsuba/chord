@@ -1,0 +1,40 @@
+Logical line 1
+Logical line 2
+Logical line 3
+Logical line 4
+Logical line 5
+Logical line 6
+Logical line 7
+Logical line 8
+Logical line 9
+Logical line 10
+Logical line 11
+Logical line 12
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › A keyboard-first prompt wraps 日本語 and emoji 🙂 without splitting graphemes. The next words continue through the [2m│
+│[0m [2m [0m  available text cells and preserve alignment. [7m [0m                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

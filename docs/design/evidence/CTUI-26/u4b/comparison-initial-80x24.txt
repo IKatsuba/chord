@@ -1,0 +1,25 @@
+Original                                                                         | Port
+ █▄     chord v0.71.0                                                            |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                               |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   fixture-root____________/project                                         |  ▄██▀   project
+ █▀     ? for shortcuts · /help                                                  |  █▀     ? for shortcuts
+        resumed · 56 years ago · Inspect the saved notes                         | 
+                                                                                 |  › Inspect the saved notes
+ › Inspect the saved notes                                                       | 
+                                                                                 |  ⏺ The saved notes are ready.
+ ⏺ The saved notes are ready.                                                    | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |   ? for shortcuts          Fake Large with a 1M context window · medium effort

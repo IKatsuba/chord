@@ -1,0 +1,24 @@
+docs · fake · Fake Large with a 1M context window · opened by main 19s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ❯ main    fake  ◦ idle 7s
+    parser  fake  ◦ idle 9s         ✓ new reply
+    docs    fake  ● permission 10s  ← new message

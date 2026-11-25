@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+ ▀▄     chord v0.71.0                                                                                                        |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                           |  ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project                                                                                                      |  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                              |  ▀▀     ? for shortcuts
+                                                                                                                             |
+ › calls                                                                                                                     |  › running
+                                                                                                                             |
+ ⏺ Read(src/main.tsx)                                                                                                        |  ⏺ Working
+   ⎿  import { Command } from '@cliffy/command';                                                                             |
+      import { render } from 'ink';                                                                                          |  ⏺ Read(notes.txt)
+      import { App } from './ui/App.tsx';                                                                                    |    ⎿  Running…
+      … +4 lines (ctrl+o to expand)                                                                                          |
+                                                                                                                             |
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw      |
+   their status")                                                                                                            |
+   ⎿  Running…                                                                                                               |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+ ››› Working… (8s · esc to interrupt)                                                                                        |  ››› Working… (8s · esc to interrupt)
+ › after the running calls: held personal                                                                                    |  › after the running calls: held personal
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › held draft                                                                                                         │     | │ › held draft                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort       |

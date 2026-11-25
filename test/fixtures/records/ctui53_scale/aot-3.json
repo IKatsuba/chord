@@ -1,0 +1,423 @@
+{
+  "runtimeLabel": "aot",
+  "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700)",
+  "pathMatching": "Canonical fixture root resolved before IO; relative lsof names.",
+  "workload": {
+    "records": 2000,
+    "irrelevantBytesPerRecord": 65536,
+    "additionalIrrelevantLineBytes": 8388608,
+    "historyTurns": 4000,
+    "stalledUpdates": 10000,
+    "updateTextBytes": 512,
+    "steadyFrames": 50,
+    "terminalSizes": [
+      "120x40",
+      "80x24"
+    ],
+    "frameIntervalMs": 16
+  },
+  "limits": "Headless build/layout/paint and synthetic Actions keys; no PTY/display/write latency. Peak RSS is cumulative. No cross-runtime speed ratio, queue cap, deadline or durability claim.",
+  "handleSnapshots": {
+    "beforeScan": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterScan": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterCancelScan": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterInstrumentedScanner": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterPrepare": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterCancelPrepare": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterLayout": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterDrain": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "beforeCleanup": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterCleanup": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    }
+  },
+  "handleSnapshotScope": "One immediate lsof snapshot per named stage; external command adds inter-stage time. Relative owned paths only. No polling or physical-isolate-exit inference.",
+  "measurementControl": {
+    "wallMs": 42.6,
+    "rssBytes": 21512192,
+    "cumulativePeakRssBytes": 21512192,
+    "heartbeat": {
+      "samples": 2,
+      "p50Ms": 3.038,
+      "p99Ms": 3.038,
+      "maxMs": 3.038
+    },
+    "dispatchedInput": {
+      "samples": 2,
+      "p50Ms": 3.049,
+      "p99Ms": 3.049,
+      "maxMs": 3.049
+    },
+    "acceptedKeys": 2
+  },
+  "setup": {
+    "wallMs": 691.029,
+    "scanBytes": 139890199
+  },
+  "scan": {
+    "wallMs": 604.486,
+    "rssBytes": 79740928,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 37,
+      "p50Ms": 0.022,
+      "p99Ms": 2.464,
+      "maxMs": 2.464
+    },
+    "dispatchedInput": {
+      "samples": 37,
+      "p50Ms": 0.029,
+      "p99Ms": 2.475,
+      "maxMs": 2.475
+    },
+    "acceptedKeys": 37
+  },
+  "sort": {
+    "wallMs": 1.357,
+    "rssBytes": 79740928,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "cancelScan": {
+    "wallMs": 1.611,
+    "rssBytes": 79790080,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0,
+    "outcome": "cancelled",
+    "requestToFutureMs": 0.092
+  },
+  "instrumentedScanner": {
+    "wallMs": 598.995,
+    "rssBytes": 85377024,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 37,
+      "p50Ms": 0.306,
+      "p99Ms": 7.207,
+      "maxMs": 7.207
+    },
+    "dispatchedInput": {
+      "samples": 37,
+      "p50Ms": 0.311,
+      "p99Ms": 7.211,
+      "maxMs": 7.211
+    },
+    "acceptedKeys": 37
+  },
+  "streamCounts": {
+    "peak": 8,
+    "retained": 0,
+    "workerLimit": 8,
+    "scope": "instrumented scanner seam; physical production isolate count is unmeasured"
+  },
+  "historyBytes": 1401340,
+  "prepare": {
+    "wallMs": 40.501,
+    "rssBytes": 97026048,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 2,
+      "p50Ms": 0.596,
+      "p99Ms": 0.596,
+      "maxMs": 0.596
+    },
+    "dispatchedInput": {
+      "samples": 2,
+      "p50Ms": 0.606,
+      "p99Ms": 0.606,
+      "maxMs": 0.606
+    },
+    "acceptedKeys": 2
+  },
+  "cancelPrepare": {
+    "wallMs": 2.759,
+    "rssBytes": 97026048,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0,
+    "outcome": "cancelled",
+    "requestToFutureMs": 0.206
+  },
+  "fold": {
+    "wallMs": 1.553,
+    "rssBytes": 97026048,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "replayWork": {
+    "actions": 12000,
+    "entries": 8000,
+    "appended": 8000,
+    "replaced": 0,
+    "copied": 8000
+  },
+  "firstLayout120x40": {
+    "wallMs": 135.019,
+    "rssBytes": 88621056,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 1,
+      "p50Ms": 119.036,
+      "p99Ms": 119.036,
+      "maxMs": 119.036
+    },
+    "dispatchedInput": {
+      "samples": 1,
+      "p50Ms": 119.041,
+      "p99Ms": 119.041,
+      "maxMs": 119.041
+    },
+    "acceptedKeys": 1
+  },
+  "firstCellDiff": {
+    "wallMs": 0.101,
+    "rssBytes": 88621056,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "resize80x24": {
+    "wallMs": 125.316,
+    "rssBytes": 88752128,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 1,
+      "p50Ms": 109.325,
+      "p99Ms": 109.325,
+      "maxMs": 109.325
+    },
+    "dispatchedInput": {
+      "samples": 1,
+      "p50Ms": 109.329,
+      "p99Ms": 109.329,
+      "maxMs": 109.329
+    },
+    "acceptedKeys": 1
+  },
+  "resizeBack120x40": {
+    "wallMs": 129.926,
+    "rssBytes": 88244224,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 1,
+      "p50Ms": 113.939,
+      "p99Ms": 113.939,
+      "maxMs": 113.939
+    },
+    "dispatchedInput": {
+      "samples": 1,
+      "p50Ms": 113.944,
+      "p99Ms": 113.944,
+      "maxMs": 113.944
+    },
+    "acceptedKeys": 1
+  },
+  "steady120x40": {
+    "wallMs": 4.815,
+    "rssBytes": 88244224,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "steadyFrameCosts": {
+    "samples": 50,
+    "p50Ms": 0.041,
+    "p99Ms": 0.049,
+    "maxMs": 0.049
+  },
+  "steadyCellDiffAndUtf8Costs": {
+    "samples": 50,
+    "p50Ms": 0.053,
+    "p99Ms": 0.06,
+    "maxMs": 0.06
+  },
+  "steadyDiffBytes": 1100,
+  "stalledFlood": {
+    "wallMs": 32.467,
+    "rssBytes": 93487104,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 2,
+      "p50Ms": 0.402,
+      "p99Ms": 0.402,
+      "maxMs": 0.402
+    },
+    "dispatchedInput": {
+      "samples": 2,
+      "p50Ms": 0.41,
+      "p99Ms": 0.41,
+      "maxMs": 0.41
+    },
+    "acceptedKeys": 2
+  },
+  "stalledAppendScope": "Injected append gate models stalled IO; drain is serialization/queue work, not a filesystem flush/durability measurement",
+  "queuedByteScope": "Serialized pending UTF-8 bytes, excluding active append and held opening",
+  "queuedByteHighWater": 6448890,
+  "queuedBytesBeforeRelease": 6448890,
+  "drain": {
+    "wallMs": 14.03,
+    "rssBytes": 112852992,
+    "cumulativePeakRssBytes": 145293312,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "recordingAfterDrain": {
+    "queuedBytes": 0,
+    "heldBytes": 0,
+    "appendCalls": 2,
+    "appendedBytes": 6449139
+  },
+  "originalBunReference": {
+    "runtime": "Bun 1.4.4",
+    "limits": "Original scan and parse/projection only; no framework fold/layout or synthetic Actions keys. Different runtime/features; no speed ratio. Original scanner has no cancellation input.",
+    "scan": {
+      "wallMs": 170.43325000000002,
+      "count": 2000,
+      "rssBytes": 146916144,
+      "heartbeat": {
+        "samples": 10,
+        "maxMs": 1.3054160000000081,
+        "p99Ms": 1.3054160000000081
+      }
+    },
+    "prepare": {
+      "wallMs": 11.015999999999963,
+      "count": 12000,
+      "rssBytes": 160105288,
+      "heartbeat": {
+        "samples": 0,
+        "maxMs": null,
+        "p99Ms": null
+      }
+    }
+  },
+  "operationFutures": {
+    "peak": 1,
+    "pending": 0
+  },
+  "physicalIsolateCount": null,
+  "physicalIsolateExitLatencyMs": null,
+  "cancellationLatencyScope": "request to Future settlement, not physical isolate exit",
+  "ownedHandlesBefore": 0,
+  "ownedHandlesAfter": 0,
+  "ownedRootRemoved": true,
+  "ownedHandlesAfterCleanup": 0
+}

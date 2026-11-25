@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfixture[0m
+ ▄██▀   [2mproject[0m
+ █▀     [2m? for shortcuts[0m
+
+ ⏺ [2m┌ sh ──[0m[copy][2m─[0m[run][2m─┐[0m
+   [2m│[0m   $ printf first  [2m│[0m
+   [2m│[0m   $ printf second [2m│[0m
+   [2m└───────────────────┘[0m
+
+   [2m┌ ts ─────[0m[copy][2m─┐[0m
+   [2m│[0m   not runnable [2m│[0m
+   [2m└────────────────┘[0m
+
+   [2m│ ┌ bash ─────────────┐[0m
+   [2m│ │[0m   $ quoted script [2m│[0m
+   [2m│ └───────────────────┘[0m
+
+
+
+
+
+
+
+ [2m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [2menter to send                         ! for bash mode                      ctrl + x a for what waits on you[0m
+  [2mshift or \ + enter for a newline      backspace to leave bash mode         1–9 to pick a choice[0m
+  [2malt + ← → to move by word             esc to interrupt or stop a command   ↑ ↓ j k ← → to move or change a value[0m
+  [2m↑ ↓ for prompts                       shift + tab to cycle modes           enter to pick the highlighted choice[0m
+  [2mpgup pgdn to scroll                   ctrl + o for verbose output          esc to reject a permission[0m
+  [2mshift + ↑ ↓ to scroll a line          ctrl + c to copy                     esc to leave a picker or shortcuts[0m
+  [2mhome end for the top and the bottom   ctrl + x b to pick a code block      ? for shortcuts[0m
+  [2m↑ ↓ to pick a completion              c r to copy or put in the prompt     any key to quit the crash screen[0m
+  [2mtab to complete a command             ctrl + c to clear input[0m
+  [2mesc to close completions              ctrl + d or ctrl + c twice to quit[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m

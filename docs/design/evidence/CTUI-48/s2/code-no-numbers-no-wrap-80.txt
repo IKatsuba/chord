@@ -1,0 +1,24 @@
+ Code  dark, numbers off, wrap off
+
+ dart
+void main() {
+  print('A long message about terminal cells, 日本語, and keeping every grapheme
+}
+
+ ts
+/** A comment
+ * over three lines. */
+export class Cache<T> extends Map<string, T> {
+  private hits = 0; // counted
+  get(key: string): T | undefined {
+    return super.get(key) ?? undefined;
+  }
+}
+
+ python
+@cached
+def area(r: float = 1.0) -> str:
+    """Doc."""
+    return f"{3.14159 * r * r:.2f}"  # rounded
+
+ctrl+n Line numbers  ctrl+w Wrap  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a…

@@ -1,0 +1,28 @@
+# Paired capture index
+
+Original is left, port is right. See acceptance.md for setup differences and limits.
+
+- [paired-auto-dark-120x40-expired](paired-auto-dark-120x40-expired.txt)
+- [paired-auto-dark-120x40-released](paired-auto-dark-120x40-released.txt)
+- [paired-auto-dark-80x24-expired](paired-auto-dark-80x24-expired.txt)
+- [paired-auto-dark-80x24-released](paired-auto-dark-80x24-released.txt)
+- [paired-auto-light-120x40-expired](paired-auto-light-120x40-expired.txt)
+- [paired-auto-light-120x40-released](paired-auto-light-120x40-released.txt)
+- [paired-auto-light-80x24-expired](paired-auto-light-80x24-expired.txt)
+- [paired-auto-light-80x24-released](paired-auto-light-80x24-released.txt)
+- [paired-auto-plain-120x40-expired](paired-auto-plain-120x40-expired.txt)
+- [paired-auto-plain-120x40-released](paired-auto-plain-120x40-released.txt)
+- [paired-auto-plain-80x24-expired](paired-auto-plain-80x24-expired.txt)
+- [paired-auto-plain-80x24-released](paired-auto-plain-80x24-released.txt)
+- [paired-failure-dark-120x40-persistent](paired-failure-dark-120x40-persistent.txt)
+- [paired-failure-dark-120x40-released](paired-failure-dark-120x40-released.txt)
+- [paired-failure-dark-80x24-persistent](paired-failure-dark-80x24-persistent.txt)
+- [paired-failure-dark-80x24-released](paired-failure-dark-80x24-released.txt)
+- [paired-manual-dark-120x40-explicit](paired-manual-dark-120x40-explicit.txt)
+- [paired-manual-dark-120x40-released](paired-manual-dark-120x40-released.txt)
+- [paired-manual-dark-80x24-explicit](paired-manual-dark-80x24-explicit.txt)
+- [paired-manual-dark-80x24-released](paired-manual-dark-80x24-released.txt)
+- [paired-timeout-dark-120x40-bounded](paired-timeout-dark-120x40-bounded.txt)
+- [paired-timeout-dark-120x40-released](paired-timeout-dark-120x40-released.txt)
+- [paired-timeout-dark-80x24-bounded](paired-timeout-dark-80x24-bounded.txt)
+- [paired-timeout-dark-80x24-released](paired-timeout-dark-80x24-released.txt)

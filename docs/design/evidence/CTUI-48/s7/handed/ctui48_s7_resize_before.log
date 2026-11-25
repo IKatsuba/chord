@@ -1,0 +1,508 @@
+00:00 +0: loading test/ui/app/code_pick_coexistence_test.dart
+00:00 +0: valid pick survives resize to20 with compact hint and current descriptor dark Size(120, 40)
+00:00 +0 -1: valid pick survives resize to20 with compact hint and current descriptor dark Size(120, 40) [E]
+  Expected: a screen showing '↑ ↓ block'
+    Actual: Screen:< ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to>
+     Which: the screen was:
+             ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to
+  
+  package:matcher                                     expect
+  test/ui/app/code_pick_coexistence_test.dart 307:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +0 -1: valid pick survives resize to20 with compact hint and current descriptor light Size(120, 40)
+00:00 +0 -2: valid pick survives resize to20 with compact hint and current descriptor light Size(120, 40) [E]
+  Expected: a screen showing '↑ ↓ block'
+    Actual: Screen:< ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to>
+     Which: the screen was:
+             ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to
+  
+  package:matcher                                     expect
+  test/ui/app/code_pick_coexistence_test.dart 307:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +0 -2: valid pick survives resize to20 with compact hint and current descriptor plain Size(120, 40)
+00:00 +0 -3: valid pick survives resize to20 with compact hint and current descriptor plain Size(120, 40) [E]
+  Expected: a screen showing '↑ ↓ block'
+    Actual: Screen:< ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to>
+     Which: the screen was:
+             ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to
+  
+  package:matcher                                     expect
+  test/ui/app/code_pick_coexistence_test.dart 307:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +0 -3: resize clears range while retaining pick and verbose cancels both Size(120, 40)
+00:00 +0 -4: resize clears range while retaining pick and verbose cancels both Size(120, 40) [E]
+  Expected: a screen showing '↑ ↓ another block · c copy · esc done'
+    Actual: Screen:< ▀▄     chord v0.0.1
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shortcuts
+            
+             ⏺ selectable prose
+            
+               ┌ ts ───[copy]─┐
+               │   first code │
+               └──────────────┘
+            
+               ┌ dart ──[copy]─┐
+               │   last code   │
+               └───────────────┘
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+            │ ›                                                                                                                   │
+            ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+              ? for shortcuts>
+     Which: the screen was:
+             ▀▄     chord v0.0.1
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shortcuts
+            
+             ⏺ selectable prose
+            
+               ┌ ts ───[copy]─┐
+               │   first code │
+               └──────────────┘
+            
+               ┌ dart ──[copy]─┐
+               │   last code   │
+               └───────────────┘
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+            │ ›                                                                                                                   │
+            ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+              ? for shortcuts
+  
+  package:matcher                                    expect
+  test/ui/app/code_pick_coexistence_test.dart 356:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7             testWidgets.<fn>
+  
+00:00 +0 -4: valid pick survives resize to20 with compact hint and current descriptor dark Size(80, 24)
+00:00 +0 -5: valid pick survives resize to20 with compact hint and current descriptor dark Size(80, 24) [E]
+  Expected: a screen showing '↑ ↓ block'
+    Actual: Screen:< ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to>
+     Which: the screen was:
+             ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to
+  
+  package:matcher                                     expect
+  test/ui/app/code_pick_coexistence_test.dart 307:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +0 -5: valid pick survives resize to20 with compact hint and current descriptor light Size(80, 24)
+00:00 +0 -6: valid pick survives resize to20 with compact hint and current descriptor light Size(80, 24) [E]
+  Expected: a screen showing '↑ ↓ block'
+    Actual: Screen:< ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to>
+     Which: the screen was:
+             ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to
+  
+  package:matcher                                     expect
+  test/ui/app/code_pick_coexistence_test.dart 307:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +0 -6: valid pick survives resize to20 with compact hint and current descriptor plain Size(80, 24)
+00:00 +0 -7: valid pick survives resize to20 with compact hint and current descriptor plain Size(80, 24) [E]
+  Expected: a screen showing '↑ ↓ block'
+    Actual: Screen:< ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to>
+     Which: the screen was:
+             ▀▄     chord v0.0…
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shor…
+            
+             ⏺ selectable prose
+            
+               ┌ text ───┐
+               │   prior │
+               └─────────┘
+            
+               ┌ ts ──[copy]─┐
+               │   current   │
+               └─────────────┘
+            
+            
+            
+            
+            
+            
+            ╭──────────────────╮
+            │ ›                │
+            ╰──────────────────╯
+              sent 5 chars to
+  
+  package:matcher                                     expect
+  test/ui/app/code_pick_coexistence_test.dart 307:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +0 -7: resize clears range while retaining pick and verbose cancels both Size(80, 24)
+00:00 +0 -8: resize clears range while retaining pick and verbose cancels both Size(80, 24) [E]
+  Expected: a screen showing '↑ ↓ another block · c copy · esc done'
+    Actual: Screen:< ▀▄     chord v0.0.1
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shortcuts
+            
+             ⏺ selectable prose
+            
+               ┌ ts ───[copy]─┐
+               │   first code │
+               └──────────────┘
+            
+               ┌ dart ──[copy]─┐
+               │   last code   │
+               └───────────────┘
+            
+            
+            
+            
+            
+            
+            ╭─────────────────────────────────────────────────────────────────────────────╮
+            │ ›                                                                           │
+            ╰─────────────────────────────────────────────────────────────────────────────╯
+              ? for shortcuts>
+     Which: the screen was:
+             ▀▄     chord v0.0.1
+             ▀▀▀▄   fixture
+             ▄▀▀▀   .
+             ▀▀     ? for shortcuts
+            
+             ⏺ selectable prose
+            
+               ┌ ts ───[copy]─┐
+               │   first code │
+               └──────────────┘
+            
+               ┌ dart ──[copy]─┐
+               │   last code   │
+               └───────────────┘
+            
+            
+            
+            
+            
+            
+            ╭─────────────────────────────────────────────────────────────────────────────╮
+            │ ›                                                                           │
+            ╰─────────────────────────────────────────────────────────────────────────────╯
+              ? for shortcuts
+  
+  package:matcher                                    expect
+  test/ui/app/code_pick_coexistence_test.dart 356:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7             testWidgets.<fn>
+  
+00:00 +0 -8: Some tests failed.
+
+Failing tests:
+  test/ui/app/code_pick_coexistence_test.dart: resize clears range while retaining pick and verbose cancels both Size(120, 40)
+  test/ui/app/code_pick_coexistence_test.dart: resize clears range while retaining pick and verbose cancels both Size(80, 24)
+  test/ui/app/code_pick_coexistence_test.dart: valid pick survives resize to20 with compact hint and current descriptor dark Size(120, 40)
+  test/ui/app/code_pick_coexistence_test.dart: valid pick survives resize to20 with compact hint and current descriptor dark Size(80, 24)
+  ... and 4 more
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

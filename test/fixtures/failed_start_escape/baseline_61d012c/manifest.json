@@ -1,0 +1,115 @@
+{
+  "sourceCommit": "61d012cf319bd3fee9d533fc9c04a818546ea6d5",
+  "fixtureOnlyOverlay": "bb3a6d25cabe28521ea1a927379ed9a6e32da4d0; not used by CLI reproduction",
+  "scope": "One baseline-port overlapping Escape/resize and one fresh32 separated control. No 4a084be execution or source inspection. Original outcome is designer observation only, not rerun here.",
+  "corpus": [
+    {
+      "type": "session",
+      "version": 1,
+      "sessionId": "00000000-0000-0000-0000-000000000002",
+      "agent": "fake",
+      "cwd": "<task-checkout>",
+      "at": 1794963008680
+    },
+    {
+      "type": "prompt",
+      "turnId": "turn-1",
+      "at": 1794963008680,
+      "prompt": "Saved reopen refusal reference",
+      "images": 0
+    }
+  ],
+  "recordFile": "saved-reopen.jsonl",
+  "argv": [
+    "dart",
+    "--packages=<exact-archive>/example/chord/.dart_tool/package_config.json",
+    "<exact-archive>/example/chord/bin/chord.dart",
+    "fake",
+    "--agent-command",
+    "<bun> ../chord/tests/fixtures/fake_agent/main.ts",
+    "--resume",
+    "00000000-0000-0000-0000-000000000002"
+  ],
+  "environment": {
+    "XDG_STATE_HOME": "<owned-case-state>",
+    "XDG_CONFIG_HOME": "<owned-case-config>",
+    "CHORD_FAKE_REFUSE_LOAD": "1",
+    "NO_COLOR": "removed"
+  },
+  "cwd": "task checkout; packages point only at exact archive, external cached packages unchanged",
+  "overlapTimingPlan": "Port Escape,10ms bounded gap matching intervening original resize duration in designer paired sequence,port resize80x24\u219232x10; actual command timestamps retained.",
+  "settlement": "Immediate capture plus explicit1second wait and later capture; actual monotonic elapsed retained.",
+  "sanitization": "Task checkout, exact archive, original checkout and owned state/config root paths replaced only in captures. Replacements are not width oracles.",
+  "setupObservation": "Initial readiness check incorrectly required literal load; U52b correctly displayed cannot resume/Resource not found. Corrected readiness check before any /resume or Escape/resize input; no overlap retry.",
+  "overlap": {
+    "startedUtc": "2026-11-18T01:58:33.079687+00:00",
+    "commandTimings": [
+      {
+        "command": [
+          "send-keys",
+          "-t",
+          "overlap",
+          "Escape"
+        ],
+        "startMs": 0.005499983672052622,
+        "endMs": 5.011958011891693
+      },
+      {
+        "command": [
+          "resize-window",
+          "-t",
+          "overlap",
+          "-x",
+          "32",
+          "-y",
+          "10"
+        ],
+        "startMs": 20.051540981512517,
+        "endMs": 27.470749977510422
+      }
+    ],
+    "explicitIntercommandGapMs": 10,
+    "immediate": {
+      "pickerVisible": true,
+      "captureMsAfterResize": 12.736833014059812
+    },
+    "settled": {
+      "pickerVisible": true,
+      "captureMsAfterResize": 1034.575291967485
+    },
+    "attempts": 1
+  },
+  "fresh32Control": {
+    "startedUtc": "2026-11-18T02:00:14.238947+00:00",
+    "initialSize": "32x10",
+    "resize": false,
+    "escapeCommandMs": 4.7687089536339045,
+    "immediate": {
+      "pickerVisible": true,
+      "captureMsAfterEscape": 11.439000023528934
+    },
+    "settled": {
+      "pickerVisible": false,
+      "captureMsAfterEscape": 1040.9181250142865
+    },
+    "attempts": 1
+  },
+  "packageConfigSha256": {
+    "framework": "7733e6eee338d7c9c760e84b119491b89f086b83ffc58d4f3946f7c38c2407fa",
+    "port": "460520d032235797579059f4ce7e37d6b3607cd0acf4afd7c5207dc463f8a890"
+  },
+  "cleanup": {
+    "exactArchiveProcessesAfterExit": [],
+    "ownedTmuxServerEnded": true,
+    "ownedStateConfigRootsRemoved": true,
+    "exactArchiveRemoved": true,
+    "quit": "Ctrl+D sent once to each case after observations; no additional Escape or input probe",
+    "limit": "Owned exact-archive CLI process and server cleanup observed. No separate physical-isolate or whole-system process census claimed."
+  },
+  "outcome": "Overlapping Escape+80\u219232resize remained open on already-reviewed U52b61d012c; fresh32 Escape without resize closed. One attempt per case. Baseline observation only; no source-level cause, U52c clearance or framework/parser attribution.",
+  "designerReference": {
+    "evidenceCommit": "eae4bd2",
+    "corpus": "docs/design/evidence/CTUI-52/u52c-repro-corpus.json",
+    "observation": "Designer paired original577b581 and U52c4a084be; original closed and port persisted after approximately39.3seconds. That original/current observation is not rerun or code-audited by this baseline check."
+  }
+}

@@ -1,0 +1,24 @@
+ [2m›[0m subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ [38;2;255;107;128m⏺[39m 2 agents ended · 1 failed[2m (ctrl+o to expand)[0m
+   [2m├─[0m [1mAgent[0m(Find the session layer)[2m · 5 tool uses · 2s[0m
+   [2m│[0m  [2m⎿[0m  [2mDone[0m
+   [2m└─[0m [1mAgent[0m(Find where tool calls are drawn on screen and how they fold)[2m ·[0m
+   [2m [0m  [2m2 tool uses · 0s[0m
+      [2m⎿[0m  [38;2;255;107;128mFailed[39m
+
+ ⏺ Now the tests, in the background.
+
+ [38;2;78;186;101m⏺[39m [1mAgent[0m(Run the whole test suite)
+   [2m⎿[0m  [2mDone (1 tool use · 2s)[0m
+
+ ⏺ It is running; I will say when it ends.
+
+ [38;2;78;186;101m✓[39m Run bun dev test and report what fails.[2m · agent · [0m[38;2;78;186;101mdone in 2s[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

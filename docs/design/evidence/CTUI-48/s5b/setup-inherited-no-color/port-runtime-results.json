@@ -1,0 +1,90 @@
+[
+  {
+    "case": "port-auto-light-120x40",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"write\",\"text\":\"Next\"}"
+    ]
+  },
+  {
+    "case": "port-auto-plain-120x40",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"write\",\"text\":\"Next\"}"
+    ]
+  },
+  {
+    "case": "port-manual-dark-120x40",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"write\",\"text\":\"Next\"}"
+    ]
+  },
+  {
+    "case": "port-failure-dark-120x40",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}"
+    ]
+  },
+  {
+    "case": "port-timeout-dark-120x40",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}"
+    ]
+  },
+  {
+    "case": "port-auto-dark-80x24",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"write\",\"text\":\"Next\"}"
+    ]
+  },
+  {
+    "case": "port-auto-light-80x24",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"write\",\"text\":\"Next\"}"
+    ]
+  },
+  {
+    "case": "port-auto-plain-80x24",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"write\",\"text\":\"Next\"}"
+    ]
+  },
+  {
+    "case": "port-manual-dark-80x24",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"write\",\"text\":\"Next\"}"
+    ]
+  },
+  {
+    "case": "port-failure-dark-80x24",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}"
+    ]
+  },
+  {
+    "case": "port-timeout-dark-80x24",
+    "exit": "1,0",
+    "events": [
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}",
+      "{\"event\":\"attempt\",\"text\":\"Next\",\"cancelled\":false}"
+    ]
+  }
+]

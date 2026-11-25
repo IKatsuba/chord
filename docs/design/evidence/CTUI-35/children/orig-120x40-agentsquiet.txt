@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › agentsquiet
+
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran bun dev test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts        Fake Large with a 1M context window · 1% used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 13s
+    parser  fake · Fake Small · medium                           ◦ idle 13s        ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 13s  ← new message

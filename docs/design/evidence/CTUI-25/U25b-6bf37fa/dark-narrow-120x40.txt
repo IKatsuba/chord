@@ -1,0 +1,40 @@
+┌ custom ──[copy]─┐
+│   x             │
+└─────────────────┘
+┌ custom ──[run]─┐
+│   run only     │
+└────────────────┘
+│ ┌ custom ──┐
+│ │   quoted │
+│ └──────────┘
+
+┌ custom ──────┐
+│   open fence │
+└──────────────┘
+Run: x
+ctrl+q Quit  r Record run action  c Record copy action  p Toggle picked frame  n Toggle narrow controls
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

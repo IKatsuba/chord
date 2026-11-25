@@ -1,0 +1,14 @@
+
+
+   chord v0.0.1 · …/example/project
+
+  Select agent
+
+  ❯ 1. claude
+    2. codex
+    3. pi · not on PATH
+
+  ↑↓ or j/k to move · Enter or 1–9 to
+  select · Esc to cancel
+
+

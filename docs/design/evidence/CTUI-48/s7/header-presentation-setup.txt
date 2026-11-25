@@ -1,0 +1,5 @@
+The first public App.home injection wrapped initial render only. Original main
+then rerendered its original element and reset that presentation input.
+No private directory capture was retained. The corrected launcher also wraps
+that existing rerender with the same approved home=capture-home input.
+No HOME environment change or original source edit was made.

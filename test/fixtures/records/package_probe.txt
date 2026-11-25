@@ -1,0 +1,23 @@
+explicit XDG
+PASS xdg_directories 1.1.0 stateHome
+PASS uuid 4.6.0: 10000 distinct canonical v4 basenames
+PASS SDK append, preserved prefix, UTF-8 stream, flush and close
+PASS owned probe directory removed
+XDG without HOME
+PASS xdg_directories 1.1.0 stateHome
+PASS uuid 4.6.0: 10000 distinct canonical v4 basenames
+PASS SDK append, preserved prefix, UTF-8 stream, flush and close
+PASS owned probe directory removed
+relative XDG
+PASS xdg_directories 1.1.0 stateHome
+PASS uuid 4.6.0: 10000 distinct canonical v4 basenames
+PASS SDK append, preserved prefix, UTF-8 stream, flush and close
+PASS owned probe directory removed
+empty XDG default
+PASS xdg_directories 1.1.0 stateHome
+PASS uuid 4.6.0: 10000 distinct canonical v4 basenames
+PASS SDK append, preserved prefix, UTF-8 stream, flush and close
+PASS owned probe directory removed
+no HOME or XDG
+PASS missing HOME/XDG requirement
+PASS all probe processes exited and temporary directories removed

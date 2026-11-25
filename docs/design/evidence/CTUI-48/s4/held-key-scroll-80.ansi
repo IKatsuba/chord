@@ -1,0 +1,24 @@
+[38;2;71;231;165m[48;5;66mSelection[49m area · immutable source log[39m
+[2mKnown coverage: true · overlay: false · held: true · following: false[0m
+[38;5;244m┌ dart ───────────────────┐[39m
+[38;5;244m│[39m     [38;2;127;224;232mprint[39m([38;2;242;211;138m"record 12"[39m); [38;5;244m│[39m
+[38;5;244m│[39m                         [38;5;244m│[39m
+[38;5;244m│[39m   end                   [38;5;244m│[39m
+[38;5;244m└─────────────────────────┘[39m
+Record 13 · appended while following or held
+
+[38;5;244m┌ dart ───────────────────┐[39m
+[38;5;244m│[39m     [38;2;127;224;232mprint[39m([38;2;242;211;138m"record 13"[39m); [38;5;244m│[39m
+[38;5;244m│[39m                         [38;5;244m│[39m
+[38;5;244m│[39m   end                   [38;5;244m│[39m
+[38;5;244m└─────────────────────────┘[39m
+Record 14 · appended while following or held
+
+[38;5;244m┌ dart ───────────────────┐[39m
+[38;5;244m│[39m     [38;2;127;224;232mprint[39m([38;2;242;211;138m"record 14"[39m); [38;5;244m│[39m
+[38;5;244m│[39m                         [38;5;244m│[39m
+[38;5;244m│[39m   end                   [38;5;244m│[39m
+draft stays focused
+[2mfinalized: Selection[0m
+[2mC-l clear · C-s snapshot · C-o overlay · C-u coverage · C-t theme · C-r reveal ·
+F2 append · S-↑/↓ scroll · PgUp/PgDn · C-q quit[0m

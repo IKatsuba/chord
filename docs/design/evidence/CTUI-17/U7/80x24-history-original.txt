@@ -1,0 +1,24 @@
+
+ › queued first
+   continuation
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › queued second
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › narrow queued 6                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

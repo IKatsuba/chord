@@ -1,0 +1,24 @@
+ ⏺ Working
+   ⎿  Interrupted by user
+
+ › ignorescancel
+
+ ⏺ Holding on.
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › status
+
+ ⏺ Status sent.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · medium · 1% used

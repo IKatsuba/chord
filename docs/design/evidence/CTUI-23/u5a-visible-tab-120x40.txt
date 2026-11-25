@@ -1,0 +1,40 @@
+Resize to five rows to hide the completion.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  status  Complete the word
+status
+Draft: status
+Last Tab: completed
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter Insert newline  ctrl+j Insert newline  l…
+Typing keeps focus; Ctrl+R resets the seed.

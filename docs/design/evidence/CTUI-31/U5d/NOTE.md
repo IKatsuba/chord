@@ -1,0 +1,1 @@
+Paths are relabelled: the port ran in ~/project, the original in ../chord. 01-03 use file1-keybindings.json (window, ! panel, end); 04 uses file2-keybindings.json with the fake's shell scenario ("(ctrl+t to expand)"). Port at 7dc09e09.

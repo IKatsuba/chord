@@ -1,0 +1,14 @@
+ › tasktwo
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Watch the build) · fake · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(Watch the deploy) · fake · 0 tool uses
+      ⎿  Initializing…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running
+    main                       fake               ◦ idle 0s
+    … +8 more

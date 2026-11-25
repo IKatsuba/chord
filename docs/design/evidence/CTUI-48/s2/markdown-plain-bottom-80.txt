@@ -1,0 +1,24 @@
+ Markdown  plain, 100%
+│   }                                                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐
+│   unlabelled │
+└──────────────┘
+
+┌ nolanguage ────────────┐
+│   unknown label, plain │
+└────────────────────────┘
+
+┌────────────────────────────────────────┬─────────┬───────┐
+│ Name                                   │ Status  │ Count │
+├────────────────────────────────────────┼─────────┼───────┤
+│ renderer                               │  ready  │     2 │
+│ a cell long enough to wrap inside its  │ waiting │    10 │
+│ column                                 │         │       │
+└────────────────────────────────────────┴─────────┴───────┘
+
+————————————————————————————————————————
+
+[ref]: https://ref.example "A definition, shown as written"
+ctrl+s Stream again  ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedo…

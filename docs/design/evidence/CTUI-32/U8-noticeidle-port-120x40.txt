@@ -1,0 +1,40 @@
+ ▀▄     chord vX
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <dir>
+ ▀▀     ? for shortcuts · /help
+
+ › notice
+
+ ⏺ Running the lexer suite with coverage now.
+
+ ⏺ Fast mode turned off
+   Rate limit for fast mode reached; it comes back after the limit resets.
+
+ ⏺ Done.
+
+ › noticelong
+
+ ⏺ MCP server "files" failed to start
+   Its tools are unavailable in this session: the server exited before it answered initialize, with status 1.
+   Check its command and environment in .mcp.json, then start a new session; the server wrote nothing to stderr that
+   names a reason, so this is all that is known.
+
+ ⏺ Carrying on without it.
+
+ › noticeidle
+
+ ⏺ Switched.
+
+ ⏺ Auto mode unavailable
+   The selected model does not support Auto mode; using Accept edits instead.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

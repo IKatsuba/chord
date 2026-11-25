@@ -1,0 +1,24 @@
+Permission fixture: one
+Transcript
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                             ↓ 61 lines below │
+│                                                                              │
+│                                                                              │
+│ The safety review held this:                                                 │
+│ This command could overwrite files outside the project. Review the proposed  │
+│ changes before allowing it.                                                  │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Answer:

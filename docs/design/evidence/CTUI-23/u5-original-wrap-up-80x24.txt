@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  /rename   Rename this session; the agent's own title may replace it
+  /resume   Resume an earlier session, here or from another directory
+  /status   Show the agent, model, mode, session and directory
+  /team     Describe, keep and run teams of agents
+  /theme    Choose chord's colours for a dark or light terminal
+  /vim      Turn vim mode for the prompt on or off
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

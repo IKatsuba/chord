@@ -1,0 +1,24 @@
+ [1mchord[0;2m v0.0.1 · fake · <repository>[0m
+
+ [2m››[0m› Waiting for permission… [2m(41s)[0m
+
+[1m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mmain[0m asks[2m · between turns[0m                                                    [1m│
+│[0m [1mmcp__files__write_file[0m                                                       [1m│
+│[0m   path: docs/release.md                                                      [1m│
+│[0m   content: # Release 0.56.0                                                  [1m│
+│[0m                                                                              [1m│
+│[0m   This release changes how chord draws long requests: the permission box now [1m│
+│[0m [2m── ↓ 38 lines below · pagedown to scroll ───────────────────────────────────[0m [1m│
+│[0m                                                                              [1m│
+│[0m Do you want to proceed?                                                      [1m│
+│[0m [1m❯[0m [1m1. Yes[0m                                                                     [1m│
+│[0m [1m [0m 2. No                                                                      [1m│
+│[0m                                                                              [1m│
+│[0m [2mEsc to reject[0m                                                                [1m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › kept draft                                                                 [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m         [2mFake Large with a 1M context window · medium effort · 1% context used[0m

@@ -1,0 +1,24 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m[fixture directory][0m
+ █▀     [2m? for shortcuts[0m
+
+
+
+
+
+
+
+
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [1m/clear[0m   [1mStart a new session with an empty transcript[0m
+  [2m/config[0m  [2mChange the agent's settings for this session, such as effort[0m
+  [2m/echo[0m    [2mRepeat what follows the command[0m
+  [2m/effort[0m  [2mChange the agent's effort for this session[0m
+  [2m/exit[0m    [2mQuit chord[0m
+  [2m/fast[0m    [2mTurn the agent's fast mode on or off for this session[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › /[7m [0m                                                                         [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m                           [2mFake Large with a 1M context window · medium effort[0m

@@ -1,0 +1,74 @@
+[
+  {
+    "case": "port-dark-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-light-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-plain-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-many-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-failure-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-timeout-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "help-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "help-120x40-closing",
+    "exit": "1,0"
+  },
+  {
+    "case": "phase-120x40",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-dark-80x24",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-light-80x24",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-plain-80x24",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-many-80x24",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-failure-80x24",
+    "exit": "1,0"
+  },
+  {
+    "case": "port-timeout-80x24",
+    "exit": "1,0"
+  },
+  {
+    "case": "help-80x24",
+    "exit": "1,0"
+  },
+  {
+    "case": "help-80x24-closing",
+    "exit": "1,0"
+  },
+  {
+    "case": "phase-80x24",
+    "exit": "1,0"
+  }
+]

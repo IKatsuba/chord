@@ -1,0 +1,5 @@
+const {chordCommand} = await import(`${process.argv[2]}/src/cli.ts`);
+const vectors = [[],['--resume'],['-r'],['fake','-r'],['--resume','aaa'],['--resume=aaa'],['-raaa'],['-r','aaa','fake'],['fake','--resume','aaa'],['--resume=-x'],['--resume','-x'],['--resume=c'],['--resume','model'],['--resume=-r'],['--resume','--resume'],['-r','aaa','-r','bbb'],['--resume=a','--resume=b'],['--continue','--resume'],['-c','-r'],['--','--resume'],['--agent-command','--resume'],['--resume='],['--resume','--help']];
+const cases=[];
+for(const argv of vectors){let value;try{await chordCommand().noExit().throwErrors().action((options,agent)=>{value={...(agent===undefined?{}:{agent}),...(options.resume===undefined?{}:{resume:options.resume}),...(options.continue===undefined?{}:{continue:options.continue}),...(options.agentCommand===undefined?{}:{agentCommand:options.agentCommand})};}).parse(argv);cases.push({argv,value:value??'no action'});}catch(error){cases.push({argv,error:error.message});}}
+console.log(JSON.stringify(cases,null,2));

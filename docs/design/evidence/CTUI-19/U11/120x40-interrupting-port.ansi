@@ -1,0 +1,40 @@
+ [1mchord[0;2m v0.0.1 · fake · [task directory]
+
+ [2m›[0m first prompt
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m readsheld
+
+ ⏺ Working
+   [2m⎿[0m  Interrupted by user
+
+ [2m›[0m ignorescancel
+
+ ⏺ Holding on.
+   [2m⎿[0m  Interrupted by user
+
+ [2m›[0m permission
+
+ [2m⏺[0m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  Interrupted by user
+
+ [2m›[0m status
+
+ ⏺ Status sent.
+
+ [2m›[0m ignorescancel
+
+ ⏺ Holding on.
+
+
+
+
+
+
+ [2m›››[0m Interrupting… [2m(1s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  ⏸ plan mode on                                 [2mFake Large with a 1M context window · medium effort · 1% context used[0m

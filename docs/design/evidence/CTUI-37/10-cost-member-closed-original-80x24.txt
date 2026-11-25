@@ -1,0 +1,24 @@
+      Total         $0.1625  26,000  tester not reported; tester not reported
+
+ › /cost
+   ⎿  Total cost:   $0.0500
+      Tokens in:    4,000
+      Tokens out:   800
+      Cache read:   3,200
+      Session time: 1m 8s
+
+      This session     Cost  Tokens
+      main          $0.0500   8,000
+      bugfix        $0.0750  12,000  team run: lead $0.0500 ·
+                                     tester not reported · coder $0.0250
+      bugfix        $0.0500   8,000  team run: lead $0.0250 ·
+                                     tester not reported · coder $0.0250
+      Total         $0.1750  28,000  tester not reported; tester not reported
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 2 agents wait · ctrl+x a     Fake Large with a 1M context window · 1% used
+    main       fake                    ◦ idle 38s
+    bugfix     team · fake · 2 agents  ● tester: permission 56s  ✓ new reply
+    bugfix 2   team · fake · 3 agents  ● tester: permission 37s  ✓ new reply

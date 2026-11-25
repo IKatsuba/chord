@@ -1,0 +1,40 @@
+ [2m›[0m Named transcript row 12
+
+ [2m›[0m Named transcript row 13
+
+ [2m›[0m Named transcript row 14
+
+ [2m›[0m Named transcript row 15
+
+ [2m›[0m Named transcript row 16
+
+ [2m›[0m Named transcript row 17
+
+ [2m›[0m Named transcript row 18
+
+ [2m›[0m Named transcript row 19
+
+ [2m›[0m Named transcript row 20
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mdimcode can start other agents[0m                                                                                       [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m With its permission option at full-access, dimcode may start other agent CLIs it finds on your PATH, such as claude, [38;2;177;185;249m│
+│[39m codex and cursor, as subagents of its own, with their approvals bypassed and on your own accounts. At                [38;2;177;185;249m│
+│[39m workspace-write it asks you first, and once you allow it, the same holds. Nothing those agents do reaches chord's    [38;2;177;185;249m│
+│[39m permission box.                                                                                                      [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m To turn a CLI off, set externalAgents.<type>.enabled to false in ~/.dimcode/v2/config.json (claude-code, codex,      [38;2;177;185;249m│
+│[39m cursor, …), or use /external-agents in dimcode's own TUI. Or keep the permission option at read-only in /config,     [38;2;177;185;249m│
+│[39m where dimcode refuses its agent tool.                                                                                [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [1m[38;2;177;185;249m1.[0m [1m[38;2;177;185;249mGot it, don't show this again[0m                                                                                   [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. Show it again next time                                                                                         [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mEnter to pick · 1–2 · ↑↓ to move · Esc to show it again next time[0m                                                    [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[39m
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m

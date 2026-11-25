@@ -1,0 +1,24 @@
+Choices enabled
+Filter:
+  ↑ current folder and
+    do not ask again
+❯   3. Allow this
+    command in the
+    current folder and
+    do not ask again
+Answer: None
+up Previous choice  k P…
+
+
+
+
+
+
+
+
+
+
+
+
+
+

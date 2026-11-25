@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [39mdraft\n- Change 2: a turn can be resumed\n- Change 3: headlines wrap\n-[38;2;255;255;255m
+   [39mChange 4: the box scrolls\n- Change 5: tests run in parallel\n- Change 6:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 7: a turn can be resumed\n- Change 8:[38;2;255;255;255m
+   [39mheadlines wrap\n- Change 9: the box scrolls\n- Change 10: tests run in[38;2;255;255;255m
+   [39mparallel\n- Change 11: the prompt keeps its draft\n- Change 12: a turn can[38;2;255;255;255m
+   [39mbe resumed\n- Change 13: headlines wrap\n- Change 14: the box scrolls\n-[38;2;255;255;255m
+   [39mChange 15: tests run in parallel\n- Change 16: the prompt keeps its draft\n-[38;2;255;255;255m
+   [39mChange 17: a turn can be resumed\n- Change 18: headlines wrap\n- Change 19:[38;2;255;255;255m
+   [39mthe box scrolls\n- Change 20: tests run in parallel\n- Change 21: the prompt[38;2;255;255;255m
+   [39mkeeps its draft\n- Change 22: a turn can be resumed\n- Change 23: headlines[38;2;255;255;255m
+   [39mwrap\n- Change 24: the box scrolls\n- Change 25: tests run in parallel\n-[38;2;255;255;255m
+   [39mChange 26: the prompt keeps its draft\n- Change 27: a turn can be resumed\n-[38;2;255;255;255m
+   [39mChange 28: headlines wrap\n- Change 29: the box scrolls\n- Change 30: tests[38;2;255;255;255m
+   [39mrun in parallel\n", mode: "overwrite")[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mI asked; the turn ends with it open.[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected mcp__files__write_file[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: deny.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m [39mkept draft restored[38;2;255;255;255m                                                        [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m         [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake
+ ▄▀▀▀   ~/<workspace>/chord
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ fake did not start: Authentication required: run `fake login` from your
+   terminal, or set FAKE_API_KEY
+   ⎿  fake reports Claude Max · a.very.long.address.for.the.
+      capture@engineering.example.com · Example Organisation of Long Names,
+      Anthropic API key · ANTHROPIC_API_KEY.
+      fake offers these sign-ins:
+        Log in with the fake · Run `fake login` in the terminal
+        Log in with SSO
+      chord does not sign agents in. Sign in with fake's own CLI in a terminal,
+      or set its API key where it offers one.
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

@@ -1,0 +1,24 @@
+ [38;2;190;250;218m[48;2;164;244;206m▀[38;2;150;241;199m[49m▄[39m     [1mchord[0;2m v0.0.1[0m
+ [38;2;139;238;193m▀[38;2;124;235;186m[48;2;99;229;173m▀[38;2;110;231;179m[48;2;85;225;167m▀[38;2;71;222;160m[49m▄[39m   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2m<project>[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m /new --name code review
+ [38;2;255;107;128m⏺[39m [38;2;255;107;128mNo agent named fake; chord knows agoragentic-acp, auggie, bob, claude,[39m
+   [38;2;255;107;128mcline, codebuddy-code, codex, cursor-cloud, deepagents, dimcode, dirac,[39m
+   [38;2;255;107;128mfactory-droid, fast-agent, gemini, github-copilot-cli, glm-acp-agent, grok-[39m
+   [38;2;255;107;128mbuild, kilo, kimi, minimax-code, minion-code, nova, pi-acp, qoder, qwen-[39m
+   [38;2;255;107;128mcode, sigit, autohand, cursor, devin, fx, goose, junie, kiro, openclaw,[39m
+   [38;2;255;107;128mopencode, poolside, zeroclaw[39m
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [38;2;177;185;249magoragentic-acp[39m
+  [2mauggie[0m
+  [2mbob[0m
+  [2mclaude[0m
+  [2mcline[0m
+  [2mcodebuddy-code[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › /new                                                                       [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m                           [2mFake Large with a 1M context window · medium effort[0m

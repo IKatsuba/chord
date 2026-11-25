@@ -1,0 +1,24 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   <isolated worktree>
+ █▀     ? for shortcuts
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  enter to send                         ctrl + d or ctrl + c twice to quit
+  shift or \ + enter for a newline      ctrl + x a for what waits on you
+  alt + ← → to move by word             1–9 to pick a choice
+  ↑ ↓ for prompts                       ↑ ↓ j k to move or change a value
+  pgup pgdn to scroll                   enter to pick the highlighted choice
+  shift + ↑ ↓ to scroll a line          esc to reject a permission
+  home end for the top and the bottom   esc to leave a picker or shortcuts
+  esc to interrupt                      ? for shortcuts
+  ctrl + o for verbose output           any key to quit the crash screen
+  ctrl + c to clear input
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl+x …  a the one that waits · esc never mind

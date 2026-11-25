@@ -1,0 +1,40 @@
+ █▄     chord v0.0.1
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/project
+ █▀     ? for shortcuts · /help
+
+ › selectedteam
+
+ ⏺ Resources
+   ⎿  Read: 17:16:11 UTC · advisory snapshot
+      claude · 5h: 12.345% used · reset 18:16 UTC · models unknown
+      codex · 5h: 12.345% used · reset 18:16 UTC · models unknown
+
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort medium · mode plan
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      Run: 1fb4feca · saved definition: fixture (project)
+      lead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default
+      Changes from saved: model, mode
+      reviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+      default (unconfirmed)
+      Changes from saved: model, mode
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 15s
+    fixture  team · codex · Fake Small · medium                    ◦ idle 15s  ✓ new reply

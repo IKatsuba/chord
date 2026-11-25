@@ -1,0 +1,24 @@
+Pointer events · reports: 0
+Last event: none
+
+
+
+
+
+
+
+
+
+
+
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ draft stays here typed draft                                                 │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+super+left Move to line start · super+right Move to line end · pageup Scroll up
+a page · pagedown Scroll down a page · shift+up Scroll up a line · shift+down
+Scroll down a line · home Scroll to the top · end Scroll to the bottom · ctrl+l
+Clear event log · ctrl+q Quit

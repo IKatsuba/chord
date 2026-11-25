@@ -1,0 +1,5 @@
+The transcript is here. Answer: none yet
+
+
+> /permission
+ctrl+o Open the dialog  ctrl+q Quit

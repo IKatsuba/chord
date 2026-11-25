@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   <working directory>
+ ▀▀     ? for shortcuts
+
+ ⏺ fake did not start: it refused session/new: session/new requires
+   `agentAlias` (alias of a configured [agents.<alias>] entry)
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

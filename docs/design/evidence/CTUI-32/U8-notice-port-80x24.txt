@@ -1,0 +1,24 @@
+ ▀▄     chord vX
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <dir>
+ ▀▀     ? for shortcuts · /help
+
+ › notice
+
+ ⏺ Running the lexer suite with coverage now.
+
+ ⏺ Fast mode turned off
+   Rate limit for fast mode reached; it comes back after the limit resets.
+
+ ⏺ Done.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

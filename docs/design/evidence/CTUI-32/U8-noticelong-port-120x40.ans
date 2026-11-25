@@ -1,0 +1,41 @@
+ [38;2;190;250;218m[48;2;164;244;206m▀[38;2;150;241;199m[49m▄     [1mchord[0;2m vX[0m
+ [38;2;139;238;193m▀[38;2;124;235;186m[48;2;99;229;173m▀[38;2;110;231;179m[48;2;85;225;167m▀[38;2;71;222;160m[49m▄   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀   [2m<dir>
+[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m notice
+
+ ⏺ Running the lexer suite with coverage now.
+
+ [38;2;255;193;7m⏺ [2mFast mode turned off[0m
+   [2mRate limit for fast mode reached; it comes back after the limit resets.[0m
+
+ ⏺ Done.
+
+ [2m›[0m noticelong
+
+ [38;2;255;107;128m⏺ [2mMCP server "files" failed to start[0m
+   [2mIts tools are unavailable in this session: the server exited before it answered initialize, with status 1.[0m
+   [2mCheck its command and environment in .mcp.json, then start a new session; the server wrote nothing to stderr that[0m
+   [2mnames a reason, so this is all that is known.[0m
+
+ ⏺ Carrying on without it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

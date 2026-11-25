@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running          Fake Large with a 1M context window · 1% used
+    background  1 task running

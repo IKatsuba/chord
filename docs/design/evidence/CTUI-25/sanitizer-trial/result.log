@@ -1,0 +1,2 @@
+{"case":"strip color from string using 8-bit CSI introducer","expected":"foo","actual":"31mfoo39m"}
+7/8 original strip-ansi 7.2.0 cases passed

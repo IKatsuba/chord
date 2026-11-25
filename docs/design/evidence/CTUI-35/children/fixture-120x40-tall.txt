@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main                                    fake               ◦ idle 0s
+    parser                                  fake · fake-small  ◦ idle 3s
+    docs                                    fake               ◦ idle 3s
+    Summarise the release notes for 0.56.0  fake               ◦ idle 3s
+    from the commits since 0.55.2, grouped
+  ↓ by area, with a line for each

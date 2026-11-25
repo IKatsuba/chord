@@ -1,0 +1,51 @@
+Retained output from the completed trials; probes were not repeated when
+this evidence bundle was written. Generated executable locations are sanitized.
+
+SDK compiler (suppressed analytics rerun), exit 0:
+Generated: <scratch>/ctui26-framework-sdk-probe
+
+SDK executable, exit 0:
+PASS SDK JSONL append/UTF-8 stream/flush/close
+
+SDK version:
+Dart SDK version: 3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on "macos_arm64"
+
+Package resolver, dart --suppress-analytics pub get --offline, exit 66:
+Resolving dependencies...
+Downloading packages...
++ crypto 3.0.8
++ fixnum 1.1.1
++ meta 1.19.0
++ path 1.9.1
++ uuid 4.6.0
++ xdg_directories 1.1.0
+Changed 6 dependencies!
+Creation failed, path = '<pub-cache>/active_roots/61' (OS Error: Operation not permitted, errno = 1)
+
+Package compiler, exit 0 (using generated package configuration):
+Generated: <scratch>/ctui26-framework-packages/probe
+
+Compiled package probe and original Bun oracle comparison, exit 0:
+override: PASS uuid: 10000 distinct v4 values
+xdg absolute=true override=true relative=false defaultSuffix=false
+original: {"absolute":true,"relative":false,"defaultSuffix":false}
+relative: PASS uuid: 10000 distinct v4 values
+xdg absolute=false override=false relative=true defaultSuffix=false
+original: {"absolute":false,"relative":true,"defaultSuffix":false}
+empty: PASS uuid: 10000 distinct v4 values
+xdg absolute=true override=false relative=false defaultSuffix=true
+original: {"absolute":true,"relative":false,"defaultSuffix":true}
+missing: PASS uuid: 10000 distinct v4 values
+xdg absolute=true override=false relative=false defaultSuffix=true
+original: {"absolute":true,"relative":false,"defaultSuffix":true}
+no-home: PASS uuid: 10000 distinct v4 values
+xdg failure: StateError
+original: {"absolute":true,"relative":false,"defaultSuffix":true}
+
+Earlier tooling attempts (diagnostic excerpts only):
+- PATH's Flutter wrapper attempted cache engine-stamp/realm writes and received
+  Operation not permitted. The direct cached Dart SDK was then used.
+- Initial direct SDK compilation without --suppress-analytics printed Generated
+  but exited 1 on telemetry-session bookkeeping, OS Error: Operation not
+  permitted, errno = 1. Suppressed rerun above exited 0.
+These are sandbox bookkeeping failures, not failures to compile either package.

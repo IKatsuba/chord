@@ -1,0 +1,1 @@
+Paths are relabelled: the port ran in ~/project, the original in ../chord. file1-* use file1-keybindings.json at 85928243 (tools scenario, ctrl+o, ctrl+t, ? typed); file2-* use file2-keybindings.json at b4de7ae4 (! opens the panel).

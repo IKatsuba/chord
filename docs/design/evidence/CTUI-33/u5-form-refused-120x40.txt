@@ -1,0 +1,40 @@
+  New deployment
+
+ ❯ ⚠ Project name   ab
+                    At least 3 characters
+   ⚠ Contact email  not-an-email
+                    Not an email address, such as name@example.com
+   ✔ Replicas       2
+     Traffic share  not set
+   ✔ Public         ☐ No
+   ✔ Region         United States
+   ✔ Tags           web
+
+   Accept   Decline     2 fields to fix
+
+ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel
+
+ Gave: nothing yet
+ Ctrl+Q quits
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

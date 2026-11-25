@@ -1,0 +1,24 @@
+
+ ⏺ Two monitors are running.
+
+ ← [2mfrom [0;1mdev server errors[0;2m · monitor[0m
+   [2m⎿[0m  [2mERROR [router] POST /login 500: Cannot read properties of undefined[0m
+      [2m(reading 'trim')[0m
+      [2m    at validate (src/routes/login.tsx:41:22)[0m
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ [2m⏺[0m [2mdev server errors and CI run 4812 were running when this session was left[0m
+   [2mand are not restarted[0m
+
+ [2m←[0m [2mfrom [0;1mchord[0m
+   [2m⎿[0m  [2mYour monitors m1 (dev server errors) and m2 (CI run 4812) were running[0m
+      [2mwhen this session was left. chord stopped them then, and nothing restarts[0m
+      [2mthem; start them again with monitor if you still need them.[0m
+
+ ⏺ Received the message from chord.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

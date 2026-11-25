@@ -1,0 +1,10 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+
+╭──────────────────────────────╮
+│ ›                            │
+╰──────────────────────────────╯
+  ? for shortcuts

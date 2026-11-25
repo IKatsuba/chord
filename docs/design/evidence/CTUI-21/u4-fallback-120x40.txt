@@ -1,0 +1,40 @@
+Fallback at 120 columns
+Bad state: The example child failed
+Resize, or press r to replace the boundary.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+x Fail child  r Replace boundary  q Quit

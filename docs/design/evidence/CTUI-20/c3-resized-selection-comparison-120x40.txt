@@ -1,0 +1,41 @@
+Original installed agents | Port synthetic fixture (120x40; inventories/version/directory differ)
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                    ██▄                                                                  | 
+                                                    ████▄                                                                | 
+                                                    ██████▄                                                              | 
+                                                     ▀██████▄                                                            | 
+                                                     ▄██████▀   chord                                                    | 
+                                                    ██████▀                                                              | 
+                                                    ████▀                                                                |                                                    ██▄
+                                                    ██▀                                                                  |                                                    ████▄
+                                                                                                                         |                                                    ██████▄
+                                          One terminal for every coding agent.                                           |                                                     ▀██████▄   chord
+                                       v0.71.0 · /tmp/chord-qa.designer-ship13-c3                                        |                                                     ▄██████▀
+                                                                                                                         |                                                    ██████▀
+                              Select agent                                                                               |                                                    ████▀
+                                                                                                                         |                                                    ██▀
+                              ❯ ↑ 5.  cline · Cline                                                                      | 
+                                  6.  codebuddy-code · Codebuddy Code                                                    |                                           One terminal for every coding agent.
+                                  7.  codex · Codex                                                                      |                             v0.0.1 · /workspace/packages/terminal/interfaces/example/project
+                                  8.  cursor-cloud · Cursor Cloud Agents                                                 | 
+                                  9.  deepagents · DeepAgents                                                            |                               Select agent
+                                  10. dimcode · DimCode                                                                  | 
+                                  11. dirac · Dirac                                                                      |                                 1. claude
+                                  12. factory-droid · Factory Droid                                                      |                               ❯ 2. codex
+                                  13. fast-agent                                                                         |                                 3. pi · not on PATH
+                                  14. gemini · Gemini CLI                                                                | 
+                                  15. github-copilot-cli · GitHub Copilot                                                |                               ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+                                  16. glm-acp-agent · GLM Agent                                                          | 
+                                  17. grok-build · Grok Build                                                            | 
+                                ↓ 18. kilo · Kilo                                                                        | 
+                                  … +15 more                                                                             | 
+                                                                                                                         | 
+                              ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel                                 | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 

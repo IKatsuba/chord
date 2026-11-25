@@ -1,0 +1,43 @@
+{
+  "original": [
+    ".gitignore",
+    ".hidden",
+    "alias-dir/.gitignore",
+    "alias-dir/a.tmp",
+    "alias-dir/deep/keep.log",
+    "alias-dir/keep.log",
+    "alias-dir/z.txt",
+    "alias-file",
+    "external-dir/out.txt",
+    "external-file",
+    "sub/.gitignore",
+    "sub/a.tmp",
+    "sub/deep/keep.log",
+    "sub/keep.log",
+    "sub/z.txt",
+    "top.txt"
+  ],
+  "helper": [
+    ".gitignore",
+    ".hidden",
+    "alias-dir/.gitignore",
+    "alias-dir/a.tmp",
+    "alias-dir/deep/keep.log",
+    "alias-dir/keep.log",
+    "alias-dir/z.txt",
+    "alias-file",
+    "broken",
+    "external-dir/out.txt",
+    "external-file",
+    "sub/.gitignore",
+    "sub/a.tmp",
+    "sub/deep/keep.log",
+    "sub/keep.log",
+    "sub/z.txt",
+    "top.txt"
+  ],
+  "only_original": [],
+  "only_helper": [
+    "broken"
+  ]
+}

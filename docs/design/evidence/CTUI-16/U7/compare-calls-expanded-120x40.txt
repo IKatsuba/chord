@@ -1,0 +1,41 @@
+Original calls-expanded-120x40.txt | U7 live calls-expanded-120x40.txt
+ ▀▄     chord v0.71.0                                                                                                    |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-calls-120                                                                          |  › calls
+ ▀▀     ? for shortcuts · /help                                                                                          | 
+                                                                                                                         |  ⏺ Read(src/main.tsx)
+ › calls                                                                                                                 |    ⎿  import { Command } from '@cliffy/command';
+                                                                                                                         |       import { render } from 'ink';
+ ⏺ Read(src/main.tsx)                                                                                                    |       import { App } from './ui/App.tsx';
+   ⎿  import { Command } from '@cliffy/command';                                                                         | 
+      import { render } from 'ink';                                                                                      |       await new Command()
+      import { App } from './ui/App.tsx';                                                                                |         .name('chord')
+                                                                                                                         |         .parse(Deno.args);
+      await new Command()                                                                                                | 
+        .name('chord')                                                                                                   |  ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw
+        .parse(Deno.args);                                                                                               |    their status")
+                                                                                                                         |    ⎿  ok | 1 passed | 0 failed (12ms)
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw  | 
+   their status")                                                                                                        |  ⏺ Read(src/missing.ts)
+   ⎿  ok | 1 passed | 0 failed (12ms)                                                                                    |    ⎿  Error: File does not exist.
+                                                                                                                         | 
+ ⏺ Read(src/missing.ts)                                                                                                  |  ⏺ Two calls worked, one failed.
+   ⎿  Error: File does not exist.                                                                                        | 
+                                                                                                                         | 
+ ⏺ Two calls worked, one failed.                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                                                                    │ | 
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |  ctrl+c or ctrl+d to quit

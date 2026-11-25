@@ -1,0 +1,41 @@
+ORIGINAL + RECORDING STUB                                                                                                | PORT + RECORDING BOOTSTRAP
+                                                                                                                         | 
+ ⏺ Reading the session layer                                                                                             |  ⏺ Reading the session layer
+                                                                                                                         | 
+   The session layer wraps the SDK so the interface never touches a process. Start with src/session/session.ts, then     |    The session layer wraps the SDK so the interface never touches a process. Start with src/session/session.ts, then
+   see the ACP spec (https://agentclientprotocol.com) for the wire format.                                               |    see the ACP spec (https://agentclientprotocol.com) for the wire format.
+                                                                                                                         | 
+   What it does                                                                                                          |    What it does
+                                                                                                                         | 
+   - opens one persistent session per chord session                                                                      |    - opens one persistent session per chord session
+   - starts turns with startTurn and cancels them                                                                        |    - starts turns with startTurn and cancels them
+     1. a cancel stops the turn at once                                                                                  |      1. a cancel stops the turn at once
+     2. the agent is told with session/cancel                                                                            |      2. the agent is told with session/cancel
+   - closes the agent and waits until its exit is seen                                                                   |    - closes the agent and waits until its exit is seen
+                                                                                                                         | 
+   │ A closed agent counts as gone only once its exit is seen:                                                           |    │ A closed agent counts as gone only once its exit is seen:
+   │ ┌ ts ──────────────────────────────────────────────────────┐                                                        |    │ ┌ ts ────────────────────────────────────────────────────────┐
+   │ │ await session.close(); // resolves once the exit is seen │                                                        |    │ │   await session.close(); // resolves once the exit is seen │
+   │ └──────────────────────────────────────────────────────────┘                                                        |    │ └────────────────────────────────────────────────────────────┘
+                                                                                                                         | 
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐                                       |    ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │                                       |    │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤                                       |    ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │                                       |    │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │                                       |    │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │                                       |    │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │                                       |    │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │                                       |    │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │                                       |    │               │ drawn                                  │                    │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘                                       |    └───────────────┴────────────────────────────────────────┴────────────────────┘
+                                                                                                                         | 
+   ┌─ ts ──────────────────────────────────────────────────[copy]─┐                                                      |    ┌ ts ─────────────────────────────────────────────────────[copy]─┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │                                                      |    │   const session = await openSession({ agent: 'claude', cwd }); │
+ ── ↓ new output · 10 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────  |  ── ↓ new output · 10 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────
+                                                                                                                         | 
+ ››› Working… (4s · esc to interrupt)                                                                                    |  ››› Working… (4s · esc to interrupt)
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |   ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

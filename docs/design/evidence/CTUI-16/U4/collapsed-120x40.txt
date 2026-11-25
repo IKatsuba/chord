@@ -1,0 +1,40 @@
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ The answer is ready.
+
+   - One item
+   - Another item
+   ⎿  Interrupted by user
+   ⎿  Stopped: max_tokens
+
+ ⏺ A warning from the agent.
+
+ ⏺ An error from the agent.
+
+ ⏺ Plan
+   ⎿  ☒ Read the source
+      ☒ Finish the change
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

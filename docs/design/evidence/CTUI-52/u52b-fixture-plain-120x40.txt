@@ -1,0 +1,40 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake
+ ▄██▀   fixture-project
+ █▀     ? for shortcuts
+
+ ⏺ fake did not start: The scripted session could not start. Its original failure words remain in the transcript and
+   wrap to the available width.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

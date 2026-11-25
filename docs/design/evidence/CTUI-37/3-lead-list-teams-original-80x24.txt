@@ -1,0 +1,24 @@
+ ← from @tester · fake
+   ⎿  It fails for that reason: "a" at the end of a line comes back as "a, with
+      no closing quote. Only tests/parse/tokenize_test.ts changed.
+
+ ⏺ Received the message from tester · fake.
+
+ › team
+
+ ⏺ List teams
+   ⎿  Error: MCP error -32602: Tool list_teams not found
+
+ ⏺ Team(bugfix)
+   ⎿  Error: MCP error -32602: Tool run_team not found
+
+ ⏺ chord did not start the team.
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake         ◦ idle 1m
+    bugfix     team · fake  ◦ idle 7s
+    ├─ tester  fake         ● permission 1m 50s  ← new message
+    └─ coder   fake         ◦ idle 1m            ✓ new reply

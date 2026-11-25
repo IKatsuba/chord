@@ -1,0 +1,5 @@
+name: ctui25_ansi_trial
+environment:
+  sdk: ^3.12.0
+dependencies:
+  ansi_escape_codes: 4.0.1

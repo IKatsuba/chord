@@ -1,0 +1,41 @@
+Original | Port (120x40; private port directory replaced with <repository>)
+ █▄     chord v0.71.0                                                                                                    |  chord v0.0.1 · fake · <repository>
+ ▀██▄   fake · Fake Large with a 1M context window                                                                       | 
+ ▄██▀   /tmp/chord-qa.designer-ship13-b3a                                                                                |  › reviewpermission
+ █▀     ? for shortcuts · /help                                                                                          | 
+                                                                                                                         |  ⏺ Run(a reviewed action)
+ › reviewpermission                                                                                                      |    ⎿  Reviewed: caution
+                                                                                                                         |    ⎿  Rejected Run a reviewed action
+ ⏺ Run(a reviewed action)                                                                                                | 
+   ⎿  Reviewed: caution                                                                                                  |  ⏺ Review permission: deny.
+   ⎿  Rejected Run a reviewed action                                                                                     | 
+                                                                                                                         |  › permission
+ ⏺ Review permission: deny.                                                                                              | 
+                                                                                                                         |  ⏺ Write(notes.txt)
+ › permission                                                                                                            |    ⎿  Waiting…
+                                                                                                                         | 
+ ⏺ Write(notes.txt)                                                                                                      | 
+   ⎿  Waiting…                                                                                                           | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+ ››› Waiting for permission… (8s)                                                                                        |  ››› Waiting for permission… (8s)
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                                                                      │ | │ Write notes.txt                                                                                                      │
+│                                                                                                                      │ | │                                                                                                                      │
+│   1 + notes                                                                                                          │ | │   1 + notes                                                                                                          │
+│                                                                                                                      │ | │                                                                                                                      │
+│ Do you want to proceed?                                                                                              │ | │ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │ | │ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │ | │   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │ | │   3. Deny                                                                                                            │
+│                                                                                                                      │ | │                                                                                                                      │
+│ Esc to reject                                                                                                        │ | │ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |                                                  Fake Large with a 1M context window · medium effort · 1% context used

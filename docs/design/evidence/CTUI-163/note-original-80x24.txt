@@ -1,0 +1,14 @@
+
+# note typed, cursor at its end
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tango uniform vict │
+│         or whiskey                                                           │
+│                                                                              │
+│ Enter for the next · ↑ options · ←→ questions · Esc to cancel                │
+
+# super+left, '[' typed
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tango uniform vict │
+│         [or whiskey                                                          │
+│                                                                              │
+│ Enter for the next · ↑ options · ←→ questions · Esc to cancel                │

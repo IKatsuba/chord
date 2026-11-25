@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  enter to send
+  shift or \ + enter for a newline
+  alt + ← → to move by word
+  ↑ ↓ for prompts
+  pgup pgdn to scroll
+  ── ↓ 14 lines below ──────────────────
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

@@ -1,0 +1,40 @@
+ ⏺ fake asked: Set up the deploy target
+   [2m⎿[0m  [38;2;78;186;101mAnswered · 6 fields[39m
+
+ ⏺ Elicitation answer: accept
+   {"name":"abc","email":"ops@example.com","replicas":2,"public":false,"region":"us","tags":["web"]}
+
+ [2m›[0m link
+
+ ⏺ fake asked: Sign in to Example to continue
+   [2m⎿[0m  [38;2;255;107;128mDeclined[39m
+
+ ⏺ Elicitation answer: decline
+
+ [2m›[0m link
+
+ ⏺ fake asked: Sign in to Example to continue
+   [2m⎿[0m  [38;2;255;107;128mCancelled[39m
+
+ ⏺ Elicitation answer: cancel
+
+ [2m›[0m form
+
+ ⏺ fake asked: Set up the deploy target
+   [2m⎿[0m  [38;2;255;107;128mCancelled[39m
+
+ ⏺ Elicitation answer: cancel
+
+ [2m›[0m leftform
+
+ ⏺ I asked; the turn ends with the form open.
+
+ ⏺ fake asked: Set up the deploy target
+   [2m⎿[0m  [38;2;255;107;128mCancelled[39m
+
+ ⏺ Elicitation answer: cancel
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

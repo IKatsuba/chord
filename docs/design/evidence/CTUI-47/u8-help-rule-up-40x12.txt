@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 1 line above · pageup to scroll ─
+  shift or \ + enter for a newline
+  ── ↓ 17 lines below ──────────────────
+
+╭──────────────────────────────────────╮
+│ ↑ draft line 4                       │
+│   draft line 5                       │
+│   draft line 6                       │
+│   draft line 7                       │
+╰──────────────────────────────────────╯
+

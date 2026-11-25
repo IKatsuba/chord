@@ -1,0 +1,40 @@
+Permission fixture: diff
+Transcript
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│    1 - old                                                                                                           │
+│    1 + proposed line 1                                                                                               │
+│    2 + proposed line 2                                                                                               │
+│    3 + proposed line 3                                                                                               │
+│    4 + proposed line 4                                                                                               │
+│    5 + proposed line 5                                                                                               │
+│    6 + proposed line 6                                                                                               │
+│    7 + proposed line 7                                                                                               │
+│    8 + proposed line 8                                                                                               │
+│    9 + proposed line 9                                                                                               │
+│   10 + proposed line 10                                                                                              │
+│   11 + proposed line 11                                                                                              │
+│   12 + proposed line 12                                                                                              │
+│   13 + proposed line 13                                                                                              │
+│   14 + proposed line 14                                                                                              │
+│   15 + proposed line 15                                                                                              │
+│   16 + proposed line 16                                                                                              │
+│   17 + proposed line 17                                                                                              │
+│ ── ↓ 43 lines below · pagedown to scroll ─────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow once                                                                                                      │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject · denied by itself in 5 minutes                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+Answer:

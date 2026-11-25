@@ -1,0 +1,25 @@
+ORIGINAL + STUB | PORT + RECORDER
+   ┌─ typescript ─┐  |    ┌ typescript ┐
+   │ x            │  |    │   x        │
+   └──────────────┘  |    └────────────┘
+                     | 
+   ┌─ sh ──[copy]─┐  |    ┌ sh ───[copy]─┐
+   │ bun dev chor │  |    │   bun dev    │
+   │ d --fake --q │  |    │ ↪ chord      │
+   │ a capture && │  |    │ ↪ --fake     │
+   │  tmux captur │  |    │ ↪ --qa       │
+   │ e-pane -t ch │  |    │ ↪ capture && │
+   │ ord-qa -p >  │  |    │ ↪  tmux capt │
+   │ /tmp/screen. │  |    │ ↪ ure-pane   │
+   │ txt          │  |    │ ↪ -t         │
+   │              │  |    │ ↪ chord-qa   │
+   │ echo done    │  |    │ ↪ -p > /tmp/ │
+   └──────────────┘  |    │ ↪ screen.txt │
+                     |    │              │
+   - a loose item    |    │   echo done  │
+ ── ↓ 11...s below   |  ── ↓ 14...s below
+                     | 
+╭──────────────────╮ | ╭──────────────────╮
+│ ›                │ | │ ›                │
+╰──────────────────╯ | ╰──────────────────╯
+  sent 1...ipboard   |   sent 1 chars to

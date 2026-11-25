@@ -1,0 +1,40 @@
+ Pick one
+
+Filter:
+  ↑ 2.  Choice 2
+    3.  Choice 3
+    4.  Choice 4
+    5.  Choice 5
+    6.  Choice 6
+❯   7.  Choice 7, with a second line
+  ↓       under its label
+    … +23 more
+
+Chosen: nothing yet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/ Edit filter  escape Cancel picker  ctrl+q Quit

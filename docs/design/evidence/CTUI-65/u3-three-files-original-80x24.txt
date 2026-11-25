@@ -1,0 +1,24 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord's MCP servers for fake. ACP does not say whether fake connected to the │
+│ ones it was passed.                                                          │
+│                                                                              │
+│ Name   Transport  Command or URL              Defined in                     │
+│ chord  http       http://127.0.0.1:59014/mcp  chord itself                   │
+│ ok     stdio      true                        .mcp.json                      │
+│                                                                              │
+│ chord's server gives fake list_agents, get_budgets, list_sessions,           │
+│ list_teams, spawn_task, open_agent, run_team, propose_team, settings,        │
+│ send_message, close_agent, clear_agent, monitor, stop_monitor and            │
+│ list_monitors.                                                               │
+│                                                                              │
+│ 1 server in <scratch>/b/cfg/chord/settings.json was ignored, 2      │
+│ servers in .mcp.json were ignored, and 1 server in .chord/settings.json was  │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

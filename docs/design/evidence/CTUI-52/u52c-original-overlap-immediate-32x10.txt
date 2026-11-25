@@ -1,0 +1,10 @@
+
+
+╭───────────────────────────────
+│ Resume a session
+│ fake's earlier sessions in thi
+│
+│ ❯ 1. 1 hour ago  Saved reopen
+│
+│ Enter to resume · Ctrl+a for a
+╰───────────────────────────────

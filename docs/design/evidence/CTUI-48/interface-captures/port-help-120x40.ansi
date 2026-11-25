@@ -1,0 +1,40 @@
+   [2m│ │[0m   await session.close(); // resolves once the exit is seen [2m│[0m
+   [2m│ └────────────────────────────────────────────────────────────┘[0m
+
+   [2m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m
+   [2m│[0m session.ts    [2m│[0m opening, prompting and closing         [2m│[0m session_test.ts    [2m│[0m
+   [2m│[0m               [2m│[0m a session                              [2m│[0m                    [2m│[0m
+   [2m│[0m processes.ts  [2m│[0m the promise that a closed agent is     [2m│[0m processes_test.ts  [2m│[0m
+   [2m│[0m               [2m│[0m gone                                   [2m│[0m                    [2m│[0m
+   [2m│[0m transcript.ts [2m│[0m the reducer from events to what is     [2m│[0m transcript_test.ts [2m│[0m
+   [2m│[0m               [2m│[0m drawn                                  [2m│[0m                    [2m│[0m
+   [2m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m
+
+   [2m┌ ts ────────────────────────────────────────────────────────────┐[0m
+   [2m│[0m   const session = await openSession({ agent: 'claude', cwd }); [2m│[0m
+   [2m│[0m   const turn = session.prompt('hello');                        [2m│[0m
+   [2m│[0m   await turn.result;                                           [2m│[0m
+   [2m└────────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1. [0mRun the checks:
+   [2m   ┌ sh ───────────┐[0m
+   [2m   │[0m   bun quality [2m│[0m
+   [2m   └───────────────┘[0m
+ [2m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [2menter to send                         tab to complete a command            1–9 to pick a choice[0m
+  [2mshift or \ + enter for a newline      esc to close completions             ↑ ↓ j k ← → to move or change a value[0m
+  [2malt + ← → to move by word             esc to interrupt                     enter to pick the highlighted choice[0m
+  [2m↑ ↓ for prompts                       shift + tab to cycle modes           esc to reject a permission[0m
+  [2mpgup pgdn to scroll                   ctrl + o for verbose output          esc to leave a picker or shortcuts[0m
+  [2mshift + ↑ ↓ to scroll a line          ctrl + c to clear input              ? for shortcuts[0m
+  [2mhome end for the top and the bottom   ctrl + d or ctrl + c twice to quit   any key to quit the crash screen[0m
+  [2m↑ ↓ to pick a completion              ctrl + x a for what waits on you[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

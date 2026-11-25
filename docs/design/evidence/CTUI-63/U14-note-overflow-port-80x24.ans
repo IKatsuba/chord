@@ -1,0 +1,24 @@
+
+ [38;2;10;116;112m››[38;2;210;255;228m› [38;2;71;231;165mWaiting for your answer to the plan… [2m(8s)[0m
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│ [1m[38;2;177;185;249mApprove Plan[0m                                                                 [38;2;177;185;249m│
+│                                                                              [38;2;177;185;249m│
+│ fake has a plan. Do you want to proceed?                                     [38;2;177;185;249m│
+│ [38;2;177;185;249m  1. Yes, accept the plan                                                    [38;2;177;185;249m│
+│ [38;2;177;185;249m  2. No, keep planning                                                       [38;2;177;185;249m│
+│                                                                              [38;2;177;185;249m│
+│ [38;2;177;185;249m❯ [1mNote  [0;2m── ↑ 24 lines above ────────────────────────────────────────────────[0m [38;2;177;185;249m│
+│         sts pass; step 26 keeps the old routing behind a flag until the test [38;2;177;185;249m│
+│         s pass; step 27 keeps the old routing behind a flag until the tests  [38;2;177;185;249m│
+│         pass; step 28 keeps the old routing behind a flag until the tests pa [38;2;177;185;249m│
+│         ss; step 29 keeps the old routing behind a flag until the tests pass [38;2;177;185;249m│
+│         ; step 30 keeps the old routing behind a flag until the tests pass   [38;2;177;185;249m│
+│                                                                              [38;2;177;185;249m│
+│ [2mEnter to keep planning with this note · ↑ to the options · Esc to keep[0m       [38;2;177;185;249m│
+│ [2mplanning[0m                                                                     [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

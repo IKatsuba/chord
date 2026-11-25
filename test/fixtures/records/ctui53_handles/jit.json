@@ -1,0 +1,159 @@
+{
+  "runtime": "3.13.5",
+  "mode": "JIT",
+  "pathMatching": "Canonical owned root; relative descriptor names only.",
+  "snapshotPolicy": "Immediate single lsof snapshot after public Future; no polling.",
+  "physicalIsolateCount": null,
+  "physicalExitLatency": null,
+  "operations": [
+    {
+      "name": "directory-cancel",
+      "whileGated": [
+        {
+          "descriptor": "8",
+          "type": "DIR",
+          "path": "records"
+        }
+      ],
+      "observedRealIoGates": 1,
+      "immediatelyAfterFuture": [],
+      "outcome": "cancelled",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    },
+    {
+      "name": "eight-files-cancel",
+      "whileGated": [
+        {
+          "descriptor": "8",
+          "type": "REG",
+          "path": "records/4.jsonl"
+        },
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "records/6.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "records/2.jsonl"
+        },
+        {
+          "descriptor": "11",
+          "type": "REG",
+          "path": "records/0.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "records/7.jsonl"
+        },
+        {
+          "descriptor": "13",
+          "type": "REG",
+          "path": "records/5.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "records/1.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "records/3.jsonl"
+        }
+      ],
+      "observedRealIoGates": 8,
+      "immediatelyAfterFuture": [],
+      "outcome": "cancelled",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    },
+    {
+      "name": "selected-cancel",
+      "whileGated": [
+        {
+          "descriptor": "8",
+          "type": "REG",
+          "path": "selected.jsonl"
+        }
+      ],
+      "observedRealIoGates": 1,
+      "immediatelyAfterFuture": [],
+      "outcome": "cancelled",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    },
+    {
+      "name": "projection-cancel",
+      "whileGated": [],
+      "observedRealIoGates": 1,
+      "immediatelyAfterFuture": [],
+      "outcome": "cancelled",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    },
+    {
+      "name": "scan-success",
+      "immediatelyAfterFuture": [],
+      "outcome": "success",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    },
+    {
+      "name": "selected-success",
+      "immediatelyAfterFuture": [],
+      "outcome": "success",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    },
+    {
+      "name": "directory-error",
+      "immediatelyAfterFuture": [],
+      "outcome": "caught-error",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    },
+    {
+      "name": "version-error",
+      "immediatelyAfterFuture": [],
+      "outcome": "caught-error",
+      "closedStreams": 0,
+      "closedTasks": 0,
+      "sdkExitJoined": true,
+      "pendingFutures": 0,
+      "afterRootDeletion": [],
+      "rootRemoved": true
+    }
+  ]
+}

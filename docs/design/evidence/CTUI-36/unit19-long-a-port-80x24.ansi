@@ -1,0 +1,24 @@
+      [2m       [0mllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll
+      [2m       [0mllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll
+      [2m       [0mllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll
+      [2m       [0mllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll
+      [2m       [0mllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll
+      [2m       [0mllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll
+      [2m       [0mllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll
+      [2m       [0mlllllllllllllllllllllllllllllllllllllllllllllllll"
+
+ [38;2;10;116;112m››[38;2;210;255;228m›[39m [38;2;71;231;165mWaiting for you…[39m [2m(6s)[0m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mSet agents.fake.model?[0m                                                       [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [1m[38;2;177;185;249m1. Yes, in ~/.config/chord/settings.json[0m               [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. No, tell fake what to change                                            [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [2mEsc to tell fake what to change · pageup to read the whole change[0m            [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

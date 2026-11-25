@@ -1,0 +1,24 @@
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran bun dev test tests/parse: 2 failures, both in tests/parse/
+      printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ main    fake  ◦ idle 49s
+    parser  fake  ◦ idle 49s        ✓ new reply
+    docs    fake  ● permission 49s  ← new message

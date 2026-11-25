@@ -1,0 +1,24 @@
+chord: ~/.config/chord/keybindings.json: unknown context "Nope", ignored
+chord: ~/.config/chord/keybindings.json: ctrl+c cannot be rebound, ignor
+ed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

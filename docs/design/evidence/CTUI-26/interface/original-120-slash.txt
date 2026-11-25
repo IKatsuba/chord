@@ -1,0 +1,40 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   fixture-project
+ █▀     ? for shortcuts · /help
+
+ › /resume
+   ⎿  That session is in fixture-other. Quit and open it there with:
+[synthetic fake command redacted; original row wrapped here]
+      resume interface-0
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │
+│ ❯   1.  1 hour ago    Inspect wrapping, history and session resume behavior across a deliberately long saved session │
+│                       title with extra details 2                                                                     │
+│     2.  2 hours ago   Saved session example 3                                                                        │
+│     3.  4 hours ago   Saved session example 5                                                                        │
+│     4.  5 hours ago   Saved session example 6                                                                        │
+│     5.  7 hours ago   Saved session example 8                                                                        │
+│     6.  8 hours ago   Saved session example 9                                                                        │
+│     7.  10 hours ago  Saved session example 11                                                                       │
+│   ↓ 8.  11 hours ago  Saved session example 12                                                                       │
+│     … +4 more                                                                                                        │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

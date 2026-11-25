@@ -1,0 +1,465 @@
+{
+  "sourceCommit": "8f270741270d4d32d682b244297e14565443283c",
+  "productionCommit": "877c545dae9046fa0bf16b6e842cd6b7f5443330",
+  "runtime": "JIT dart test",
+  "command": "dart test test/widgets/picker_retention_test.dart --reporter=expanded",
+  "records": [
+    {
+      "choices": 2000,
+      "observations": [
+        {
+          "cycle": 0,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 0,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 0,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 1,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 1,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 1,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 2,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 2,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 2,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 3,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 3,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 3,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 4,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 4,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 4,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 5,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 5,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 5,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 6,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 6,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 6,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 7,
+          "width": 120,
+          "height": 40,
+          "extentCount": 2000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 7,
+          "width": 80,
+          "height": 24,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 7,
+          "width": 32,
+          "height": 10,
+          "extentCount": 2000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        }
+      ],
+      "peakLiveItemStates": 14,
+      "liveItemStatesAfterUnmount": 0
+    },
+    {
+      "choices": 10000,
+      "observations": [
+        {
+          "cycle": 0,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 0,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 0,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 1,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 1,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 1,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 2,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 2,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 2,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 3,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 3,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 3,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 4,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 4,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 4,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 5,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 5,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 5,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 6,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 6,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 6,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 7,
+          "width": 120,
+          "height": 40,
+          "extentCount": 10000,
+          "mountedItems": 7,
+          "placedItems": 7,
+          "liveItemStates": 7
+        },
+        {
+          "cycle": 7,
+          "width": 80,
+          "height": 24,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        },
+        {
+          "cycle": 7,
+          "width": 32,
+          "height": 10,
+          "extentCount": 10000,
+          "mountedItems": 4,
+          "placedItems": 4,
+          "liveItemStates": 4
+        }
+      ],
+      "peakLiveItemStates": 14,
+      "liveItemStatesAfterUnmount": 0
+    }
+  ],
+  "sourceAudit": {
+    "picker": "One current PickerGeometry holds copied heights, N+1 line starts and at most N positive-height indices; no width/query map or second height snapshot.",
+    "renderer": "One ItemExtents container and current exact next-positive index; width changes overwrite current scalar geometry and rebuild only visible widgets.",
+    "sources": [
+      "lib/src/widgets/picker.dart",
+      "lib/src/foundation/picker_state.dart",
+      "lib/src/rendering/list_viewport.dart"
+    ]
+  },
+  "limits": "Fixed 2000/10000 corpora over 24 width transitions each. Current extent count and mounted/placed/live-state counts are measured; private geometry ownership is source-audited. No whole-heap/GC retained byte measurement; RSS remains process-only in separate AOT reports.",
+  "cleanup": "Both widget trees unmounted, live item states zero, test runner exited0."
+}

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in every directory.                                                                          │
+│                                                                                                                      │
+│ ❯   1.  1 hour ago    …/CTUI-27                       Inspect the saved notes and retain this descriptive title      │
+│                                                       across wrapped lines.                                          │
+│     2.  2 hours ago   …gner-resume-other-directory-1  Saved session 1 · 界😀 with a long title and                   │
+│                                                       an_unbroken_title_tail                                         │
+│     3.  3 hours ago   …/CTUI-27                       Saved session 2 · 界😀 with a long title and                   │
+│                                                       an_unbroken_title_tail                                         │
+│     4.  4 hours ago   …gner-resume-other-directory-3  Saved session 3 · 界😀 with a long title and                   │
+│                                                       an_unbroken_title_tail                                         │
+│   ↓ 5.  5 hours ago   …/CTUI-27                       Saved session 4 · 界😀 with a long title and                   │
+│     … +25 more                                                                                                       │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

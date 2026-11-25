@@ -1,0 +1,24 @@
+
+      [1mWho edits what[0m
+
+      [2m- [0mOne writer per file at a time. Before a member starts, the lead tells
+      [2m  [0mit which files are its own.
+      [2m- [0mA member that needs a file it does not own asks its owner directly,
+      [2m  [0mand tells the lead what they agreed.
+      [2m- [0mAnother run of a team may be working in this directory: the leads
+      [2m  [0magree on files among themselves.
+      [2m- [0mNobody commits. The person commits.
+
+      [1mReporting[0m
+
+      The lead writes to main when it needs a decision only the person can
+      make, when the job is done, and when it cannot be done.
+   [2m [0m  [38;2;78;186;101mSaved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job[39m
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix and
+   the bug, or just tell me to hand one to bugfix.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

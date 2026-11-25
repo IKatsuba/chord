@@ -1,0 +1,40 @@
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end — a failing test first, then the fix.
+
+      lead    fake · fake-large  default      Splits the job, says who edits which files, reports to main
+      tester  fake · fake-small  acceptEdits  Writes the failing test, then proves the fix
+      coder   fake · fake-large  plan         Writes the fix, in the files the lead names
+
+      How bugfix works
+      1. The lead reads the job and names who may edit which files.
+      2. tester writes a test that fails for the bug's own reason, in tests/.
+      … +24 lines (ctrl+o to expand)
+
+ › /team run bugfix Fix issue 214.
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  Fix issue 214.
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 15s on "Fix issue 214."
+
+      lead    fake · fake-large  default      ◦ idle 13s        ✓ new reply    ← from @tester · fake
+      tester  fake · fake-small  acceptEdits  ● permission 13s  ← new message  Bash(bun dev test tests/parse)
+      coder   fake · fake-large  plan         ◦ idle 12s        ✓ new reply    ← from @tester · fake
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window · medium         ◦ idle 15s
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ◦ idle 14s        ✓ new reply
+    ├─ tester  fake · Fake Small · medium                                  ● permission 14s  ← new message
+    └─ coder   fake · Fake Large with a 1M context window · medium         ◦ idle 13s        ✓ new reply

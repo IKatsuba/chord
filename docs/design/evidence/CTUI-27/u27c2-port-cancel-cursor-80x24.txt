@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › alpha first
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › alpha second
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › alpha first
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › saved 界X😀                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

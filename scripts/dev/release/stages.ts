@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { authenticate } from './authenticate.ts';
 import { compile, install, natives, quality } from './build.ts';
 import { commitVersion, type Held, holdVersion, pushVersion } from './bump.ts';
-import { channelOf } from '../../../src/channel.ts';
+import { channelOf } from './channel.ts';
 import {
   die,
   identity,

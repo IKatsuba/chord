@@ -1,0 +1,8 @@
+{"event":"attempt","text":"chord","cancelled":false}
+{"event":"write","text":"chord"}
+{"event":"attempt","text":"chord","cancelled":false}
+{"event":"write","text":"chord"}
+{"event":"attempt","text":"bun dev check","cancelled":false}
+{"event":"write","text":"bun dev check"}
+{"event":"attempt","text":"x","cancelled":false}
+{"event":"write","text":"x"}

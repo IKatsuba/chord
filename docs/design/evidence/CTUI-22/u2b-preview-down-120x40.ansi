@@ -1,0 +1,40 @@
+Highlight a choice to preview it; Enter accepts it.
+Filter:
+[1m [0m   1.  Choice 1
+[1m❯[0m   [1m2. [0m [1mChoice 2[0m
+[1m [0m   3.  Choice 3
+[1m [0m   4.  Choice 4
+[1m [0m   5.  Choice 5
+[1m [0m   6.  Choice 6
+[1m [0m [2m↓[0m 7.  Choice 7
+[2m    … +23 more[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Highlighted: Choice 2
+Accepted: Nothing yet
+[1mup[0;2m Previous choice[0m  [1mk[0;2m Previous choice[0m  [1mdown[0;2m Next choice[0m  [1mj[0;2m Next choice[0m  [1menter[0;2m Choose highlighted item[0m  [1m1[0;2m Choose item 1…[0m

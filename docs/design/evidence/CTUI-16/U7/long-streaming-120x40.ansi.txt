@@ -1,0 +1,40 @@
+ [1mchord[0;2m v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7[0m
+   [2m12. [0mLine 12 of 200, streamed one at a time.
+   [2m13. [0mLine 13 of 200, streamed one at a time.
+   [2m14. [0mLine 14 of 200, streamed one at a time.
+   [2m15. [0mLine 15 of 200, streamed one at a time.
+   [2m16. [0mLine 16 of 200, streamed one at a time.
+   [2m17. [0mLine 17 of 200, streamed one at a time.
+   [2m18. [0mLine 18 of 200, streamed one at a time.
+   [2m19. [0mLine 19 of 200, streamed one at a time.
+   [2m20. [0mLine 20 of 200, streamed one at a time.
+   [2m21. [0mLine 21 of 200, streamed one at a time.
+   [2m22. [0mLine 22 of 200, streamed one at a time.
+   [2m23. [0mLine 23 of 200, streamed one at a time.
+   [2m24. [0mLine 24 of 200, streamed one at a time.
+   [2m25. [0mLine 25 of 200, streamed one at a time.
+   [2m26. [0mLine 26 of 200, streamed one at a time.
+   [2m27. [0mLine 27 of 200, streamed one at a time.
+   [2m28. [0mLine 28 of 200, streamed one at a time.
+   [2m29. [0mLine 29 of 200, streamed one at a time.
+   [2m30. [0mLine 30 of 200, streamed one at a time.
+   [2m31. [0mLine 31 of 200, streamed one at a time.
+   [2m32. [0mLine 32 of 200, streamed one at a time.
+   [2m33. [0mLine 33 of 200, streamed one at a time.
+   [2m34. [0mLine 34 of 200, streamed one at a time.
+   [2m35. [0mLine 35 of 200, streamed one at a time.
+   [2m36. [0mLine 36 of 200, streamed one at a time.
+   [2m37. [0mLine 37 of 200, streamed one at a time.
+   [2m38. [0mLine 38 of 200, streamed one at a time.
+   [2m39. [0mLine 39 of 200, streamed one at a time.
+   [2m40. [0mLine 40 of 200, streamed one at a time.
+   [2m41. [0mLine 41 of 200, streamed one at a time.
+   [2m42. [0mLine 42 of 200, streamed one at a time.
+   [2m43. [0mLine 43 of 200, streamed one at a time.
+   [2m44. [0mLine 44 of 200, streamed one at a time.
+   [2m45. [0mLine 45 of 200, streamed one at a time.
+   [2m46. [0mLine 46 of 200, streamed one at a time.
+   [2m47. [0mLine 47 of 200, streamed one at a time.
+   [2m48. [0mLine 48 of 200, streamed one at a time.
+ [2m› [0;7m [0m
+ [2mctrl+c or ctrl+d to quit[0m

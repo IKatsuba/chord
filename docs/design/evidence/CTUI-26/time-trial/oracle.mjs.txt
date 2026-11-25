@@ -1,0 +1,4 @@
+const { lastUsed } = await import(`${process.argv[2]}/src/ui/pickers/picker.ts`);
+const now = Date.UTC(2026, 0, 1);
+const seconds = [-1, 0, 59, 60, 90, 119, 120, 3599, 3600, 7199, 7200, 86399, 86400, 172799, 172800, 604799, 604800, 1209600, 2591999, 2592000, 5184000, 31535999, 31536000, 63072000];
+console.log(JSON.stringify({now, cases: [...seconds.map(seconds => ({seconds, at: new Date(now - seconds * 1000).toISOString(), expected: lastUsed(new Date(now - seconds * 1000).toISOString(), now)})), {at: 'invalid timestamp', expected: lastUsed('invalid timestamp', now)}]}, null, 2));

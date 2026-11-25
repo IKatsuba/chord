@@ -1,0 +1,75 @@
+== 10 backspaces
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                         │
+│                                                                              │
+│   ↑                                                                          │
+│   1. Deno (TypeScript) (Recommended)                                         │
+│      Runs from source with inline npm: and jsr: imports, no package manager  │
+│   2. Python                                                                  │
+│      Only where a library has no JS or TS equivalent                         │
+│                                                                              │
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tango uniform vict │
+│                                                                              │
+│                                                                              │
+== 11th
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                         │
+│                                                                              │
+│ Which language should helper scripts use?                                    │
+│                                                                              │
+│   1. Deno (TypeScript) (Recommended)                                         │
+│      Runs from source with inline npm: and jsr: imports, no package manager  │
+│   2. Python                                                                  │
+│      Only where a library has no JS or TS equivalent                         │
+│                                                                              │
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tango uniform vic  │
+│                                                                              │
+== 13 more, fast
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                         │
+│                                                                              │
+│ Which language should helper scripts use?                                    │
+│                                                                              │
+│   1. Deno (TypeScript) (Recommended)                                         │
+│      Runs from source with inline npm: and jsr: imports, no package manager  │
+│   2. Python                                                                  │
+│      Only where a library has no JS or TS equivalent                         │
+│                                                                              │
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tang               │
+│                                                                              │
+== Q typed
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                         │
+│                                                                              │
+│ Which language should helper scripts use?                                    │
+│                                                                              │
+│   1. Deno (TypeScript) (Recommended)                                         │
+│      Runs from source with inline npm: and jsr: imports, no package manager  │
+│   2. Python                                                                  │
+│      Only where a library has no JS or TS equivalent                         │
+│                                                                              │
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tangQ              │
+│                                                                              │
+== Up
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                         │
+│                                                                              │
+│ Which language should helper scripts use?                                    │
+│                                                                              │
+│   1. Deno (TypeScript) (Recommended)                                         │
+│      Runs from source with inline npm: and jsr: imports, no package manager  │
+│ ❯ 2. Python                                                                  │
+│      Only where a library has no JS or TS equivalent                         │
+│                                                                              │
+│   Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tangQ              │
+│                                                                              │

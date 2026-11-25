@@ -1,0 +1,40 @@
+   That is the whole loop. To land a change:
+
+   [2m1. [0mRun the checks:
+   [2m   ┌ sh ────[0m[copy][2m─┐[0m
+   [2m   │[0m   bun quality [2m│[0m
+   [2m   └───────────────┘[0m
+   [2m2. [0mCommit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from a
+   [2m   [0mbuild that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ────────────────────────────────────────────[0m[copy][2m─┐[0m
+   [2m│[0m   bun dev compile --all                               [2m│[0m
+   [2m│[0m   for bin in dist/*/chord; do echo "built $bin"; done [2m│[0m
+   [2m└───────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m permission
+
+ [2m⏺[0m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [2mWaiting…[0m
+
+ [2m›[0m›[2m›[0m Waiting for permission… [2m(0s)[0m
+
+[1m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mWrite notes.txt[0m                                                                                                      [1m│
+│[0m                                                                                                                      [1m│
+│[0m   [2m1[0m + [7mnotes[0m                                                                                                          [1m│
+│[0m                                                                                                                      [1m│
+│[0m Do you want to proceed?                                                                                              [1m│
+│[0m [1m❯[0m [1m1. Allow[0m                                                                                                           [1m│
+│[0m [1m [0m 2. Always allow                                                                                                    [1m│
+│[0m [1m [0m 3. Deny                                                                                                            [1m│
+│[0m                                                                                                                      [1m│
+│[0m [2mEsc to reject[0m                                                                                                        [1m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  sent 5 chars to the terminal's clipboard

@@ -1,0 +1,15 @@
+Original installed agents | Port synthetic fixture (39x14; inventories/version/directory differ)
+ chord v0.71.0 · …a.designer-ship13-c3  | 
+                                        | 
+  Select agent                          |    chord v0.0.1 · …/example/project
+                                        | 
+      1.  agoragenti... · Agoragentic   |   Select agent
+      2.  auggie · Auggie CLI           | 
+      3.  bob · Bob                     |   ❯ 1. claude
+  ❯   4.  claude · Claude Agent         |     2. codex
+    ↓ 5.  cline · Cline                 |     3. pi · not on PATH
+      … +24 more                        | 
+                                        |   ↑↓ or j/k to move · Enter or 1–9 to
+  ↑↓ or j/k to move · Enter or 1–9 to   |   select · Esc to cancel
+  select · Esc to cancel                | 
+                                        | 

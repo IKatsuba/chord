@@ -1,0 +1,79 @@
+{
+  "finding": "U27b3 round1 self-start recovery reentrant observer",
+  "decision": "Main A, recorded in 6ac5591: reserve local recovery ownership before cancel/closure observers; deliberate original divergence.",
+  "portBaselineCommit": "4ca80ad08272ed26a4aef420cfa51ddc37d6802f",
+  "portBaselineSourceSha256": "3dbb976c106ba24d185ed8b8fa2953b3872f418ca0fd17200aa2497d379a3502",
+  "portFixedSourceSha256": "019914b1ef8c7bea83bc7eb71deda2078fb417bd71c6d6b30918e33a10a9dcdd",
+  "originalCommit": "577b58167672e12c999aeaf4eed2a1a988513dc2",
+  "originalSource": "../chord/src/session/conversation.ts",
+  "originalSourceSha256": "e9efde96424f01443adb2889e513d4fdd8f6cc58dcba2c55a27d3af04b3881cc",
+  "workingDirectory": "example/chord",
+  "commands": {
+    "portProbe": "dart run test/fixtures/steering_recovery/port_probe.dart <selected source revision or SHA256>",
+    "portRedTest": "dart test test/session/conversation_steer_test.dart -n 'self-start recovery reserves queue ownership'",
+    "portGreenTests": "dart test test/session/conversation_steer_test.dart -n 'self-start recovery|self-start closure observer'",
+    "originalProbeReplay": "bun run test/fixtures/steering_recovery/original_probe.ts"
+  },
+  "originalEnvironment": {
+    "CHORD_SOURCE": "configured original checkout (../chord)",
+    "CHORD_ORIGINAL_REVISION": "577b58167672e12c999aeaf4eed2a1a988513dc2",
+    "XDG_STATE_HOME": "isolated temporary root",
+    "XDG_CONFIG_HOME": "isolated temporary root"
+  },
+  "runtimes": {
+    "bun": "1.4.4",
+    "dart": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700) on \"macos_arm64\""
+  },
+  "exits": {
+    "portRedTest": 1,
+    "portRedProbe": 0,
+    "originalProbe": 0,
+    "portGreenTest": 0,
+    "portGreenProbe": 0
+  },
+  "rawSemantics": {
+    "portRedOrderPass": false,
+    "portRedWorkOwnerPass": false,
+    "originalOrderPass": false,
+    "originalWorkOwnerPass": false,
+    "portGreenOrderPass": true,
+    "portGreenWorkOwnerPass": true
+  },
+  "cleanup": {
+    "realAgentsOrModels": false,
+    "originalEdited": false,
+    "temporaryXdgRootsRemoved": true,
+    "probeAndTestProcessesAwaited": true,
+    "greenPendingTimersAfterClose": 0
+  },
+  "files": {
+    "original_probe.ts": "4e75549605d5c00cd418f9bc2a2fea45d4a6c7b4c5727e3c93557dc76e02d865",
+    "original_red.json": "e3fce6f09bb4f31d89f33ab2714070ed3c889da0ae799badea50ba506c22b9f0",
+    "original_red.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "port_green.json": "ed1cf282df59cdc77d2353ce52f097915a03cdfc825c06a24d44aa79a4ab7bb9",
+    "port_green_test.log": "6dfca4899dc081a56f27c501a7c89ad73225d2ba9de5cbf4fe12890244d93b22",
+    "port_probe.dart": "378298bd5cb7813baed21fd7064469fdf23ebc46f5cdf02fa556dbf442a79fdf",
+    "port_red.json": "af38ec57446ea7afdac26cb8e8fd255511c150f8f0fd4e8dcc743d7adc5bee38",
+    "port_red_test.log": "bb8589469b74d27db7bcc24ec92a252de9e9d31969f7c396b82c912f84f32191"
+  },
+  "executedProbes": {
+    "original": {
+      "workingDirectory": ".",
+      "command": "nice -n 19 bun run build/u27b3_original_recovery.ts",
+      "retainedByteExactSource": "original_probe.ts"
+    },
+    "portRed": {
+      "workingDirectory": "example/chord",
+      "command": "dart run test/fixtures/steering_recovery/port_probe.dart 4ca80ad08272ed26a4aef420cfa51ddc37d6802f"
+    },
+    "portGreen": {
+      "workingDirectory": "example/chord",
+      "command": "dart run test/fixtures/steering_recovery/port_probe.dart sha256:019914b1ef8c7bea83bc7eb71deda2078fb417bd71c6d6b30918e33a10a9dcdd"
+    }
+  },
+  "fixedSources": {
+    "example/chord/lib/session/conversation.dart": "019914b1ef8c7bea83bc7eb71deda2078fb417bd71c6d6b30918e33a10a9dcdd",
+    "example/chord/test/session/conversation_fake.dart": "80b7de2353448f2cfbe1df4ff8556aacb93608c677ffd6d1b1847945acda0ee3",
+    "example/chord/test/session/conversation_steer_test.dart": "25a5a8607fd2fd0e90296577743b027c46656da817bb8a6a91175e2792231a6c"
+  }
+}

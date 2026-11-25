@@ -1,0 +1,106 @@
+{
+  "sourceCommit": "85bccdc02b64ecbd72712c17c1acf17f821c6287",
+  "fixtureFixCommit": "b4b82cde12266f1979611bf38cc9cdc1fc831899",
+  "snapshotCommit": "b4b82cde12266f1979611bf38cc9cdc1fc831899",
+  "teamHeadAtProbeStart": "941f1ceacbeae32a7fafd28e7d65490ba6fe566d",
+  "sourceSha256": {
+    "lib/src/widgets/text_area.dart": "3a25f16950220c7431a23c07d8526d22ccfbd8cf9c02f7c97740aa606141b5ea",
+    "lib/src/text/text_area_span.dart": "1d878dbcb453da3eed63224481ffdb361789a55666c42156459f35b0813e5c42",
+    "test/fixtures/text_area_span_probe.dart": "4d51ec90a8f16c3d2e9134bc3b9123b9182d3611ff1003b7e03f9afb28deec2a"
+  },
+  "commands": [
+    {
+      "name": "jit",
+      "command": [
+        "nice",
+        "-n",
+        "19",
+        "dart",
+        "run",
+        "test/fixtures/text_area_span_probe.dart",
+        "85bccdc02b64ecbd72712c17c1acf17f821c6287"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "compile",
+      "command": [
+        "nice",
+        "-n",
+        "19",
+        "dart",
+        "compile",
+        "exe",
+        "test/fixtures/text_area_span_probe.dart",
+        "-o",
+        "build/tester_text_area_span_probe"
+      ],
+      "exitCode": 0
+    },
+    {
+      "name": "aot",
+      "command": [
+        "nice",
+        "-n",
+        "19",
+        "./build/tester_text_area_span_probe",
+        "85bccdc02b64ecbd72712c17c1acf17f821c6287"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "targetedTests": 199,
+  "analyze": "No issues found",
+  "format": "703 files,0 changed",
+  "scope": "Independent headless runtime rejection and hidden-handler proof only. Six checks per runtime: two rejection modes across120x40,80x24,0x0. No model,agent,terminal,port consumption or performance claim.",
+  "archive": "Exact committed snapshot under task checkout; shared-tree WIP excluded. Only independent tester test groups overlaid, production/probe bytes verified unchanged.",
+  "logs": "JIT/AOT JSON retained byte-exact; compiler text replaces only exact scratch archive prefix.",
+  "cleanup": "Owned probe binary, immutable snapshot and live tmux sessions removed; no owned Dart/probe process remains.",
+  "binarySha256": "076f016f1be706ea987a77eb3e65b1b69f4ae17cbe14336b5f32802b68a42d3f",
+  "teamHeadAtProbeEnd": "941f1ceacbeae32a7fafd28e7d65490ba6fe566d",
+  "cleanupChecks": {
+    "probeProcessesAfterExit": [],
+    "binaryRemoved": true,
+    "hostsDisposedPerRuntime": 6,
+    "externalProcessesStartedByProbe": 0,
+    "archiveRemoved": true,
+    "liveFixtureProcessesAfterExit": [],
+    "ownedTmuxSessionsAfterExit": []
+  },
+  "liveFixture": {
+    "command": "dart run example/text_area_spans.dart --plain",
+    "fixtureCommit": "b4b82cde12266f1979611bf38cc9cdc1fc831899",
+    "observations": {
+      "decorated120Cursor": "13,1,1",
+      "plain120Cursor": "13,1,1",
+      "toggle120TextAndCursorUnchanged": true,
+      "decorated80Cursor": "13,2,1",
+      "plain80Cursor": "13,2,1",
+      "toggle80TextAndCursorUnchanged": true,
+      "undoRestoresText": true,
+      "redoRestoresEdit": true,
+      "zero80Cursor": "80,23,0",
+      "zero120Cursor": "120,39,0",
+      "zeroRoomToggleResizeInert": true,
+      "zeroTotalRowsResize": "3 at 80 columns; 2 at 120 columns"
+    },
+    "scope": "Logical tmux cursor coordinates and cell output, not physical focused/unfocused cursor appearance.",
+    "zeroCommand": "dart run example/text_area_spans.dart --zero --plain"
+  },
+  "targetedCommand": [
+    "dart",
+    "test",
+    "test/text/text_area_span_test.dart",
+    "test/widgets/text_area_span_test.dart",
+    "test/widgets/text_area_span_error_test.dart",
+    "test/widgets/text_area_span_freshness_test.dart",
+    "test/text_area_spans_example_test.dart",
+    "test/widgets/text_area_test.dart",
+    "test/widgets/text_area_viewport_test.dart",
+    "test/widgets/text_area_key_filter_test.dart",
+    "test/widgets/text_area_undo_test.dart",
+    "test/widgets/text_area_state_swap_test.dart",
+    "test/widgets/selection_test.dart",
+    "test/widgets/selection_diagnostics_test.dart"
+  ]
+}

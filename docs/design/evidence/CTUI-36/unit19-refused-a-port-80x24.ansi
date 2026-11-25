@@ -1,0 +1,24 @@
+      [38;2;255;107;128mhand[39m
+
+ [38;2;255;107;128m⏺[39m [1mSettings[0m(mcpServers.linear)
+   [2m⎿[0m  [38;2;255;107;128mchord does not write mcpServers.linear; edit the settings file by hand[39m
+
+ [38;2;255;107;128m⏺[39m [1mSettings[0m(agents.codex)
+   [2m⎿[0m  [38;2;255;107;128magents.codex is not one setting; name agents.codex.model or agents.[39m
+      [38;2;255;107;128mcodex.effort[39m
+
+ [38;2;255;107;128m⏺[39m [1mSettings[0m(teamSelection)
+   [2m⎿[0m  [38;2;255;107;128mteamSelection is not one setting; name teamSelection.intent,[39m
+      [38;2;255;107;128mteamSelection.prefer.agent or teamSelection.prefer.model[39m
+
+ [38;2;255;107;128m⏺[39m [1mSettings[0m(editorMode)
+   [2m⎿[0m  [38;2;255;107;128meditorMode cannot be "emacs": Invalid option: expected one of[39m
+      [38;2;255;107;128m"normal"|"vim"[39m
+
+ [38;2;255;107;128m⏺[39m [1mSettings[0m(agents.nope.model)
+   [2m⎿[0m  [38;2;255;107;128mchord knows no agent named "nope"; list_agents names every one[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

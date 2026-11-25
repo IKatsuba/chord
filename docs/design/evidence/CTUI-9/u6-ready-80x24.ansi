@@ -1,0 +1,24 @@
+Terminal services
+Copy sample: Terminal services
+Editor: ready
+Last key: none
+[2m┌──────────────────────────────────────────────────────────────────────────────┐
+│[0m                                                                              [2m│
+│[0m Terminal services                                                            [2m│
+│[0m Second sample line[7m [0m                                                          [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+│[0m                                                                              [2m│
+└──────────────────────────────────────────────────────────────────────────────┘
+super+left Move to line start · super+right Move to line end · ctrl+y Copy[0m
+[2msample · ctrl+g Open editor · ctrl+b Bell · ctrl+n OSC9 · ctrl+x n OSC777 ·[0m
+[2mctrl+t Title · ctrl+q Quit[0m

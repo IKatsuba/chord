@@ -1,0 +1,24 @@
+
+ ⏺ Read(src/main.ts)
+   ⎿  one
+      two
+      three
+      four
+      five
+
+ ⏺ Run(bun dev test)
+   ⎿  test
+      start
+      3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      Exit code 1
+
+ ⏺ Edit(src/greet.ts)
+   ⎿  Updated src/greet.ts with 1 addition and 1 removal
+      1   export function greet() {
+      2 -   return "hello";
+      2 +   return "hello, world";
+      3   }
+
+   Guardian reviewing…

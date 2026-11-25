@@ -1,0 +1,40 @@
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m team
+
+ [38;2;78;186;101m⏺[39m [1mList teams[0m
+   [2m⎿[0m  [2m1 team · bugfix[0m
+
+ [38;2;78;186;101m⏺[39m [1mTeam[0m(bugfix)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mIssue 214: a string at the end of a line loses its closing quote. readString in src/parse/tokenize.ts stops at[0m
+      [2mthe newline before it consumes the quote. Add a test that fails for that reason, fix it, and have the diff[0m
+      [2mreviewed. Report to me when it is done.[0m
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ [38;2;108;182;255m←[39m [2mfrom [0;1m[38;2;108;182;255m@bugfix[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/[0m
+      [2mparse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix · fake.
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:[0m   $0.0250
+   [2m [0m  [2mTokens in:[0m    2,000
+   [2m [0m  [2mTokens out:[0m   400
+   [2m [0m  [2mCache read:[0m   1,600
+   [2m [0m  [2mSession time:[0m 24s
+   [2m [0m
+   [2m [0m  This session     Cost  Tokens
+   [2m [0m  main          $0.0250   4,000
+   [2m [0m  bugfix        $0.0500   8,000  team run: lead $0.0250 · tester not reported · coder $0.0250
+   [2m [0m  Total         $0.0750  12,000  tester not reported
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;255;193;7m● tester needs your permission · ctrl+x a to go[2m[39m · ? for shortcuts[0m      [2mFake Large with a 1M context window · 1% used[0m
+    [1mmain     [0;2m  fake · Fake Large with a 1M context window · medium         ◦ idle 17s[0m
+    [38;2;108;182;255mbugfix   [2m[39m  team · fake · Fake Large with a 1M context window · medium  ◦ idle 16s        ✓ new reply[0m
+    [2m├─ [0m[38;2;196;156;255mtester[2m[39m  fake · Fake Small · medium                                [0m[38;2;255;193;7m  ● permission 16s[2m[39m  ← new message[0m
+    [2m└─ [0m[38;2;86;212;221mcoder [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 15s        ✓ new reply[0m

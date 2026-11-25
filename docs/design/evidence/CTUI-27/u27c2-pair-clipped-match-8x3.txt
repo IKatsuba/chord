@@ -1,0 +1,4 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+                                                                                                                             |
+╭──────╮                                                                                                                     | ╭──────╮
+╰──────╯                                                                                                                     | │ ↑ fi │

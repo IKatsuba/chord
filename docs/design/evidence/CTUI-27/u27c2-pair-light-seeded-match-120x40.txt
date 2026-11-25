@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+   終わり 😀 é needle crosses                                                                                                   |    終わり 😀 é needle crosses
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › thought                                                                                                                   |  › thought
+                                                                                                                             |
+ ∴ Thinking…                                                                                                                 |  ∴ Thinking…
+                                                                                                                             |
+ ⏺ Here is the answer.                                                                                                       |  ⏺ Here is the answer.
+                                                                                                                             |
+ › calls                                                                                                                     |  › calls
+                                                                                                                             |
+ ⏺ Read(src/main.tsx)                                                                                                        |  ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';                                                                             |    ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';                                                                                          |       import { render } from 'ink';
+      import { App } from './ui/App.tsx';                                                                                    |       import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)                                                                                          |       … +4 lines (ctrl+o to expand)
+                                                                                                                             |
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw      |  ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw
+   their status")                                                                                                            |    their status")
+   ⎿  ok | 1 passed | 0 failed (12ms)                                                                                        |    ⎿  ok | 1 passed | 0 failed (12ms)
+                                                                                                                             |
+ ⏺ Read(src/missing.ts)                                                                                                      |  ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.                                                                                            |    ⎿  Error: File does not exist.
+                                                                                                                             |
+ ⏺ Two calls worked, one failed.                                                                                             |  ⏺ Two calls worked, one failed.
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › readsheld
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+   ⎿  Interrupted by user                                                                                                    |    ⎿  Interrupted by user
+                                                                                                                             |
+ › alpha light                                                                                                               |  › alpha light
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────      |  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  search prompts: alpha                                                                                                      |   search prompts: alpha
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › alpha light                                                                                                        │     | │ › alpha light                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                 Fake Large with a 1M context window · medium effort · 1% context used       |                                                  Fake Large with a 1M context window · medium effort · 1% context used

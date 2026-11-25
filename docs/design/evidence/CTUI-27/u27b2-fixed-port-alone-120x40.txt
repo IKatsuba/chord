@@ -1,0 +1,40 @@
+
+› Earlier request
+
+⏺ Earlier answer.
+
+› Personal message accepted into this turn
+
+⏺ Interrupted · the agent started this on its own; your message goes as the next turn
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ctrl+t empty · ctrl+n late · ctrl+p next · ctrl+r reset · ctrl+s source · ctrl+q quit

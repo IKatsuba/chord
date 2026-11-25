@@ -1,0 +1,20 @@
+{
+  "originalCommit": "577b58167672e12c999aeaf4eed2a1a988513dc2",
+  "scope": "One original-only8x3 flow plus one80x24 control; no query-visible claim at8x3; no port execution.",
+  "sha256": {
+    "u27c2-reference-look.md": "bca0c79747e5d760c27f6c765bfc5d0954aa203df9f19da9d99c96b0c5bd636a",
+    "u27c2-reference-original-after-enter-clipped-8x3.ansi": "f702ecea8087e909f53a16c8d1b3844ab42b95e782d068326361e75363426732",
+    "u27c2-reference-original-after-enter-clipped-8x3.txt": "b82bae59fd3c32fdc2cb78894b9192015088e3ca6aaa541272e3e3b45acc9dbd",
+    "u27c2-reference-original-control-accepted-80x24.ansi": "42041698629c849055ffe13bd00096efc3b74a695dc38d2ebc286fa5d1efcc28",
+    "u27c2-reference-original-control-accepted-80x24.txt": "52e7753771ec39b87455e8aabf3f844cdfc5eb91f3da0a126378b603c06da600",
+    "u27c2-reference-original-control-match-80x24.ansi": "67e62118abf2147d3935ad14aeb96df8e262a9f22c0881d1b4b7aa8ce2104d30",
+    "u27c2-reference-original-control-match-80x24.txt": "8c31ed7e565ab5f37ac68e10f31c5d30bd72f7107c646aa699b22fcf8c81c4a1",
+    "u27c2-reference-original-match-clipped-8x3.ansi": "f702ecea8087e909f53a16c8d1b3844ab42b95e782d068326361e75363426732",
+    "u27c2-reference-original-match-clipped-8x3.txt": "b82bae59fd3c32fdc2cb78894b9192015088e3ca6aaa541272e3e3b45acc9dbd",
+    "u27c2-reference-original-match-normal-80x24.ansi": "67e62118abf2147d3935ad14aeb96df8e262a9f22c0881d1b4b7aa8ce2104d30",
+    "u27c2-reference-original-match-normal-80x24.txt": "8c31ed7e565ab5f37ac68e10f31c5d30bd72f7107c646aa699b22fcf8c81c4a1",
+    "u27c2-reference-original-recovered-80x24.ansi": "42041698629c849055ffe13bd00096efc3b74a695dc38d2ebc286fa5d1efcc28",
+    "u27c2-reference-original-recovered-80x24.txt": "52e7753771ec39b87455e8aabf3f844cdfc5eb91f3da0a126378b603c06da600"
+  },
+  "ownerDecision": "Positive-size query Enter/Tab accepts/closes without send despite both surfaces clipped;0x0 inert. No editor visibility guard/new geometry contract."
+}

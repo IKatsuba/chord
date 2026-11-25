@@ -1,0 +1,40 @@
+   │ ┌ console ──────┐
+   │ │   quoted body │
+   │ └───────────────┘
+
+   ┌ dart ───────┐
+   │   open body │
+   └─────────────┘
+
+ › History row 0
+
+ › History row 1
+
+ › History row 2
+
+ › History row 3
+
+ › History row 4
+
+ › History row 5
+
+ › History row 6
+
+ › History row 7
+
+ › History row 8
+
+ › History row 9
+
+ › History row 10
+
+ › History row 11
+
+ › History row 12
+
+ ── ↓ 175 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  sent 11 chars to the terminal's clipboard

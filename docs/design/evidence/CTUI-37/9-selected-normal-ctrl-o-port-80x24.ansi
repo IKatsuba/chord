@@ -1,0 +1,24 @@
+      [2mPlanned for this run:[0m
+      [2mlead (lead): codex · model fake-small · effort agent default[0m
+      [2m(unconfirmed) · mode plan[0m
+      [2mActual: confirmed · session runtime codex · model fake-small · effort[0m
+      [2mmedium · mode plan[0m
+      [2mreviewer: claude · model fake-small · effort agent default[0m
+      [2m(unconfirmed) · mode plan[0m
+      [2mActual: not opened · configuration unconfirmed[0m
+      [2mRun: 8041f87c · saved definition: fixture (project)[0m
+      [2mlead saved: codex · model fake-large · effort agent default[0m
+      [2m(unconfirmed) · mode default[0m
+      [2mChanges from saved: model, mode[0m
+      [2mreviewer saved: claude · model agent default (unconfirmed) · effort[0m
+      [2magent default (unconfirmed) · mode agent default (unconfirmed)[0m
+      [2mChanges from saved: model, mode[0m
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m
+    [1mmain   [0;2m  codex         ◦ idle 14s[0m
+    [38;2;108;182;255mfixture[2m[39m  team · codex  ◦ idle 14s  ✓ new reply[0m

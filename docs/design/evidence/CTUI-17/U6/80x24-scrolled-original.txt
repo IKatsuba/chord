@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [isolated QA directory]       
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ↑ Logical line 5                                                             │
+│   Logical line 6                                                             │
+│   Logical line 7                                                             │
+│   Logical line 8                                                             │
+│   Logical line 9                                                             │
+│   Logical line 10                                                            │
+│   Logical line 11                                                            │
+│   Logical line 12                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

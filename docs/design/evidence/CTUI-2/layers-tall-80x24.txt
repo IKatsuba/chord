@@ -1,0 +1,24 @@
+╭ Models ──────╮ranscript, scrolled back scrolled back scrolled back
+│ ❯ Choice 1   │ranscript,
+│   Choice 2   │ranscript, scrolled back
+│   Choice 3   │ranscript, scrolled back scrolled back
+│   Choice 4   │ranscript, scrolled back scrolled back scrolled back
+│   Choice 5   │ranscript,
+│   Choice 6   │ranscript, scrolled back
+│   Choice 7   │ranscript, scrolled back scrolled back
+│   Choice 8   │ranscript, scrolled back scrolled back scrolled back
+│   Choice 9   │ranscript,
+│   Choice 10  │ranscript, scrolled back
+│   Choice 11  │ranscript, scrolled back scrolled back
+│   Choice 12  │ranscript, scrolled back scrolled back scrolled back
+│   Choice 13  │ranscript,
+│   Choice 14  │ranscript, scrolled back
+│   Choice 15  │ranscript, scrolled back scrolled back
+│   Choice 16  │ranscript, scrolled back scrolled back scrolled back
+│   Choice 17  │ranscript,
+╰──────────────╯ranscript, scrolled back
+
+> /model
+  more prompt
+page builds 10 · rows 72 · offset 30 · scrolled back
+enter Choose  escape Close  tab Next field  shift+tab Previous field  ctrl+p Pi…

@@ -1,0 +1,40 @@
+Resume this session with:
+chord fake --agent-command /var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/fast.sh --no-mcp-servers --re
+sume 83dbfde7-20df-4433-a055-d7f89fcd5140
+^D
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

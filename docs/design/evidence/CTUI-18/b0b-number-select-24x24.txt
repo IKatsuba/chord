@@ -1,0 +1,24 @@
+Choices enabled
+Filter:
+❯   1. Allow this
+    command in the
+    current folder and
+    do not ask again
+  ↓ 2. Allow this
+    … +1 more
+Answer: 2
+up Previous choice  k P…
+
+
+
+
+
+
+
+
+
+
+
+
+
+

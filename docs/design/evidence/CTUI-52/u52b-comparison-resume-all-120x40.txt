@@ -1,0 +1,41 @@
+Original                                                                                                                 │ Port
+ ▀▄     chord v0.71.0                                                                                                    │  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake                                                                                                             │  ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project                                                                                                  │  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                          │  ▀▀     ? for shortcuts
+                                                                                                                         │
+ ⏺ fake did not start: it refused session/new: session/new requires `agentAlias` (alias of a configured [agents.         │  ⏺ fake did not start: session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)
+   <alias>] entry)                                                                                                       │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │ │ │ Resume a session                                                                                                     │
+│ fake's earlier sessions in every directory.                                                                          │ │ │ fake's earlier sessions in every directory.                                                                          │
+│                                                                                                                      │ │ │                                                                                                                      │
+│ ❯   1.  1 hour ago    fixture-other  Saved failure recovery session 0 · 界😀 with a descriptive title   │              │ │ ❯   1.  1 hour ago    fixture-other  Saved failure recovery session 0 · 界😀 with a descriptive title   │
+│                                                   for wrapping                                                       │ │ │                                                   for wrapping                                                       │
+│     2.  2 hours ago   …/CTUI-27                   Saved failure recovery session 1 · 界😀 with a descriptive title   │ │ │     2.  2 hours ago   …/CTUI-27                   Saved failure recovery session 1 · 界😀 with a descriptive title   │
+│                                                   for wrapping                                                       │ │ │                                                   for wrapping                                                       │
+│     3.  3 hours ago   …/CTUI-27                   Saved failure recovery session 2 · 界😀 with a descriptive title   │ │ │     3.  3 hours ago   …/CTUI-27                   Saved failure recovery session 2 · 界😀 with a descriptive title   │
+│                                                   for wrapping                                                       │ │ │                                                   for wrapping                                                       │
+│     4.  4 hours ago   fixture-other  Saved failure recovery session 3 · 界😀 with a descriptive title   │              │ │     4.  4 hours ago   fixture-other  Saved failure recovery session 3 · 界😀 with a descriptive title   │
+│                                                   for wrapping                                                       │ │ │                                                   for wrapping                                                       │
+│   ↓ 5.  5 hours ago   …/CTUI-27                   Saved failure recovery session 4 · 界😀 with a descriptive title   │ │ │   ↓ 5.  5 hours ago   …/CTUI-27                   Saved failure recovery session 4 · 界😀 with a descriptive title   │
+│     … +13 more                                                                                                       │ │ │     … +13 more                                                                                                       │
+│                                                                                                                      │ │ │                                                                                                                      │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                                                           │ │ │ Enter to resume · Ctrl+a for this directory · Esc to close                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         │
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ │ │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                                                        │   ? for shortcuts

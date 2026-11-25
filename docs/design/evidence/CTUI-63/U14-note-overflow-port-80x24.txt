@@ -1,0 +1,24 @@
+
+ ››› Waiting for your answer to the plan… (8s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│   1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│ ❯ Note  ── ↑ 24 lines above ──────────────────────────────────────────────── │
+│         sts pass; step 26 keeps the old routing behind a flag until the test │
+│         s pass; step 27 keeps the old routing behind a flag until the tests  │
+│         pass; step 28 keeps the old routing behind a flag until the tests pa │
+│         ss; step 29 keeps the old routing behind a flag until the tests pass │
+│         ; step 30 keeps the old routing behind a flag until the tests pass   │
+│                                                                              │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep       │
+│ planning                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

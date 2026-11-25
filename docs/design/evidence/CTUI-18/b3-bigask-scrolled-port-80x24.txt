@@ -1,0 +1,24 @@
+ chord v0.0.1 · fake · <repository>
+
+ ››› Waiting for permission… (47s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                       │
+│ ── ↑ 4 lines above · pageup to scroll ────────────────────────────────────── │
+│   caps its height, keeps its options on screen and lets the person scroll    │
+│   through the whole argument before answering, at any window size, including │
+│   80 by 24.                                                                  │
+│ ── ↓ 35 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Yes                                                                     │
+│   2. Yes, and don't ask again for files - write_file commands                │
+│   3. No, and tell Claude what to do differently                              │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

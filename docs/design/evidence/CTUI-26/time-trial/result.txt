@@ -1,0 +1,11 @@
+Dart 3.13.5, timeago 3.7.1. AOT compilation passed.
+0 => a moment ago
+59 => a minute ago
+60 => a minute ago
+90 => 2 minutes ago
+120 => 2 minutes ago
+3600 => about an hour ago
+86400 => a day ago
+604800 => 7 days ago
+2592000 => about a month ago
+31536000 => about a year ago

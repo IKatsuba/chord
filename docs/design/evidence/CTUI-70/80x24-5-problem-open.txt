@@ -1,0 +1,24 @@
+  New deployment
+
+     ↑ 5 more fields
+ ❯ ⚠ Region         ▾
+                    ❯ 1. Europe
+                      2. United States
+                      3. Asia Pacific
+                      ↓ 9 more options
+                    Required
+     ↓ 1 more field
+
+   Accept   Decline     2 fields to fix
+
+ ↑↓ · 1–9 or Enter to pick · ← to close · Esc to cancel
+
+ Gave: nothing yet
+ Ctrl+Q quits
+
+
+
+
+
+
+

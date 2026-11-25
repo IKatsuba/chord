@@ -1,0 +1,25 @@
+ORIGINAL                                                                         | PORT
+ █▄     chord v0.71.0                                                            |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                               |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.ctui21-u11                                                 |  ▄██▀   <worktree>
+ █▀     ? for shortcuts · /help                                                  |  █▀     ? for shortcuts
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |                            Fake Large with a 1M context window · medium effort

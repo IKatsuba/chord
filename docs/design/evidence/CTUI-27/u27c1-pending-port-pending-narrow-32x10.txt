@@ -1,0 +1,10 @@
+ ⏺ Working
+
+ ››› Working… (37s · esc to int
+ › into the running turn: f...g
+ › second unsent
+
+╭──────────────────────────────╮
+│ › draft remains              │
+╰──────────────────────────────╯
+

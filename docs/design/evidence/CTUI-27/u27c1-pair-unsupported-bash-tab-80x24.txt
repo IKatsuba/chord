@@ -1,0 +1,25 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+ █▄     chord v0.71.0                                                                                                        |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                                                                           |  ▀██▄   fake
+ ▄██▀   …/CTUI-27/build/designer-u27c1-unsupported/fixture-project                                                           |  ▄██▀   fixture-project
+ █▀     ? for shortcuts · /help                                                                                              |  █▀     ? for shortcuts
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › running
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+ ››› Working… (32s · esc to interrupt)                                                                                       |  ››› Working… (32s · esc to interrupt)
+ › unsupported queued                                                                                                        |  › unsupported queued
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────╮                                             | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ! echo recorded                                                              │                                             | │ ! echo recorded                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯                                             | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ! for bash mode          Fake Large with a 1M context window · medium effort                                               |   ! for bash mode

@@ -29,8 +29,7 @@ import { sha256 } from '../../../../scripts/dev/release/sums.ts';
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
 import { KINDS } from '../../../../scripts/dev/release/build.ts';
 import type { FoundPackage } from '../../../../scripts/dev/steps.ts';
-import chordSteps from '../../../../steps.ts';
-import { CHORDED_AGENTS } from '../../../../src/chorded.ts';
+import chordSteps from './fixtures/chord_steps.ts';
 
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import { tarball, tarballs } from '../../../../scripts/dev/release/publish.ts';
@@ -45,7 +44,7 @@ import {
 } from './scratch.ts';
 
 /** chord's steps.ts, for a release run in a child. */
-const STEPS = new URL('../../../../steps.ts', import.meta.url).pathname;
+const STEPS = new URL('./fixtures/chord_steps.ts', import.meta.url).pathname;
 
 // A whole run's guards and their order, on a scratch repository with a bare
 // origin: npm, bun, security and xcrun faked, each logging what it was asked,
@@ -62,18 +61,6 @@ beforeEach(() => {
   at = scratch();
 
   mkdirSync(join(at.place, 'published'));
-
-  // The agents chord pins are on npm, as chord's preflight asks (CHD-622).
-  for (const agent of CHORDED_AGENTS) {
-    writeFileSync(
-      join(
-        at.place,
-        'published',
-        `${agent.package.replace('@chorded/', '')}@${agent.version}`,
-      ),
-      '',
-    );
-  }
 
   writeFileSync(
     join(at.root, 'package.json'),

@@ -1,0 +1,25 @@
+Original | Port (80x24; private port directory replaced with <repository>)
+                                                                                 |  chord v0.0.1 · fake · <repository>
+ ››› Waiting for permission… (8s)                                                | 
+                                                                                 |  ››› Waiting for permission… (8s)
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ mcp__files__write_file                                                       │ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│   path: docs/release.md                                                      │ | │ mcp__files__write_file                                                       │
+│   content: # Release 0.56.0                                                  │ | │   path: docs/release.md                                                      │
+│                                                                              │ | │   content: # Release 0.56.0                                                  │
+│   This release changes how chord draws long requests: the permission box now │ | │                                                                              │
+│   caps its height, keeps its options on screen and lets the person scroll    │ | │   This release changes how chord draws long requests: the permission box now │
+│ ── ↓ 37 lines below · pagedown to scroll ─────────────────────────────────── │ | │ ── ↓ 38 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │ | │                                                                              │
+│ Do you want to proceed?                                                      │ | │ Do you want to proceed?                                                      │
+│ ❯ 1. Yes                                                                     │ | │ ❯ 1. Yes                                                                     │
+│   2. Yes, and don't ask again for files - write_file commands                │ | │   2. Yes, and don't ask again for files - write_file commands                │
+│   3. No, and tell Claude what to do differently                              │ | │   3. No, and tell Claude what to do differently                              │
+│                                                                              │ | │                                                                              │
+│ Esc to reject                                                                │ | │ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |          Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,40 @@
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran bun dev test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ › /cost
+   ⎿  Total cost:   $0.0375
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 41s
+
+      This session          Cost  Tokens
+      main               $0.0375   6,000
+      parser             $0.0125   2,000  agent
+      docs          not reported       —  agent
+      Total              $0.0500   8,000  docs not reported
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts        Fake Large with a 1M context window · 1% used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 31s
+    parser  fake · Fake Small · medium                           ◦ idle 31s        ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 31s  ← new message

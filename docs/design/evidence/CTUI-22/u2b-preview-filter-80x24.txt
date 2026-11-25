@@ -1,0 +1,24 @@
+Highlight a choice to preview it; Enter accepts it.
+Filter: 30
+❯ 1. Choice 30
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Highlighted: Choice 30
+Accepted: Choice 2
+enter Finish editing filter  escape Finish editing filter  ctrl+q Quit

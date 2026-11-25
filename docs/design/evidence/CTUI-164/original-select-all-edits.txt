@@ -1,0 +1,57 @@
+Original, 120x40, bun dev chord --fake. Draft "alpha beta gamma" / "delta
+epsilon| zeta" (cursor five graphemes from the end), cmd+a (CSI 97;9u),
+then the key, then "|" typed. Prompt rows only.
+
+== select-all, backspace, |
+│ › |
+== select-all, delete, |
+│ › |
+== select-all, ctrl+w, |
+│ › |
+== select-all, alt+backspace, |
+│ › |
+== select-all, ctrl+u, |
+│ › alpha beta gamma
+│   |
+== select-all, ctrl+k, |
+│ › |
+== select-all, alt+left, |
+│ › |alpha beta gamma
+│   delta epsilon zeta
+== select-all, alt+right, |
+│ › alpha beta gamma
+│   delta epsilon zeta|
+== select-all, ctrl+a, |
+│ › |alpha beta gamma
+│   delta epsilon zeta
+== select-all, ctrl+e, |
+│ › alpha beta gamma
+│   delta epsilon zeta|
+== select-all, up, |
+│ › alpha beta gamma|
+│   delta epsilon zeta
+== select-all, down, |
+│ › |
+== select-all, super+left, |
+│ › |alpha beta gamma
+│   delta epsilon zeta
+== select-all, super+right, |
+│ › alpha beta gamma
+│   delta epsilon zeta|
+== select-all, shift+enter, |
+│ › alpha beta gamma
+│   delta epsilon zeta
+│   |
+== select-all, paste, |
+│ › PASTED|
+== select-all, ctrl+z, |
+│ › alpha beta gamma
+│   delta epsilon zet|
+== select-all, super+a again, |
+│ › |
+
+Without the "|": cmd+a, then left, then "L" typed: "Lalpha beta gamma";
+cmd+a, right, "R": "alpha beta gammaR". cmd+a then ctrl+c: the draft is
+cleared, no copy noted. ctrl+k after cmd+a deletes nothing and keeps the
+selection, so the "|" replaces the whole draft. "down" walks history from
+the last row (the draft goes, an empty newer prompt shows).

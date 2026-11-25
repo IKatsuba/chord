@@ -1,0 +1,41 @@
+Original                                                                                                                 │ Port
+ ▀▄     chord v0.71.0                                                                                                    │  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake                                                                                                             │  ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project                                                                                                  │  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                          │  ▀▀     ? for shortcuts
+                                                                                                                         │
+ ⏺ fake did not start: it refused session/new: session/new requires `agentAlias` (alias of a configured [agents.         │  ⏺ fake did not start: session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)
+   <alias>] entry)                                                                                                       │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │ │ │ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │ │ │ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │ │ │                                                                                                                      │
+│ ❯   1.  2 hours ago   Saved failure recovery session 1 · 界😀 with a descriptive title for wrapping                  │ │ │ ❯   1.  2 hours ago   Saved failure recovery session 1 · 界😀 with a descriptive title for wrapping                  │
+│     2.  3 hours ago   Saved failure recovery session 2 · 界😀 with a descriptive title for wrapping                  │ │ │     2.  3 hours ago   Saved failure recovery session 2 · 界😀 with a descriptive title for wrapping                  │
+│     3.  5 hours ago   Saved failure recovery session 4 · 界😀 with a descriptive title for wrapping                  │ │ │     3.  5 hours ago   Saved failure recovery session 4 · 界😀 with a descriptive title for wrapping                  │
+│     4.  6 hours ago   Saved failure recovery session 5 · 界😀 with a descriptive title for wrapping                  │ │ │     4.  6 hours ago   Saved failure recovery session 5 · 界😀 with a descriptive title for wrapping                  │
+│     5.  8 hours ago   Saved failure recovery session 7 · 界😀 with a descriptive title for wrapping                  │ │ │     5.  8 hours ago   Saved failure recovery session 7 · 界😀 with a descriptive title for wrapping                  │
+│     6.  9 hours ago   Saved failure recovery session 8 · 界😀 with a descriptive title for wrapping                  │ │ │     6.  9 hours ago   Saved failure recovery session 8 · 界😀 with a descriptive title for wrapping                  │
+│     7.  11 hours ago  Saved failure recovery session 10 · 界😀 with a descriptive title for wrapping                 │ │ │     7.  11 hours ago  Saved failure recovery session 10 · 界😀 with a descriptive title for wrapping                 │
+│     8.  12 hours ago  Saved failure recovery session 11 · 界😀 with a descriptive title for wrapping                 │ │ │     8.  12 hours ago  Saved failure recovery session 11 · 界😀 with a descriptive title for wrapping                 │
+│   ↓ 9.  14 hours ago  Saved failure recovery session 13 · 界😀 with a descriptive title for wrapping                 │ │ │   ↓ 9.  14 hours ago  Saved failure recovery session 13 · 界😀 with a descriptive title for wrapping                 │
+│     … +3 more                                                                                                        │ │ │     … +3 more                                                                                                        │
+│                                                                                                                      │ │ │                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │ │ │ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         │
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ │ │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                                                        │   ? for shortcuts

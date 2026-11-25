@@ -1,0 +1,24 @@
+   [2m⎿[0m  [2mERROR [router] POST /login 500: Cannot read properties of undefined[0m
+      [2m(reading 'trim')[0m
+      [2m    at validate (src/routes/login.tsx:41:22)[0m
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ [2m←[0m [2mfrom [0;1mCI run 4812[0;2m · monitor · stopped[0m
+   [2m⎿[0m  [2mThe person stopped it after 17s.[0m
+
+ ⏺ Received the message from CI run 4812 · monitor · stopped.
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mBackground[0;2m · 1 in this session[0m                                               [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯ [1m[39mdev server errors[0;2m  monitor · m1  running 18s · 1 event  main[0m               [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [2mEnter for details · x to stop · Esc to close[0m                                 [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m
+  [38;2;177;185;249m  [2m[39mbackground  1 monitor running[0m

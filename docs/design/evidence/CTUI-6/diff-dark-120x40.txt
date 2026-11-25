@@ -1,0 +1,40 @@
+ Diff  dark
+
+ edit
+src/greeting.ts
+1 + /** Greets someone by name. */
+2   export function greet(name: string): string {
+2 -   return "hello " + name;
+3 +   return `hello, ${name}`;
+4   }
+
+ long line, two hunks, a tab
+src/long.ts
+ 9   step9();
+10   step10();
+11   step11();
+12 -   return 'A message about terminal cells, 日本語, and preserving every grapheme while the source line wraps';
+12 +   return 'A shorter message';
+13   more13();
+14   more14();
+15   more15();
+   …
+45   more45();
+46   more46();
+47   save();
+48 -   indented();
+48 +   indented(again);
+
+ unified patch
+lib/app.dart
+ 3     /* A comment the hunk opens
+ 4        and closes. */
+ 5 -   final int count = 1;
+ 5 +   final int count = 2;
+ 6     final String name;
+   …
+20     void run() {}
+21 +   void stop() {}
+22   }
+
+ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedown Scroll down a page  up Scroll up a line  shift+up Scroll u…

@@ -1,0 +1,24 @@
+Permission fixture: long
+Transcript
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│    1 - old                                                                   │
+│    1 + proposed line 1                                                       │
+│    2 + proposed line 2                                                       │
+│    3 + proposed line 3                                                       │
+│    4 + proposed line 4                                                       │
+│ ── ↓ 56 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow once, and do not ask again for files - write_file commands in     │
+│   this project                                                               │
+│   2. Always allow, and do not ask again for files - write_file commands in   │
+│   this project                                                               │
+│ ❯ 3. Deny, and do not ask again for files - write_file commands in this      │
+│   project                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Answer:

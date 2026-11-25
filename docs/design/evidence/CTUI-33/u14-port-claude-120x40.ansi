@@ -1,0 +1,40 @@
+
+      [2mReport paths and line numbers, and write what you find to notes/routing.md.[0m
+
+ → [2mto [0;1mAgent(Review the transcript reducer)[0m
+   [2m⎿[0m  [2mReview src/session/transcript/reducer.ts for updates it drops.[0m
+
+ → [2mto [0;1mAgent(Run the tests)[0m
+   [2m⎿[0m  [2mRun bun test and report what fails.[0m
+
+ → [2mto [0;1mAgent(Watch the build)[0m
+   [2m⎿[0m  [2mWatch the build and say when it breaks.[0m
+
+ [38;2;71;231;165m⏺[39m Running 4 agents…[2m (ctrl+o to expand)[0m
+   [2m├─[0m [1mAgent[0m(Find the session layer)[2m · 3 tool uses[0m
+   [2m│[0m  [2m⎿[0m  [1mWrite[0m(notes/routing.md)[2m · waiting for permission[0m
+   [2m├─[0m [1mAgent[0m(Review the transcript reducer)[2m · 1 tool use · 0s[0m
+   [2m│[0m  [2m⎿[0m  [38;2;255;107;128mFailed[39m
+   [2m│[0m  [2m [0m  [38;2;255;107;128mAPI Error: 529 Overloaded[39m
+   [2m├─[0m [1mAgent[0m(Run the tests)[2m · 1 tool use · 0s[0m
+   [2m│[0m  [2m⎿[0m  [2mCancelled[0m
+   [2m└─[0m [1mAgent[0m(Watch the build)[2m · 1 tool use · 0s[0m
+      [2m⎿[0m  [2mUntracked[0m
+
+ [38;2;210;255;228m›[38;2;10;116;112m››[39m [38;2;71;231;165mWaiting for permission…[39m [2m(1s)[0m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1mAgent[0m(Find the session layer) asks                                                                                   [38;2;177;185;249m│
+│[39m [1m[38;2;177;185;249mWrite notes/routing.md[0m                                                                                               [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m Do you want to proceed?                                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [1m[38;2;177;185;249m1. Allow[0m                                                                                                           [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. Deny                                                                                                            [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mEsc to reject[0m                                                                                                        [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[39m
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                  [2mFake Large with a 1M context window · medium effort[0m

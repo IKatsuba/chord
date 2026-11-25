@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 5 lines above ───────────────────
+  alt + ← → to move by word
+  cmd + ← → to line start or end
+  ↑ ↓ for prompts, agents, background
+  x to close an agent, stop background
+  ── ↓ 34 lines below ──────────────────
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

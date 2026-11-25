@@ -40,11 +40,25 @@ installs that version; `chord upgrade -l` lists versions. A missing channel
 tag fails naming the channel, including with `--version` or `-l`;
 `chord upgrade --force --version <version>` bypasses that check.
 
-Or build from source with [Bun](https://bun.sh) 1.4.4 or newer:
+Homebrew installs stable releases:
 
 ```sh
-bun install
-bun dev compile --install   # compiles into ~/.local/bin/chord
+brew install ikatsuba/tap/chord
+```
+
+`chord upgrade` uses `brew upgrade ikatsuba/tap/chord` for that install;
+`--force` reinstalls it. Homebrew refuses `--version` and `-l`.
+Downloaded binaries are replaced by a checked release archive;
+`chord upgrade` names npm, Homebrew and the archive rather than replacing
+itself. A source build gets pull-and-recompile instructions.
+
+Or build from source with [Dart](https://dart.dev) 3.12 or newer:
+
+```sh
+dart pub get
+mkdir -p build
+dart compile exe bin/chord.dart -o build/chord
+./build/chord
 ```
 
 ## Use
@@ -52,14 +66,20 @@ bun dev compile --install   # compiles into ~/.local/bin/chord
 ```sh
 chord                 # choose an agent here
 chord codex           # any agent `chord agents` lists
-chord gemini -C ~/src/app
+chord gemini -C .
 chord --continue      # the default agent's latest session here, again
 chord --resume <id>   # a recorded session, on its own agent
 chord --resume        # pick an earlier session first
 chord agents          # the agents chord can start: name, what starts each, and whether PATH has its CLI
-chord -p "Explain src/main.tsx"                # the reply on stdout, then exit
+chord -p "Explain this project"                # the reply on stdout, then exit
 git diff | chord -p "Review this" --output-format json
 ```
+
+`--help` shows usage; `agents --help` and `acp --help` describe those
+commands. `--version` prints `chord <version>`; `-V` prints the version alone.
+Invalid arguments exit 2, including repeated options and help or version
+combined with other options. `-p` refuses model, continue and resume flags;
+`--dangerously-skip-permissions` requires `-p`.
 
 Each chord window runs one main session with its children. For sessions
 side by side, run chord in separate terminal panes.
@@ -172,9 +192,11 @@ permission in that session, otherwise its oldest form or link. With several
 asking, `● N agents wait` counts a task as one agent. ctrl+x a reaches its
 box through its owner session; the background summary keeps `● 1 task asking`.
 
-ctrl+d and `/exit` quit at once, closing main, its children and forks,
+ctrl+d on an empty prompt, or `/exit`, quits, closing main, its children and forks,
 and waiting for their agents to exit. chord prints a
-`chord <agent> --resume <id>` for the main session if a prompt went to it.
+`chord <agent> --resume <id>` for main after a prompt or a successful
+resume, using chord's record id when its record has a valid session header,
+otherwise the agent's session id.
 It repeats `--agent-command` and `--no-mcp-servers` only when given as
 flags, as does `/resume`'s reopen command for another directory. Settings
 are read again from their files.
@@ -189,9 +211,11 @@ edit with its diff, and the next prompt goes on in the same session. chord
 keeps a record of every session a prompt was sent in, in its state directory
 (`~/.local/state/chord/records/`), which `--continue`, `--resume` and
 `/resume` read, and the past is drawn from it whichever way the agent
-reopens the session. The id is the agent's own: for Claude Code, the one
-`claude --resume` takes, so `--resume <id>` also opens a session chord never
-saw, its past as the agent replays it.
+reopens the session. `--resume <id>` first looks for chord's record file
+name without `.jsonl`, then for the agent's session id. For Claude Code,
+the latter is the id `claude --resume` takes, so it also opens a session
+chord never saw, its past as the agent replays it. ACP load and resume
+take only the agent's session id.
 
 `--resume` (`-r`) takes one id, or none for the picker. Repeating the
 option prints CLI help and a parse error, then exits 2 before any agent
@@ -256,11 +280,36 @@ recipients it says `No agents to mention`; an unmatched query says
 Tab does nothing. A sent mention is plain text to the picked session: it routes
 nothing and attaches no file link. Single `@` still finds files.
 
+Enter sends trimmed input. Shift/Alt/Ctrl+Enter, ctrl+j, or `\` then
+Enter adds a line. ↑/↓ recalls prompts at the draft's edges; Ctrl, Alt or
+Command+↑/↓ does the same outside completion lists. Shift+↑/↓ scrolls.
+ctrl+z/ctrl+y undoes/redoes edits. Each agent keeps its own draft and
+history walk.
+
+ctrl+r searches this window's prompt history by literal, case-sensitive
+substring; ctrl+r again finds an older distinct match. Enter or Tab recalls
+without sending; Esc or ctrl+c restores the saved draft and cursor. Paste
+searches its first line with controls stripped. An attended request closes
+search.
+
+Without a drag selection, ctrl+c clears the draft. On an empty prompt it
+shows `Press ctrl+c again to quit`; a second press within two seconds quits.
+
+Type or paste `!` at the start of an empty prompt to enter bash mode. Enter
+runs the script in the session directory and returns to the ordinary prompt;
+Esc stops it. One shell command runs at a time. Its output stays in the
+transcript and is sent as context with the next agent prompt, once. History
+recalls commands in bash mode; Backspace in an empty bash prompt leaves it.
+
 In the prompt, option+←/→ (alt+←/→) moves by word; cmd+←/→ moves to the
 current displayed line's start or end, including when text wraps. alt+b/f
-also moves by word, and ctrl+a/e goes to the line's start or end. `?` on
-an empty prompt lists the arrow shortcuts. In vim mode these editing keys
-apply in insert mode.
+also moves by word, and ctrl+a/e goes to the logical line's start or end,
+stepping over the break when already there. ctrl+u at a line's start joins
+it to the previous line. cmd+a selects all; cmd+z undoes and cmd+shift+z
+redoes where the terminal passes those keys. Typing, paste and deletion
+replace that selection; ctrl+c clears the draft. Shift+Backspace does
+nothing in the prompt. `?` on an empty prompt lists the arrow shortcuts.
+In vim mode these editing keys apply in insert mode.
 
 cmd+arrows work only where the terminal passes them to chord:
 
@@ -274,10 +323,6 @@ cmd+arrows work only where the terminal passes them to chord:
   to chord. Use ctrl+a/e for the line's ends.
 - **tmux:** option+arrows work, but tmux has no super/cmd modifier. Use
   ctrl+a/e for line moves, or a terminal preset that sends those keys.
-  OpenTUI chooses the width method; `OPENTUI_FORCE_WCWIDTH` or
-  `OPENTUI_FORCE_UNICODE` overrides it. Under tmux 3.6a, some VS16 glyphs
-  may still go blank when repainted over earlier wide glyphs; this was
-  also reproduced in tmux alone.
 
 ctrl+g opens the prompt in your editor (`$VISUAL`, then `$EDITOR`, then
 `vi`), run through your shell; what it saves comes back as the prompt with
@@ -287,7 +332,8 @@ and are sent as held. The box shows them as `^L`, `^?` or `<85>`; the
 transcript's prompt echo and ctrl+r's match show no notation. A paste
 removes escape sequences; C1 CSI (0x9b) also takes the byte after it.
 An editor that exits with an error or is killed leaves the prompt as it
-was, and the status line says so.
+was, and the status line says so. On Linux, the window may freeze after
+the editor returns until you press another key.
 
 ctrl+v puts the image on the clipboard into the prompt as `[Image #1]`, at
 the cursor, and Enter sends it after the text. So does the terminal's own
@@ -296,8 +342,8 @@ holds only an image, as Ghostty does; one with nothing on the clipboard
 changes nothing. A path to a PNG, JPEG, GIF or WebP file pasted or typed
 into the prompt (`/…`, `~/…`, `file://…`, as a terminal writes a dropped
 file) is taken the same way. Backspace after
-the placeholder, or delete before it, takes it whole, and the image stays
-behind. An agent that takes no images gets none, and the status line says
+the placeholder, or delete before it, removes the whole placeholder;
+that image is not sent. An agent that takes no images gets none, and the status line says
 so. While the agent starts, ctrl+v says `X has not started yet`. That notice
 goes when the agent starts; if it fails, `X did not start: …` replaces it.
 Other paste failures after startup stay until the next key.
@@ -378,9 +424,9 @@ quote has no buttons, but the keys below still reach it.
 
 <img src="images/codeblocks.png" alt="A reply's code blocks with copy buttons, and run buttons on shell commands" width="900">
 
-`[copy]` copies the block's text, without its border, label, display wraps
-or trailing newline. The status line says `copied N chars to clipboard`,
-`sent N chars to the terminal's clipboard` over OSC 52, or
+`[copy]` sends the block's text over OSC 52, without its border, label,
+display wraps or trailing newline. The status line says
+`sent N chars to the terminal's clipboard`, or
 `could not copy: <reason>`, for 3 seconds. `[run]` puts all the block's lines
 into the prompt in bash mode, stripping a leading `$ ` from each line.
 Enter runs them as one script in the session's directory, with the output
@@ -624,8 +670,7 @@ transcript, then `── forked from <source> · HH:MM ──` and its own turns
 
 The runtime must advertise `session/fork`; otherwise the command says
 `This agent does not fork sessions`. Claude Code and Codex adapters advertise
-it; see the [session capabilities table](agent-capabilities.md#sessions-b3b8)
-for other runtimes and evidence limits. A source with work, an open request or
+it. A source with work, an open request or
 queued prompts refuses until its turn ends. On an ordinary child, the command
 says `/fork forks main or a fork`. A fork can itself be forked.
 
@@ -660,9 +705,9 @@ chord acp --agent-command "my-agent --acp" --model model-id --effort high --perm
 The agent comes from the argument, `--agent-command` or the startup
 settings. `--model` (`-m`), `--effort` and `--permission-mode` set starting
 values for each session. `chord --agent-command "my-agent --acp" acp`
-opens the window instead: OpenTUI's terminal queries reach stdout.
-`chord acp --nope` exits 2 with empty stdout and stderr naming `--nope`
-as an unknown agent; with `--agent-command`, it silently becomes the agent's name.
+opens the window instead, with terminal queries on stdout.
+Unknown options to `chord acp` exit 2 with empty stdout and a diagnostic
+on stderr, with or without `--agent-command`.
 
 A client names the directory: each `session/new`'s `cwd` loads that
 directory's `.chord/settings.json` and `.mcp.json`. These can start MCP
@@ -1154,10 +1199,7 @@ has the terminal, then reports it again on return.
 
 Reports do not wait for a terminal capability reply and have no tmux
 wrapping: inside tmux they do not reach the outer terminal. A terminal
-without support shows nothing. Support includes
-[iTerm2 3.7.5+](https://iterm2.com/downloads.html),
-[cmux](https://cmux.com/docs/changelog) and Rex; kitty's support is in
-0.50, not yet released. The Ghostty app does not yet show it.
+without support shows nothing.
 
 chord sends the main session id to the terminal through OSC
 1337 `SetUserVar=chord_session=<base64 id>`. The value is empty at start
@@ -1186,8 +1228,9 @@ way.
 
 chord reads the mouse, so the wheel and the trackpad scroll the
 transcript (or an overflowing permission request), and a drag selects text.
-Release copies it through the system clipboard, or OSC 52 over SSH;
-the highlight stays until a key or click. In replies and messages, a copied
+Release sends it to the terminal's clipboard through OSC 52, including
+over SSH; chord receives no clipboard acknowledgement. The highlight
+stays until a key or click. In replies and messages, a copied
 paragraph, heading or list item joins its wrapped rows at any window width.
 List markers and hanging indents do not copy; a list inside a quote keeps
 its markers. Source soft breaks join with a space; hard breaks stay newlines.
@@ -1201,7 +1244,9 @@ Clicking the prompt takes the keys back from the agents list or background
 summary without changing which agent receives your typing. A picked child's
 name and colour stay on the border. A permission, form, question, picker or
 ctrl+r search keeps the keys when you click the prompt.
-`"copyOnSelect": false` leaves the copy to ctrl+c. To use your
+`"copyOnSelect": false` leaves the copy to ctrl+c or ctrl+shift+c. With an
+existing drag selection, ctrl+c copies it before it can clear the draft;
+a successful explicit copy clears the highlight. To use your
 terminal's selection, hold its modifier while you drag: option in iTerm2,
 fn in Terminal.app, shift in most others. Inside tmux, the wheel and drags
 reach chord only with `set -g mouse on`, and over SSH a copy reaches
@@ -1239,6 +1284,7 @@ before. The actions are `chat:submit`, `chat:newline`, `chat:steer` (Tab),
 `app:toggleTranscript`, `history:search`, chord's own `session:attention`
 and `codeBlock:pick` (ctrl+x b) in `Global`;
 `codeBlock:copy`, `prompt`, `previous`, `next` and `cancel` in `CodeBlock`;
+`selection:copy` (ctrl+shift+c) in `Selection`;
 chord's own `agents:close` (`x`) in `Agents`, where it closes an agent
 in the agents list or stops an item in the background view;
 `autocomplete:accept`, `dismiss`, `previous` and `next` in `Autocomplete`;
@@ -1582,7 +1628,8 @@ JSON remains in the session record.
 
 Production readers try any installed version on `darwin-arm64`: Codex through
 its unmodified official PATH npm launcher or native binary, and native Claude
-Code through Agent SDK 0.3.325's experimental getter in an isolated worker.
+Code through the stream-json requests used by Agent SDK 0.3.325's
+experimental usage getter, in a separate process group.
 The npm Codex launcher needs existing Node. Missing executables, unsupported
 targets, custom ACP commands and failed or malformed reads return unavailable
 reasons. Chord installs no provider and adds no login or credential reader.
@@ -1894,6 +1941,12 @@ environment values. stderr keeps
 the table's problem lines. Making the list exits `0`, even with problems
 or unstartable entries. Without `--json`, the table is unchanged.
 
+While connecting, a dim drifting mark covers the window. After five
+seconds, `esc for the window · ctrl+c to quit` appears. Esc reveals
+`Starting <agent>…` below the prompt. chord's own commands run during startup;
+prompts stay in the draft. A failed start leaves the prompt available for
+supported client commands, including `/resume`, with ordinary text unsent.
+
 If an agent does not start, chord says which request it refused or was
 answering when it exited or closed its connection, with its exit code or
 signal when known. A pinned agent's failure also names the `package@version`
@@ -1902,8 +1955,6 @@ Below it, when available, are stderr's last six non-empty lines,
 with `… +N lines` for omitted lines and `…` on cut long lines. Plain stdout
 messages are not shown. `-p` reports the same details on stderr; a lead's
 failed-child note keeps the step, pin and stderr's last line.
-For recorded fx `ResponseLanguageMismatch` turn failures, see the
-[investigation and evidence limits](design/CHD-534.md).
 A session request refused with `Method not found` means the program does not
 serve ACP sessions: it is not an ACP agent, or not at this version. If
 zeroclaw needs an agent alias, set `[acp] default_agent = "<alias>"` in
@@ -1995,216 +2046,29 @@ to Cursor's name replaces it.
 
 ## Development
 
-```sh
-bun install                # the dependencies
-bun dev chord              # run from source
-bun dev quality chord      # types, lint, format and tests
-bun check                  # native type checker
-bun dev lint chord --fix   # what ESLint can fix
-bun fmt                    # native formatter
-bun dev compile            # this machine's binary into dist/
-bun dev registry           # refetch the registry; name binary-only omissions
-```
-
-`AGENTS.md` is binding for people and agents and says which checks a change
-needs. `docs/decisions.md` records why the stack is what it is.
-
-`bun dev --help` lists runtime, test and build commands: `chord` (`--fake`
-for the test agent), `test`, `compile` (`--all` or `--install`), `npm`,
-`registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
-`selftest <binary>`, `quality <package>`, `lint <package> [args…]` and
-`release <package> [--bump <version>]`. `bun dev chord --qa [name]`
-recreates `/tmp/chord-qa.<name>` for captures and its sibling
-`/tmp/chord-qa.<name>.state` for chord's state. Without a name, these are
-`/tmp/chord-qa` and `/tmp/chord-qa.state`; an empty name disables QA.
-`--fake --qa` opens the scripted agent; a plain `--qa` start shows the picker.
-`--fake` without `--qa` uses `/tmp/chord-fake`, made if missing and kept
-across runs so fake sessions resume. `--qa` takes precedence.
-These runs set only `XDG_STATE_HOME`: records stay out of your own state;
-config, data and cache are unchanged. Plain `bun dev chord` keeps your XDG state.
-
-For the cursor-cloud adapter's offline fixture, use `--qa` without
-`--fake`, which supplies its own `--agent-command`:
-
-```sh
-bun dev chord --qa capture cursor-cloud --agent-command "bun packages/cursor-cloud-acp/tests/fixtures/main.ts"
-```
-
-The fixture uses fake git, credentials and Cursor; it needs no repository,
-keychain or network. `CURSOR_CLOUD_QA` selects a refused start:
-`signed-out`, `key-refused`, `keychain-fails`, `outside`, `detached`,
-`no-remote` or `not-pushed`; `env-key` starts with `CURSOR_API_KEY`.
-Otherwise the account is Ada Lovelace with a keychain expiry of 2027-02-13.
-A prompt's first word selects `think`, `tool`, `plan`, `request`, `hang`
-(until Esc), `fail`, `busy`, `lost`, `rename` (changes Cursor's title) or
-`nocost` (cost not yet reported); other prompts answer `ok`. A new agent
-is named `Login form email validation`; each run costs 4.2 cents. Add
-`--resume bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10` to replay the earlier
-agent, `Login page`; `rename` changes it to `Login page and email validation`.
-
-`bun dev compile` installs all target packages and embeds OpenTUI's native
-library. `--all` builds every release target; `--install` puts this machine's
-binary in `~/.local/bin/chord`.
-
-`bun dev selftest <binary>` needs tmux and checks the version, `-p`, ACP
-stdio, the window and clipboard with the fake agent.
-
-`bun dev quality <package>` runs that package's checks in its root
-`steps.ts`, which also defines its lint arguments and release stages,
-with publish last. Only `quality`, `lint` and `release` take a package,
-by its npm name without the scope; chord's `steps.ts` is at the repository
-root. Its checks run types, tracked-file coverage, ESLint, format, `lint/`
-tests and the suite, in order; `--static` leaves out the suite. They leave
-`packages/` out; format uses `bun fmt --check --ignore-pattern=packages/ .`.
-`bun dev lint chord` runs ESLint. Arguments after `bun dev chord`, `bun dev test`
-and `bun dev lint chord` pass on as written; empty arguments need `--`
-(`bun dev test -- -t ''`), as does the tool's help (`bun dev lint chord -- --help`
-or `bun dev chord -- --help`).
-
-`bun dev test` reports the tests' status. `tests/timings.json` only places
-files: Bun uses it to balance shards and start each worker's slowest files
-first; an unlisted file takes the median. No refresh is required.
-On pull requests and pushes to `main` and `next`, CI runs `static`
-(`bun dev quality chord --static`), three `tests` shards
-(`--shard=1/3`, `2/3`, `3/3`), `compile` and `node`. The `node` job uses
-Node 22.13 and runs `bun dev quality cursor-cloud-acp`: its Node and
-tooling types, coverage, ESLint, format, tests, build and packed Node smoke.
-`--static` leaves out its tests, build and smoke. The smoke installs the
-package's dependencies, then checks ACP startup outside git without
-reaching Cursor or a keychain. The required `check` job needs every job to pass.
-
-The owner's `bun dev release <package>` releases the package's version;
-a bare `bun dev release` releases nothing. Use
-`--bump <version|major|minor|patch|fix>` instead of editing package.json.
-An exact version must equal it or be above it, in canonical `X.Y.Z` form
-with no prefix or build metadata. `fix` means `patch`.
-Add `--channel <name>` for `<base>-<channel>.<n>`. A channel bump counts
-from npm's latest stable version. If package.json already holds that base
-on that channel, its number goes up; otherwise it starts at 0. From stable
-0.67.0, `--bump major --channel next` gives 1.0.0-next.0, then
-1.0.0-next.1; `--bump 1.0.0 --channel next` gives the same. Channel names
-start with a lowercase letter, then use lowercase letters, digits or hyphens;
-`latest`, `main` and semver ranges such as `x` or `v1` are refused. Labelled
-versions are refused; use `--channel`. A stable bump from a pre-release
-needs an exact version, such as `--bump 1.0.0` over `1.0.0-next.5`.
-Without `--bump`, `--channel` requires package.json already on that channel.
-A fresh release refuses a different version while package.json's is not on npm.
-
-`bun dev release cursor-cloud-acp` runs `install`, `quality`, `build`,
-`pack` and `publish`; a new version needs `build`. It publishes only
-`@chorded/cursor-cloud-acp`, tags `cursor-cloud-acp-v<version>` and creates
-no GitHub release. Publish the pinned version before chord's next release:
-chord's preflight checks every `src/chorded.ts` pin on npm and refuses a miss.
-
-chord's release runs `install`, `quality` (`bun dev quality chord`),
-`natives`, `compile`, `sign`, `selftest`, `notarise`, `pack`, `publish` in
-order. `--skip` and `--only` take comma-separated stages; `--from` and
-`--to` bound the run. `--only` cannot combine with the other three.
-A new version needs `compile` selected. `--dry-run` stops before publishing
-but still submits to Apple; `--dry-run --skip notarise` leaves that out.
-`pack` uses `curl` to fetch FFmpeg and zlib source into
-`dist/release/source/`, checking SHA-256 sums against OpenTUI's native
-package `FFMPEG-SOURCE.md`. Failed downloads or mismatches stop the release,
-even in a dry run. A channel dry run prints its stages and npm publish arguments.
-
-One release at a time holds a lock in git's common directory, shared by
-worktrees. It never goes stale: a lock left by SIGKILL, a crash or reboot
-is refused with its pid and path, to remove by hand. Preflight checks a
-clean tree and the version. Publishing needs the channel's branch, or
-`main` for a stable release, level with origin, and no package tag the
-release did not make. chord also needs signed-in `gh`, checked with
-`gh auth status`.
-After the guards, every named release requires successful `npm whoami`,
-including dry runs and runs without publish. Success needs no terminal.
-On failure, stdin and stdout must be terminals for one plain `npm login`
-and a successful `npm whoami` recheck. Missing terminals, failed, cancelled
-or interrupted login, or a failed recheck stop release work. npm may open
-a browser and save credentials or registry settings, even in a dry run.
-Stage selection cannot skip authentication.
-
-A new version is written into package.json and committed alone as
-`chore: <package> v<version>` before any stage. A publishing run pushes that
-branch first. A run that publishes, or one at package.json's version
-without `--dry-run`, records its progress in gitignored
-`.release/<package>/state.json`: stages and output sums, each npm package,
-the tag and the draft. It keeps its version commit on failure, a failed
-push or a signal. A dry run, or a run without publish that makes a new
-version, keeps no state and drops its commit at the end, on failure,
-SIGINT, SIGTERM or SIGHUP too. SIGKILL may leave that commit; drop it with
-`git reset --keep HEAD~1`.
-
-Rerun `bun dev release <package>` to continue from the state. It runs what
-is left, including a failed draft; `--bump` and `--dry-run` are refused
-while state is unfinished. Continuation needs a clean tree, the recorded
-build commit in HEAD's history, and HEAD at that commit while a stage before
-publish is left. With only publish left, HEAD may move on; publishing uses
-the recorded artifacts and tags their build commit. Missing or changed
-output is refused, naming the stage to rerun from; after signing changed
-compile's binaries, use `--from compile`. `--only` or `--from` reruns a
-selected done stage and clears it and later progress; rebuilding is refused
-once any npm package has been sent. `--skip` leaves stages undone; `--to`
-keeps state to continue later. Unrecorded npm versions or tags are refused.
-Completion removes state. To abandon a release, remove it by hand with
-`rm -r .release/<package>`. If state is lost after part of a release reached
-npm, the fresh guards refuse it; finish by hand.
-
-`natives`, `sign` and `notarise` need an arm64 Mac; signing and notary
-credentials are checked before building when selected. Publish needs `pack`
-done in this run or the state. Each tarball must match its recorded SHA-256;
-the source archives must still match `FFMPEG-SOURCE.md`. All five npm
-packages publish in order, the main one after the four platform packages
-answer on npm. Channel packages use `--tag <channel>`, leaving `latest`
-unchanged. Once all five answer, the annotated version tag is pushed and
-`gh release create v<version> --draft` attaches the archives to a draft
-GitHub release, with `--prerelease` for a channel. The owner writes its notes
-and publishes it. If creating the draft fails, rerun to continue from state
-or use the printed `gh` command. Publishing hands the terminal to npm for
-each authorisation and waits. See `bun dev release --help`.
-
-A chord that has grown large: `kill -USR2 <pid>` writes a heap snapshot of
-it, without stopping it, into `heaps/` in chord's state directory, for
-Chrome's DevTools. `docs/memory.md` has how, and the long-run memory check
-(`bun dev memory`).
-
-### Rebuilding with a modified libopentui
-
-This procedure was tested only on macOS arm64 (`darwin-arm64`), with
-[OpenTUI v0.8.1](https://github.com/anomalyco/opentui/tree/v0.8.1) source
-and Zig 0.17.0. Install chord's dependencies with `bun install`, then in
-your OpenTUI source checkout:
-
-```sh
-bun install
-cd packages/native
-bun run build
-```
-
-After making your library changes and building, copy
-`packages/native/lib/aarch64-macos/libopentui.dylib` from that checkout over
-`node_modules/@opentui/core-darwin-arm64/libopentui.dylib` in your chord
-checkout, then run `bun dev compile` there. The rebuilt binary is in
-`dist/bun-darwin-arm64/chord` and will not carry chord's signature.
+[Developing chord](development.md) covers source builds, the scripted Dart
+agent, screen fixtures, benchmarks and maintainer release tooling.
+[Screenshots](development.md#screenshots) are captured with
+`dart run tool/screenshots.dart` through the scripted Dart agent.
+[AGENTS.md](../AGENTS.md) gives the binding rules and checks.
 
 ## Built on
 
+- [chord_tui](../packages/chord_tui/README.md) — the terminal interface,
+  written in Dart.
 - [ACP Registry](https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json)
-  — the agents chord knows by name, frozen into `src/registry.ts`, beside
-  `src/clis.ts`'s agents started by their own CLI.
-- [OpenTUI](https://github.com/anomalyco/opentui) 0.8.4 — the terminal interface,
-  through its React bindings.
-- [Agent Client Protocol SDK](https://github.com/agentclientprotocol/typescript-sdk)
-  2.6.0 — the connection to the agent, and the protocol types.
-- [Cliffy](https://cliffy.io) — the command line.
+  — the agents chord knows by name, pinned in `lib/registry.dart`, beside
+  `lib/clis.dart`'s agents started by their own CLI.
+- [json_rpc_2](https://pub.dev/packages/json_rpc_2) — ACP requests over
+  JSON-RPC, with chord's own serving dispatcher.
+- [args](https://pub.dev/packages/args) — the command line.
 
 ## Licence
 
-chord's code is [MIT](../LICENSE). Its binary includes FFmpeg under
-LGPL-2.1-or-later through OpenTUI. npm platform packages carry
-`LICENSE-FFMPEG`, `LICENSE-ZLIB` and `FFMPEG-SOURCE.md` beside chord's
-`LICENSE`. The source notice identifies the FFmpeg source and build options.
+chord's code is [MIT](../LICENSE). Release archives and npm packages carry
+`NOTICES` for the Dart SDK, dependencies and retained source notices.
 
 The Chorded name and the chevron mark, which chord draws at the top of a
-session (`scripts/mark.svg`, and `src/ui/header/mark.ts` generated from it), are
-trademarks of Igor Katsuba. The MIT licence does not cover them: a fork may
-keep the code, but should take the mark out and draw its own. See
-[TRADEMARKS.md](../TRADEMARKS.md).
+session (`lib/ui/header/mark_rows.dart`), are trademarks of Igor Katsuba.
+The MIT licence does not cover them: a fork may keep the code, but should
+take the mark out and draw its own. See [TRADEMARKS.md](../TRADEMARKS.md).

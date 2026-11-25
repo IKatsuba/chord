@@ -1,0 +1,11 @@
+import 'package:args/args.dart';
+void main() {
+  final parser = ArgParser()..addOption('resume', abbr: 'r');
+  for (final input in <List<String>>[
+    ['--resume'], ['-r'], ['--resume', 'session-id'],
+    ['--resume=session-id'], ['--resume=a', '--resume=b'],
+  ]) {
+    try { print('$input => ${parser.parse(input).option('resume')}'); }
+    on FormatException catch (error) { print('$input => ${error.message}'); }
+  }
+}

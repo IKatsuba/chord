@@ -1,0 +1,25 @@
+Original | Port (80x24; private port directory replaced with <repository>)
+ › twins                                                                         |  chord v0.0.1 · fake · <repository>
+                                                                                 | 
+ ⏺ Write(notes.txt)                                                              |  ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow once in this folder                        |    ⎿  Allowed Write notes.txt · Allow once in this folder
+                                                                                 | 
+ ⏺ Permission: allow-here.                                                       |  ⏺ Permission: allow-here.
+                                                                                 | 
+ › permissionmeta                                                                |  › permissionmeta
+                                                                                 | 
+ ››› Waiting for permission… (12s)                                               |  ››› Waiting for permission… (13s)
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ Tool call                                                                    │ | │ Tool call                                                                    │
+│                                                                              │ | │                                                                              │
+│ Do you want to proceed?                                                      │ | │ Do you want to proceed?                                                      │
+│ ❯ 1. Deny                                                                    │ | │ ❯ 1. Deny                                                                    │
+│                                                                              │ | │                                                                              │
+│ Esc to reject                                                                │ | │ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |          Fake Large with a 1M context window · medium effort · 1% context used

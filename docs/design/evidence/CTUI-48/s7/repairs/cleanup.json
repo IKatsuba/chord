@@ -1,0 +1,11 @@
+{
+  "final_repair_panes": 12,
+  "exit0": 12,
+  "first_look_panes": 12,
+  "first_look_exit0": 12,
+  "owned_runtime_processes": [],
+  "owned_tmux_server": "absent",
+  "isolated_state_journals": "removed after per-case retention",
+  "host_clipboard": "never constructed/called",
+  "new_native_or_performance_run_by_designer": false
+}

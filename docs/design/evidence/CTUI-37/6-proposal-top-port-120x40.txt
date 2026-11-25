@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › propose
+
+ ⏺ A lead on Opus to split the work, and three members, one for each step. Only one of them edits a file at a time.
+
+ ⏺ Team(bugfix) · proposal
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+      lead      claude · opus          default      Splits the job, says who edits which files, reports to main
+      tester    claude · sonnet        acceptEdits  Writes the failing test, then proves the fix
+      coder     codex · gpt-5.3-codex  auto         Writes the fix, in the files the lead names
+      reviewer  claude · opus          plan         Reads the diff and edits nothing
+
+      lead's instructions
+      Read the job and the code it points at until you can name the cause and the files involved. Open tester first,
+      coder once tester's test fails, and reviewer last, on the diff.
+
+      tester's instructions
+      Write the smallest test that fails because of the bug, and run it to show that.
+
+      coder's instructions
+      Make the failing test pass with the smallest change. Do not touch tests.
+
+      reviewer's instructions
+      Read `git diff` and the test. Never edit a file.
+
+      How bugfix works
+
+      1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      2. tester writes a test that fails for the bug's own reason. It edits tests/ only, and reports the failure.
+ ── ↓ 19 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2mproject[0m
+ █▀     [2m? for shortcuts[0m
+
+ [2m›[0m Inspect the saved notes
+
+ ⏺ The saved notes are ready.
+
+ [2m›[0m text
+
+ ⏺ Could not keep this session's record: Bad state: fixture record write failed
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

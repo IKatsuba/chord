@@ -1,0 +1,24 @@
+                            █▄
+                            ▀██▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄██▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            █▀
+                 v0.0.1 · fake · ~/project
+
+ ╭────────────────────────────────────────────────────────────────────────────╮
+ │ Resume a session                                                           │
+ │ Pick one of fake's earlier sessions to open.                               │
+ │                                                                            │
+ │ ❯   1.  18 minutes ago  ../chord                          │
+ │         edit                                                               │
+ │     2.  18 minutes ago  ../chord                          │
+ │         edit                                                               │
+ │     3.  19 minutes ago  ~/project                      │
+ │         edit                                                               │
+ │     4.  19 minutes ago  ~/project                      │
+ │   ↓     edit                                                               │
+ │     … +43 more                                                             │
+ │                                                                            │
+ │ Enter to resume · Ctrl+t for this directory · Q to quit                    │
+ ╰────────────────────────────────────────────────────────────────────────────╯
+
+

@@ -1,0 +1,40 @@
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the
+   answer.
+
+ › plan
+
+ ⏺ Planned. Step 2
+   done. Step 3
+   done.
+
+ ⏺ Plan
+   ⎿  ☒ Read...code
+      ☒ Writ...ange
+      ☒ Run ...ests
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write
+      notes.txt ·
+      Allow
+
+ ⏺ Permission:
+   allow.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent
+   failed on
+   purpose.
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+   Fake… · 1% used

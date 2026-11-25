@@ -1,0 +1,24 @@
+ [38;2;190;250;218m[48;2;164;244;206m▀[38;2;150;241;199m[49m▄[39m     [1mchord[0;2m v0.0.1[0m
+ [38;2;139;238;193m▀[38;2;124;235;186m[48;2;99;229;173m▀[38;2;110;231;179m[48;2;85;225;167m▀[38;2;71;222;160m[49m▄[39m   [2mfixture[0m
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2mproject[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts[0m
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [2menter to send                         ctrl + o for verbose output[0m
+  [2mshift or \ + enter for a newline      ctrl + c to copy[0m
+  [2malt + ← → to move by word             ctrl + x b to pick a code block[0m
+  [2m↑ ↓ for prompts                       c r to copy or put in the prompt[0m
+  [2mpgup pgdn to scroll                   ctrl + c to clear input[0m
+  [2mshift + ↑ ↓ to scroll a line          ctrl + d or ctrl + c twice to quit[0m
+  [2mhome end for the top and the bottom   ctrl + x a for what waits on you[0m
+  [2m↑ ↓ to pick a completion              1–9 to pick a choice[0m
+  [2mtab to complete a command             ↑ ↓ j k ← → to move or change a value[0m
+  [2mesc to close completions              enter to pick the highlighted choice[0m
+  [2m! for bash mode                       esc to reject a permission[0m
+  [2mbackspace to leave bash mode          esc to leave a picker or shortcuts[0m
+  [2mesc to interrupt or stop a command    ? for shortcuts[0m
+  [2mshift + tab to cycle modes            any key to quit the crash screen[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m

@@ -1,0 +1,24 @@
+   [2m   │[0m   bun quality [2m│[0m
+   [2m   └───────────────┘[0m
+   [2m2. [0mCommit on main once every check has passed and the tree is clean, so
+   [2m   [0mwhoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   ┌ sh ────────────────────────────────────────────[1m[copy][0m─┐
+   │   bun dev compile --all                               │
+   │   for bin in dist/*/chord; do echo "built $bin"; done │
+   └───────────────────────────────────────────────────────┘
+
+ [2m›[0m permission
+
+ ⏺ [1mWrite[0m(notes.txt)
+   [2m⎿[0m  Failed
+   [2m⎿[0m  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  ↑ ↓ another block · c copy · esc done

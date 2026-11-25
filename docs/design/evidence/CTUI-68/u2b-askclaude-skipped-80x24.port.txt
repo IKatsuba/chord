@@ -1,0 +1,24 @@
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno"}
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+   ⎿  Language  Deno (TypeScript) (Recommended)
+      Checks    skipped
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript) (Recommended)"}
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+   ⎿  Language, Checks · Skipped
+
+ ⏺ Elicitation answer: decline
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

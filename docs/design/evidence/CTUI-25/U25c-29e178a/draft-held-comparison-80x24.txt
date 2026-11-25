@@ -1,0 +1,24 @@
+   ┌─ sh ────────────────────────────────────────────────────────[copy]─[run]─┐  |  ▀▄     chord v0.0.1
+   │ bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p >  │  |  ▀▀▀▄   fixture
+   │ /tmp/screen.txt                                                          │  |  ▄▀▀▀   project
+   │                                                                          │  |  ▀▀     ? for shortcuts
+   │ echo done                                                                │  |
+   └──────────────────────────────────────────────────────────────────────────┘  |  ⏺ ┌ sh ──[copy]─[run]─┐
+                                                                                 |    │   $ printf first  │
+   - a loose item                                                                |    │   $ printf second │
+                                                                                 |    └───────────────────┘
+   - a loose item with a box:                                                    |
+                                                                                 |    ┌ ts ─────[copy]─┐
+     ┌─ sh ─[copy]─[run]─┐                                                       |    │   not runnable │
+     │ bun dev check     │                                                       |    └────────────────┘
+     └───────────────────┘                                                       |
+                                                                                 |    │ ┌ bash ─────────────┐
+   A paragraph after.                                                            |    │ │   $ quoted script │
+                                                                                 |    │ └───────────────────┘
+╭──────────────────────────────────────────────────────────────────────────────╮ |
+│ ! bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /t │ |
+│   mp/screen.txt                                                              │ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│                                                                              │ | │ ! printf first                                                               │
+│   echo done                                                                  │ | │   printf second                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  The prompt holds a draft · ctrl+c clears it  Fake Large with a 1M… · 1% used   |   The prompt holds a draft · ctrl+c clears it

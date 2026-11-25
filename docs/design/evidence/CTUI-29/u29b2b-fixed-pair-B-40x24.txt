@@ -1,0 +1,24 @@
+|
+|
+|
+|
+|
+|
+        ▀▄|        ▀▄
+        ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄|        ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+        ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀|        ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+        ▀▀|        ▀▀
+  v0.71.0 · /private/tmp/ctui29b-look/w|  v0.0.1 · /private/tmp/ctui29b-look/w
+|
+  Select agent|  Select agent
+|
+  No agents available|  No agents available
+  offeredAgents in...gent chord knows.|  offeredAgents in...gent chord knows.
+|
+  Esc to cancel|  Esc to cancel
+|
+|
+|
+|
+|
+|

@@ -1,0 +1,40 @@
+The transcript is here. Answer: rejected
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+> /permission
+ctrl+o Open the dialog  ctrl+q Quit

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › agentmentions
+
+ ⏺ Open(parser) · fake
+   ⎿  text
+
+ ⏺ Open(docs) · fake
+   ⎿  text
+
+ ⏺ chord - run_team (MCP)(team: "bugfix", job: "First completion team.")
+
+ ⏺ Internal error
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  parser
+  docs
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @@                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 12s
+    parser  fake · Fake Large with a 1M context window · medium  ◦ idle 12s  ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ◦ idle 12s  ✓ new reply

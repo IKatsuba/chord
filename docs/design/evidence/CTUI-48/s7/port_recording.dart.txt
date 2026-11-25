@@ -1,0 +1,33 @@
+// Capture-only bootstrap: production session and window, original scripted fake.
+// Adapted from the handed public selection_session fixture; never host clipboard.
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:chord/cli.dart';
+import 'package:chord/platform/group_exec.dart';
+import 'package:chord/session/leaving.dart';
+import 'package:chord/session/start_connection.dart';
+import 'package:chord/ui/app/selection.dart' as copy;
+import 'package:chord/ui/app/window.dart';
+import 'package:chorded_tui/chorded_tui.dart';
+Future<void> main(List<String> args) async {
+  if (args.isNotEmpty && args.first == groupExecFlag) groupExec(args);
+  final command=args[0], mode=args[1], theme=args[2];
+  final journal=File('build/ctui48-s7-port-record.jsonl')..writeAsStringSync('');
+  const place='build/ctui48-s7-project';
+  Directory(place).createSync(recursive:true);
+  final connection=StartConnection(command:command,cwd:Directory(place).absolute.path,agent:'fake')..start();
+  await runApp(TranscriptWindow(
+    launch:const Launch(name:'fake',agent:null,agentCommand:'fake',version:'0.0.1',directory:place),
+    connection:connection,copyOnSelect:mode!='manual',
+    copy:(text,token){
+      journal.writeAsStringSync('${jsonEncode({'event':'attempt','text':text,'cancelled':token.isCancelled})}\n',mode:FileMode.append);
+      if(mode=='timeout')return Completer<copy.CopyResult>().future;
+      if(mode=='failure')return const copy.CopyResult.failed('recording clipboard refused');
+      journal.writeAsStringSync('${jsonEncode({'event':'write','text':text})}\n',mode:FileMode.append);
+      return const copy.CopyResult.sent();
+    },
+  ),theme:theme=='light'?ThemeData.light():ThemeData.dark(),
+    environment:{...Platform.environment,if(theme=='plain')'NO_COLOR':'1'},
+    beforeExit:()async{await connection.close();await leave();});
+}

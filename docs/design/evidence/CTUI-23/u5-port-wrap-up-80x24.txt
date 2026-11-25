@@ -1,0 +1,24 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  /exit    Quit chord
+  /fast    Turn the agent's fast mode on or off for this session
+  /greet   Say hello from the fake agent
+  /help    Show keyboard shortcuts
+  /model   Switch the agent's model
+  /status  Show the agent, model, mode, session and directory
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

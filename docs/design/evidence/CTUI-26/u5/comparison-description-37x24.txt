@@ -1,0 +1,25 @@
+Original                              | Before fix                            | After fix
+ ▀▄     chord v0.71.0                 |                                       |                                      
+ ▀▀▀▄   fake · Fake ...ontext window  |                                       |                                      
+ ▄▀▀▀   …/ctui26-designer-u5/project  |                                       |                                      
+ ▀▀     ? for shortcuts · /help       |                                       |                                      
+                                      |                                       |                                      
+╭───────────────────────────────────╮ |                                       |                                      
+│ Resume a session                  │ |                                       |                                      
+│ fake's earlier ...this directory. │ |                                       |                                      
+│                                   │ |                                       |                                      
+│ ❯   1. 1 minute ago               │ | ╭───────────────────────────────────╮ | ╭───────────────────────────────────╮
+│        Inspect the saved notes    │ | │ Resume a session                  │ | │ Resume a session                  │
+│        and retain this            │ | │ fake's earlier sessions in this d │ | │ fake's earlier ...this directory. │
+│        descriptive title across   │ | │                                   │ | │                                   │
+│        wrapped lines.             │ | │ ❯   1. just now                   │ | │ ❯   1. just now                   │
+│   ↓ 2. yesterday                  │ | │        Inspect the saved notes    │ | │        Inspect the saved notes    │
+│                                   │ | │        and retain this            │ | │        and retain this            │
+│ Enter to resume · Ctrl+a for all  │ | │        descriptive title across   │ | │        descriptive title across   │
+│ directories · Esc to close        │ | │        wrapped lines.             │ | │        wrapped lines.             │
+╰───────────────────────────────────╯ | │   ↓ 2. yesterday                  │ | │   ↓ 2. yesterday                  │
+                                      | │                                   │ | │                                   │
+╭───────────────────────────────────╮ | │                                   │ | │                                   │
+│ ›                                 │ | │ Enter to resume · Ctrl+a for all  │ | │ Enter to resume · Ctrl+a for all  │
+╰───────────────────────────────────╯ | │ directories · Esc to close        │ | │ directories · Esc to close        │
+  ? for shortcuts  Fake Large with…   | ╰───────────────────────────────────╯ | ╰───────────────────────────────────╯

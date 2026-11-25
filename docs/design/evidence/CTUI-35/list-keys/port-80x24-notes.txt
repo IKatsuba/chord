@@ -1,0 +1,4 @@
+  parser is working · x again to stop it and close
+  main is the session · ctrl+d quits
+  ● 2 agents wait · ctrl+x a to go · ? for shortcuts
+  Nothing waits on you

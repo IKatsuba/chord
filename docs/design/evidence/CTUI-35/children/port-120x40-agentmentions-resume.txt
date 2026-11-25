@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › agentmentions
+
+ ⏺ Open(parser) · fake
+   ⎿  text
+
+ ⏺ Open(docs) · fake
+   ⎿  text
+
+ ⏺ chord - run_team (MCP)(team: "bugfix", job: "First completion team.")
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │
+│ ❯   1.  just now                 docs · text                                                                         │
+│     2.  just now       open now  docs · text                                                                         │
+│     3.  just now       open now  parser · text                                                                       │
+│     4.  just now                 parser · text                                                                       │
+│     5.  just now                 agentmentions                                                                       │
+│     6.  1 minute ago             agentclear                                                                          │
+│     7.  1 minute ago             agentclear                                                                          │
+│     8.  1 minute ago             parser · Read AGENTS.md and docs/FEATURES.md before you start. Then: 1. Fix the     │
+│   ↓                              tokenizer so a string at the end of a line keeps its closing quote. 2. Add two      │
+│     … +34 more                                                                                                       │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 26s
+    parser  fake · Fake Large with a 1M context window · medium  ◦ idle 26s  ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ◦ idle 26s  ✓ new reply

@@ -1,0 +1,1212 @@
+00:00 +0: loading test/code_example_test.dart
+00:00 +0: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +1: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +2: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +3: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +4: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +5: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +6: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +7: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +8: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +9: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +10: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +11: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +12: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +13: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +14: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +15: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +16: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +17: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +18: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +19: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +20: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +21: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +22: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +23: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +24: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +25: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +26: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +27: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +28: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +29: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +30: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +31: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +32: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +33: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +34: test/code_example_test.dart: the code example numbers, wraps and recolours at 120x40
+00:00 +35: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +36: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +37: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +38: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +39: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +40: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +41: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +42: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +43: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +44: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +45: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +46: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +47: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +48: test/diff_example_test.dart: the diff example draws and recolours at 120x40
+00:00 +49: test/foundation/selection_geometry_test.dart: pure exposure rejects partial wide endpoints and retains covered interior
+00:00 +50: test/diff_example_test.dart: the diff example draws and recolours at 80x24
+00:00 +51: test/foundation/selection_geometry_test.dart: genuine blank LF boundary uses content lane and later paint mask
+00:00 +52: test/diff_example_test.dart: tester: Diff example keys scroll, full theme cycle and quit at Size(120, 40)
+00:00 +53: test/foundation/selection_source_test.dart: source snapshots freeze span children and validate lineage and groups
+00:00 +54: test/diff_example_test.dart: tester: Diff example keys scroll, full theme cycle and quit at Size(80, 24)
+00:00 +55: test/diff_example_test.dart: tester: Diff example keys scroll, full theme cycle and quit at Size(80, 24)
+00:00 +56: test/diff_example_test.dart: tester: Diff example keys scroll, full theme cycle and quit at Size(80, 24)
+00:00 +57: test/foundation/selection_test.dart: inclusive forward/reverse endpoints, equality empty and release unchanged
+00:00 +58: test/foundation/selection_test.dart: inclusive forward/reverse endpoints, equality empty and release unchanged
+00:00 +59: test/foundation/selection_test.dart: inclusive forward/reverse endpoints, equality empty and release unchanged
+00:00 +60: test/foundation/selection_source_test.dart: reference reparses retain unambiguous current semantic identities
+00:00 +61: test/foundation/selection_test.dart: mixed source order/separators is identical in both directions
+00:00 +62: test/foundation/selection_test.dart: mixed source order/separators is identical in both directions
+00:00 +63: test/foundation/selection_test.dart: mixed source order/separators is identical in both directions
+00:00 +64: test/foundation/selection_test.dart: mixed source order/separators is identical in both directions
+00:00 +65: test/foundation/selection_source_test.dart: nested list-item diagnostic collisions are equality-confirmed
+00:00 +66: test/foundation/selection_source_test.dart: nested list-item diagnostic collisions are equality-confirmed
+00:00 +67: test/foundation/selection_source_test.dart: nested list-item diagnostic collisions are equality-confirmed
+00:00 +68: test/foundation/selection_test.dart: same source token cannot carry a lease across reparenting
+00:00 +69: test/foundation/selection_test.dart: reparented endpoints migrate only to surviving selected fragments
+00:00 +70: test/foundation/selection_test.dart: blank code-line boundaries preserve LF only when crossed
+00:00 +71: test/foundation/selection_test.dart: diagnostic newline collisions cannot authorize ambiguous source identity
+00:00 +72: test/foundation/selection_tester_test.dart: tester: immutable source identity and directional ranges colliding code descriptions do not become anchors: a
+b
+00:00 +73: test/foundation/selection_tester_test.dart: tester: immutable source identity and directional ranges colliding code descriptions do not become anchors: a\nb
+00:00 +74: test/foundation/selection_tester_test.dart: tester: immutable source identity and directional ranges reordered code anchors cannot migrate a finalized range
+00:00 +75: test/foundation/selection_tester_test.dart: tester: immutable source identity and directional ranges old range value and shaped projection survive one thousand revisions
+00:00 +76: test/key_capture_fixture_test.dart: capture fixture action, passthrough and empty paste Size(120, 40)
+00:00 +77: test/key_capture_fixture_test.dart: capture fixture action, passthrough and empty paste Size(120, 40)
+00:00 +78: test/foundation/selection_tester_test.dart: tester: immutable source identity and directional ranges full reparse leaves old text and descriptors immutable 80
+00:00 +79: test/foundation/selection_tester_test.dart: tester: immutable source identity and directional ranges full reparse leaves old text and descriptors immutable 80
+00:01 +80: test/layers_example_test.dart: tester: layers fixture retained stream and focus a thousand stream updates preserve scroll-back under layers at Size(120, 40)
+00:01 +81: test/layers_example_test.dart: tester: layers fixture retained stream and focus a thousand stream updates preserve scroll-back under layers at Size(120, 40)
+00:01 +82: test/layers_example_test.dart: tester: layers fixture retained stream and focus a thousand stream updates preserve scroll-back under layers at Size(120, 40)
+00:01 +83: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +84: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +85: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +86: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +87: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +88: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +89: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +90: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +91: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +92: test/markdown_controls_fixture_test.dart: framework controls fixture records current complete blocks without clipboard Size(120, 40)
+00:01 +93: test/markdown_example_test.dart: the markdown example draws, streams and recolours at 120x40
+00:01 +94: test/markdown_example_test.dart: the markdown example draws, streams and recolours at 120x40
+00:01 +95: test/markdown_example_test.dart: the markdown example draws, streams and recolours at 120x40
+00:01 +96: test/markdown_example_test.dart: the markdown example draws, streams and recolours at 120x40
+00:01 +97: test/markdown_example_test.dart: the markdown example draws, streams and recolours at 120x40
+00:01 +98: test/markdown_example_test.dart: the markdown example draws, streams and recolours at 120x40
+00:01 +99: test/markdown_example_test.dart: the markdown example draws, streams and recolours at 120x40
+00:01 +100: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +101: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +102: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +103: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +104: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +105: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +106: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +107: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +108: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +109: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +110: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +111: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +112: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +113: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +114: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +115: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +116: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:01 +117: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:02 +118: test/layers_example_test.dart: tester: layers fixture retained stream and focus unmount with live timer closes all owned resources
+00:02 +119: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +120: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+Bad state: input failure
+
+00:02 +121: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +122: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +123: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +124: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +125: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +126: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +127: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +128: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +129: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +130: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +131: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +132: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +133: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +134: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +135: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +136: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +137: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +138: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +139: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +140: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +141: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +142: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +143: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +144: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+Bad state: dispose failed
+#0      _beforeExitTests.<anonymous closure>.<anonymous closure>.<anonymous closure> (file://<task-root>/test/run_app_test.dart:536:27)
+#1      _DisposedState.dispose (file://<task-root>/test/run_app_test.dart:602:21)
+#2      StatefulElement.unmount (package:chorded_tui/src/widgets/framework.dart:566:11)
+#3      Element.unmountTree (package:chorded_tui/src/widgets/framework.dart:397:7)
+#4      ComponentElement.visitChildren (package:chorded_tui/src/widgets/framework.dart:523:32)
+#5      Element.unmountTree (package:chorded_tui/src/widgets/framework.dart:396:7)
+#6      ComponentElement.visitChildren (package:chorded_tui/src/widgets/framework.dart:523:32)
+#7      Element.unmountTree (package:chorded_tui/src/widgets/framework.dart:396:7)
+#8      AppHost.dispose (package:chorded_tui/src/widgets/host.dart:265:17)
+#9      runApp.<anonymous closure> (package:chorded_tui/src/widgets/run_app.dart:335:22)
+#10     runApp (package:chorded_tui/src/widgets/run_app.dart:341:17)
+<asynchronous suspension>
+#11     _beforeExitTests.<anonymous closure>.<anonymous closure> (file://<task-root>/test/run_app_test.dart:544:9)
+<asynchronous suspension>
+#12     Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#13     Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#14     Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+
+00:02 +145: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +146: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +147: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +148: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +149: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +150: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +151: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +152: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +153: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +154: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +155: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +156: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +157: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +158: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +159: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+Bad state: leave failed
+#0      _FailingLeave.leave (file://<task-root>/test/run_app_test.dart:615:5)
+<asynchronous suspension>
+#1      runApp (package:chorded_tui/src/widgets/run_app.dart:341:7)
+<asynchronous suspension>
+#2      _beforeExitTests.<anonymous closure>.<anonymous closure> (file://<task-root>/test/run_app_test.dart:561:7)
+<asynchronous suspension>
+#3      Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#4      Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#5      Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+
+00:02 +160: test/selection_area_fixture_test.dart: selection runtime fixture exposes public queries and keys Size(120, 40)
+00:02 +161: test/selection_child_fixture_test.dart: source child fixture keeps rows and toggles copy/code eligibility Size(120, 40)
+00:02 +162: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +163: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +164: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +165: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +166: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +167: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +168: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +169: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +170: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +171: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +172: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +173: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +174: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +175: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +176: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +177: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +178: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +179: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +180: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +181: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +182: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +183: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +184: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +185: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +186: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +187: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +188: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +189: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +190: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +191: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +192: test/layers_example_test.dart: the stream grows the page under an open picker
+00:02 +193: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +194: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +195: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +196: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +197: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +198: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +199: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +200: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +201: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +202: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +203: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +204: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +205: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +206: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +207: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +208: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +209: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +210: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:02 +211: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +212: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +213: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +214: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +215: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +216: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +217: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +218: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +219: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +220: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +221: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +222: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +223: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +224: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +225: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +226: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +227: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +228: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +229: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +230: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +231: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +232: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +233: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +234: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +235: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +236: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +237: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +238: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +239: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +240: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +241: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +242: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +243: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +244: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +245: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +246: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +247: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +248: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +249: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +250: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +251: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +252: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +253: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +254: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +255: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +256: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +257: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +258: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +259: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +260: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +261: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +262: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +263: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +264: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +265: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +266: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +267: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +268: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +269: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +270: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +271: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +272: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +273: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +274: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +275: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +276: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +277: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +278: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +279: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +280: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +281: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +282: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +283: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +284: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +285: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +286: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +287: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +288: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +289: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +290: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +291: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +292: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +293: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +294: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +295: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +296: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +297: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +298: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +299: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +300: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +301: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +302: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +303: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +304: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +305: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +306: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +307: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +308: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +309: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +310: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +311: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +312: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +313: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +314: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +315: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +316: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +317: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:03 +318: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +319: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +320: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +321: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +322: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +323: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +324: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +325: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +326: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +327: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +328: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +329: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +330: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +331: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +332: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +333: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +334: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +335: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +336: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +337: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +338: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +339: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +340: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +341: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +342: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +343: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +344: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +345: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +346: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +347: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +348: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +349: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +350: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +351: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +352: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +353: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +354: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +355: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +356: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +357: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +358: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +359: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +360: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +361: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +362: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +363: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +364: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +365: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +366: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +367: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +368: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +369: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +370: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +371: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +372: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +373: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +374: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +375: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +376: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +377: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +378: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +379: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +380: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +381: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +382: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +383: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +384: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +385: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +386: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +387: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +388: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +389: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +390: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +391: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +392: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +393: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +394: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +395: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +396: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +397: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +398: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +399: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +400: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +401: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +402: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +403: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +404: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +405: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +406: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +407: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +408: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +409: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +410: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +411: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +412: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +413: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +414: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +415: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +416: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +417: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +418: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +419: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +420: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +421: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +422: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +423: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +424: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +425: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +426: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +427: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +428: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +429: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +430: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +431: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +432: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +433: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +434: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +435: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +436: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +437: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +438: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +439: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +440: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +441: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +442: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +443: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +444: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +445: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +446: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +447: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +448: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +449: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +450: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +451: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +452: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +453: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +454: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +455: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +456: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +457: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +458: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +459: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +460: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +461: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +462: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +463: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +464: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +465: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +466: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +467: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +468: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +469: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +470: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +471: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +472: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +473: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +474: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +475: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +476: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +477: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +478: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +479: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +480: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +481: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +482: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +483: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +484: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +485: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +486: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +487: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +488: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +489: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +490: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +491: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +492: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +493: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +494: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +495: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +496: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +497: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +498: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +499: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +500: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +501: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +502: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +503: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +504: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +505: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +506: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +507: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +508: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +509: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +510: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +511: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +512: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +513: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +514: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +515: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +516: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +517: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +518: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +519: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +520: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +521: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +522: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +523: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +524: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +525: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +526: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +527: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +528: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +529: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +530: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +531: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:04 +532: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +533: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +534: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +535: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +536: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +537: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +538: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +539: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +540: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +541: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +542: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +543: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +544: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +545: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +546: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +547: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +548: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +549: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +550: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +551: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +552: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +553: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +554: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +555: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +556: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +557: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +558: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +559: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +560: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +561: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +562: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +563: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +564: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +565: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +566: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +567: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +568: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +569: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +570: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +571: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +572: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +573: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +574: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +575: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +576: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +577: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +578: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +579: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +580: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +581: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +582: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +583: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:05 +584: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +585: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +586: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +587: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +588: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +589: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +590: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +591: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +592: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +593: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +594: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +595: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +596: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +597: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +598: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +599: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +600: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +601: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +602: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +603: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +604: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +605: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +606: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +607: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +608: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +609: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +610: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +611: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +612: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +613: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +614: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +615: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +616: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +617: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +618: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +619: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +620: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +621: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +622: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +623: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +624: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +625: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +626: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +627: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +628: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +629: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +630: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +631: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +632: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +633: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +634: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +635: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +636: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +637: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +638: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +639: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +640: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +641: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +642: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +643: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +644: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +645: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +646: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +647: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +648: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +649: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +650: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +651: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +652: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +653: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +654: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +655: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +656: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +657: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +658: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +659: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +660: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +661: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +662: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +663: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +664: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +665: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +666: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +667: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +668: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +669: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +670: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +671: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +672: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +673: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +674: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +675: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +676: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +677: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +678: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +679: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +680: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +681: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +682: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +683: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +684: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +685: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +686: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +687: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +688: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +689: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +690: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +691: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +692: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +693: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +694: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +695: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +696: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +697: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +698: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +699: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +700: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +701: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +702: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +703: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +704: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +705: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +706: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +707: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +708: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +709: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +710: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +711: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +712: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +713: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +714: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +715: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +716: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +717: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +718: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +719: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +720: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +721: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +722: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +723: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +724: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +725: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +726: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +727: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +728: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +729: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +730: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +731: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +732: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +733: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +734: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:06 +735: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +736: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +737: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +738: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +739: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +740: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +741: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +742: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +743: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +744: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +745: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +746: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +747: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +748: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +749: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +750: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +751: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +752: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +753: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +754: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +755: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +756: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +757: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +758: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +759: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +760: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +761: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +762: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +763: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +764: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +765: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +766: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +767: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +768: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +769: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +770: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +771: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +772: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +773: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +774: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +775: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +776: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +777: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +778: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +779: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +780: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +781: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +782: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +783: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +784: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +785: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +786: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +787: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +788: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +789: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +790: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +791: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +792: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +793: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +794: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +795: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +796: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +797: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +798: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +799: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +800: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +801: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +802: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +803: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +804: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +805: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +806: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +807: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +808: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +809: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +810: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +811: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +812: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +813: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:07 +814: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:08 +815: test/run_app_test.dart: runApp beforeExit exits 0 when ok
+00:08 +816: test/widgets/picker_viewport_test.dart: optional initial viewport reveals 4 minimally at Size(120, 40)
+00:08 +817: test/widgets/picker_viewport_test.dart: optional initial viewport reveals 4 minimally at Size(120, 40)
+00:08 +818: test/widgets/picker_viewport_test.dart: optional initial viewport reveals 4 minimally at Size(120, 40)
+00:08 +819: test/widgets/picker_unhandled_test.dart: omitted keys reach parent unchanged in both modes at Size(80, 24)
+00:08 +820: test/widgets/picker_unhandled_test.dart: omitted keys reach parent unchanged in both modes at Size(80, 24)
+00:08 +821: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +822: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +823: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +824: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +825: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +826: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +827: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +828: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +829: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +830: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +831: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +832: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +833: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +834: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +835: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +836: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +837: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +838: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +839: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +840: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +841: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +842: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +843: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +844: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +845: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +846: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +847: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +848: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +849: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +850: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +851: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +852: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +853: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +854: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +855: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +856: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +857: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +858: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +859: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +860: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +861: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +862: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +863: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +864: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +865: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +866: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +867: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +868: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +869: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +870: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +871: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +872: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +873: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +874: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +875: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +876: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +877: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +878: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +879: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +880: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +881: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +882: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +883: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +884: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +885: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +886: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +887: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +888: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +889: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +890: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +891: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +892: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +893: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +894: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +895: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +896: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +897: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +898: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:08 +899: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +900: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +901: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +902: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +903: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +904: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +905: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +906: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +907: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +908: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +909: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +910: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +911: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +912: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +913: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +914: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +915: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +916: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +917: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +918: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +919: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +920: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +921: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +922: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +923: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +924: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +925: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +926: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +927: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +928: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +929: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +930: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +931: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +932: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +933: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +934: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +935: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +936: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +937: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +938: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +939: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +940: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +941: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +942: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +943: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +944: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +945: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +946: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +947: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +948: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +949: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +950: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +951: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +952: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +953: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +954: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +955: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +956: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +957: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +958: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +959: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +960: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +961: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +962: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +963: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +964: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +965: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +966: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +967: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +968: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +969: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +970: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +971: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +972: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +973: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +974: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +975: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +976: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +977: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +978: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +979: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +980: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +981: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +982: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +983: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +984: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +985: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +986: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +987: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +988: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +989: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +990: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +991: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +992: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +993: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +994: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +995: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +996: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +997: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +998: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +999: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +1000: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +1001: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:09 +1002: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1003: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1004: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1005: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1006: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1007: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1008: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1009: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1010: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1011: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1012: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1013: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1014: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1015: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1016: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1017: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1018: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1019: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1020: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1021: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1022: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1023: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1024: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1025: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1026: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1027: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1028: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1029: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1030: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1031: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1032: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1033: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1034: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1035: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1036: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1037: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1038: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1039: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1040: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1041: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1042: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1043: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1044: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1045: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1046: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1047: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1048: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1049: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1050: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1051: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1052: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1053: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1054: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1055: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1056: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1057: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1058: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1059: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1060: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1061: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1062: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1063: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1064: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1065: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1066: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1067: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1068: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1069: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1070: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1071: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1072: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1073: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1074: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1075: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1076: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1077: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1078: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1079: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1080: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1081: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1082: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1083: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1084: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1085: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1086: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1087: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1088: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1089: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1090: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1091: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1092: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1093: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1094: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1095: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1096: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1097: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1098: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1099: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1100: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1101: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1102: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1103: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1104: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1105: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1106: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1107: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1108: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1109: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1110: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1111: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1112: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1113: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1114: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1115: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1116: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1117: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1118: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1119: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1120: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1121: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1122: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1123: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1124: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1125: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1126: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1127: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1128: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1129: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1130: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1131: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1132: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1133: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1134: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1135: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:10 +1136: test/run_app_test.dart: runApp beforeExit exits 1 when fails
+00:12 +1137: test/run_app_test.dart: runApp beforeExit exits 1 when throws
+00:14 +1138: test/run_app_test.dart: tester beforeExit lifecycle boundaries input ending before mount still awaits the hook exactly once
+00:14 +1139: test/run_app_test.dart: tester beforeExit lifecycle boundaries an asynchronous terminal restore finishes before the hook
+00:14 +1140: test/run_app_test.dart: tester beforeExit lifecycle boundaries a rejected hook is consumed and called once without process exit
+Bad state: tester hook failed
+#0      main.<anonymous closure>.<anonymous closure>.<anonymous closure> (file://<task-root>/test/run_app_test.dart:184:13)
+#1      runApp (package:chorded_tui/src/widgets/run_app.dart:350:23)
+<asynchronous suspension>
+#2      main.<anonymous closure>.<anonymous closure> (file://<task-root>/test/run_app_test.dart:189:9)
+<asynchronous suspension>
+#3      Declarer.test.<anonymous closure>.<anonymous closure> (package:test_api/src/backend/declarer.dart:253:15)
+<asynchronous suspension>
+#4      Declarer.test.<anonymous closure> (package:test_api/src/backend/declarer.dart:250:11)
+<asynchronous suspension>
+#5      Invoker._waitForOutstandingCallbacks.<anonymous closure> (package:test_api/src/backend/invoker.dart:318:9)
+<asynchronous suspension>
+
+00:14 +1141: test/run_app_test.dart: runApp asks the terminal for its background a light answer gives the light theme, before the first frame
+00:15 +1142: test/run_app_test.dart: runApp asks the terminal for its background a dark answer gives the dark theme, even with COLORFGBG light
+00:15 +1143: test/run_app_test.dart: runApp asks the terminal for its background no answer: COLORFGBG after 100 ms
+00:15 +1144: test/run_app_test.dart: runApp asks the terminal for its background no answer and no COLORFGBG: dark by default
+00:15 +1145: test/run_app_test.dart: runApp asks the terminal for its background a theme given is used whatever the background
+00:15 +1146: test/run_app_test.dart: runApp asks the terminal for its background NO_COLOR wins over a theme given, and still asks
+00:16 +1147: test/run_app_test.dart: runApp asks the terminal for its background NO_COLOR set but empty does not count
+00:16 +1148: test/run_app_test.dart: runApp asks the terminal for its background a reply split 40 ms apart, past a lone escape's 30, is still read, never typed
+00:16 +1149: test/run_app_test.dart: runApp asks the terminal for its background keys typed during the wait reach the app, in order
+00:16 +1150: test/run_app_test.dart: runApp asks the terminal for its background a late reply is dropped, never typed
+00:17 +1151: test/run_app_test.dart: tester: startup lifecycle and held input input closes during the ask without mounting and leaves once
+00:17 +1152: test/run_app_test.dart: tester: startup lifecycle and held input held keys and paste are delivered once in order after one mount
+00:17 +1153: test/run_app_test.dart: tester: startup lifecycle and held input other OSC does not resolve the ask and malformed OSC 11 falls back
+00:17 +1154: test/run_app_test.dart: tester: startup lifecycle and held input held quit cancels pending escape and frame timers
+00:17 +1155: test/run_app_test.dart: tester: startup lifecycle and held input input error during the ask leaves without mounting
+Bad state: tester input failure
+
+00:17 +1156: All tests passed!

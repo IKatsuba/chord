@@ -1,0 +1,40 @@
+ [38;2;190;250;218m[48;2;164;244;206m▀[38;2;150;241;199m[49m▄[39m     [1mchord[0;2m v0.0.1[0m
+ [38;2;139;238;193m▀[38;2;124;235;186m[48;2;99;229;173m▀[38;2;110;231;179m[48;2;85;225;167m▀[38;2;71;222;160m[49m▄[39m   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2m~/project[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m propose
+
+ ⏺ A lead on Opus to split the work, and three members, one for each step. Only one of them edits a file at a time.
+
+ [38;2;78;186;101m⏺[39m [1mTeam[0m(bugfix)[2m · proposal[0m
+   [2m⎿[0m  [2mFixes a bug end to end: a failing test first, then the fix, then a review of the diff.[0m
+
+   [2m [0m  lead      claude · opus          default      Splits the job, says who edits which files, reports to main
+   [2m [0m  tester    claude · sonnet        acceptEdits  Writes the failing test, then proves the fix
+   [2m [0m  coder     codex · gpt-5.3-codex  auto         Writes the fix, in the files the lead names
+   [2m [0m  reviewer  claude · opus          plan         Reads the diff and edits nothing
+   [2m [0m
+   [2m [0m  lead's instructions
+   [2m [0m  Read the job and the code it points at until you can name the cause and the files involved. Open tester first,
+   [2m [0m  coder once tester's test fails, and reviewer last, on the diff.
+   [2m [0m
+   [2m [0m  tester's instructions
+   [2m [0m  Write the smallest test that fails because of the bug, and run it to show that.
+   [2m [0m
+   [2m [0m  coder's instructions
+   [2m [0m  Make the failing test pass with the smallest change. Do not touch tests.
+   [2m [0m
+   [2m [0m  reviewer's instructions
+   [2m [0m  Read `git diff` and the test. Never edit a file.
+   [2m [0m
+   [2m [0m  [1;4mHow bugfix works[0m
+
+      [2m1. [0mThe lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      [2m2. [0mtester writes a test that fails for the bug's own reason. It edits [38;2;177;185;249mtests/[39m only, and reports the failure.
+ [2m── ↓ 19 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

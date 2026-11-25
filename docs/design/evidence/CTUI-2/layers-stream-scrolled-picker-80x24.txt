@@ -1,0 +1,24 @@
+line 31 of the transcript, scrolled back scrolled back scrolled back
+line 32 of the transcript,
+line 33 of the transcript, scrolled back
+line 34 of the transcript, scrolled back scrolled back
+line 35 of the transcript, scrolled back scrolled back scrolled back
+line 36 of the transcript,
+line 37 of the transcript, scrolled back
+line 38 of the transcript, scrolled back scrolled back
+line 39 of the transcript, scrolled back scrolled back scrolled back
+line 40 of the transcript,
+line 41 of the transcript, scrolled back
+line 42 of the transcript, scrolled back scrolled back
+╭ Models ──────╮ranscript, scrolled back scrolled back scrolled back
+│ ❯ Careful    │ranscript,
+│   Balanced   │ranscript, scrolled back
+│   Quick      │ranscript, scrolled back scrolled back
+│   Thorough   │ranscript, scrolled back scrolled back scrolled back
+│ Esc to close │ranscript,
+╰──────────────╯ranscript, scrolled back
+
+> /model
+  more prompt
+page builds 7 · rows 72 · offset 30 · scrolled back
+enter Choose  escape Close  tab Next field  shift+tab Previous field  ctrl+p Pi…

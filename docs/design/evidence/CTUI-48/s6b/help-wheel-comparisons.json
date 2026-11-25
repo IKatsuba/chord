@@ -1,0 +1,18 @@
+[
+  {
+    "case": "help-120x40-initial",
+    "prompt_cells_and_cursor_after_wheel": "unchanged"
+  },
+  {
+    "case": "help-120x40-closing-initial",
+    "prompt_cells_and_cursor_after_wheel": "unchanged"
+  },
+  {
+    "case": "help-80x24-initial",
+    "prompt_cells_and_cursor_after_wheel": "unchanged"
+  },
+  {
+    "case": "help-80x24-closing-initial",
+    "prompt_cells_and_cursor_after_wheel": "unchanged"
+  }
+]

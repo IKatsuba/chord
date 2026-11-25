@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfixture[0m
+ ▄██▀   [2mproject[0m
+ █▀     [2m? for shortcuts[0m
+
+ ! printf "line 01\nline 02\nline 03\nline 04\nline 05\nline 06\nline 07\nline 08\nline 09\nline 10\nline 11\nline
+   12\n"
+   printf "warning\n" >&2; exit 3
+   [2m⎿[0m  line 01
+      line 02
+      line 03
+      line 04
+      line 05
+      line 06
+      line 07
+      line 08
+      line 09
+      line 10
+      line 11
+      line 12
+   [2m [0m  warning
+   [2m [0m  Exit code 3
+
+ ! hold
+   [2m⎿[0m  ready
+   [2m [0m  [2mStopped by the user[0m
+
+ ! empty
+   [2m⎿[0m  [2m(No output)[0m
+
+ ! failed
+   [2m⎿[0m  Error: recording shell did not start
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m

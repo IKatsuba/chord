@@ -1,0 +1,24 @@
+Markdown
+controls ·
+recording only
+F2 close/open
+ctrl+s range ·
+ctrl+q quit
+┌ ts ────────┐
+│     copy   │
+│ ↪ body     │
+│            │
+│   tail     │
+└────────────┘
+
+│ ┌ console ─┐
+│ │   quoted │
+│ │ ↪  body  │
+│ └──────────┘
+
+┌ dart ──────┐
+│   streamin │
+│ ↪ g body   │
+└────────────┘
+draft
+Copies 2: quot

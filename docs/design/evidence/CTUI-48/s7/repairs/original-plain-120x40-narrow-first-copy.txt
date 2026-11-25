@@ -1,0 +1,24 @@
+   ┌─ typescript ─┐
+   │ x            │
+   └──────────────┘
+
+   ┌─ sh ──[copy]─┐
+   │ bun dev chor │
+   │ d --fake --q │
+   │ a capture && │
+   │  tmux captur │
+   │ e-pane -t ch │
+   │ ord-qa -p >  │
+   │ /tmp/screen. │
+   │ txt          │
+   │              │
+   │ echo done    │
+   └──────────────┘
+
+   - a loose item
+ ── ↓ 11...s below
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+  sent 1...ipboard

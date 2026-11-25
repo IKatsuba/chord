@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ ⏺ fake did not start: session/new requires `agentAlias` (alias of a configured
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in every directory.                                  │
+│                                                                              │
+│ ❯   1.  1 hour ago    fixture-other                             │
+│         Saved failure recovery session 0 · 界😀 with a descriptive title for │
+│         wrapping                                                             │
+│     2.  2 hours ago   …/CTUI-27                                              │
+│   ↓     Saved failure recovery session 1 · 界😀 with a descriptive title for │
+│     … +16 more                                                               │
+│                                                                              │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

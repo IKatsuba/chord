@@ -1,0 +1,242 @@
+[
+  {
+    "case": "auto-dark-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-dark-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-dark-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-dark-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-dark-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-dark-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-dark-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-dark-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-light-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-light-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-light-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-light-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-light-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-light-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-light-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-light-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-plain-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-plain-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-plain-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-plain-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-plain-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-plain-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-plain-120x40",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-plain-120x40",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-dark-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-dark-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-dark-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-dark-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-dark-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-dark-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-dark-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-dark-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-light-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-light-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-light-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-light-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-light-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-light-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-light-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-light-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-plain-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-plain-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-plain-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-plain-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-plain-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-plain-80x24",
+    "role": "port",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-plain-80x24",
+    "role": "original",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-plain-80x24",
+    "role": "port",
+    "exit": "1,0"
+  }
+]

@@ -1,0 +1,24 @@
+ Pick one
+
+Filter: Choice 7
+❯ 1. Choice 7, with a
+     second line
+       under its label
+  2. Choice 17
+  3. Choice 27
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Chosen: choice 7
+up Previous choice  k P…

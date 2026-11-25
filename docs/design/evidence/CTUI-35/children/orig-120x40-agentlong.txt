@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › agentlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  Read AGENTS.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing quote.
+      2. Add two cases to `tests/parse/tokenize_test.ts`.
+      3. Run `bun quality` in the foreground and **do not** hand back until it passes.
+
+      Tell me only what failed, if anything.
+
+ ⏺ Waiting on parser.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 11s
+    parser  fake · Fake Small · medium                           ◦ idle 10s  ✓ new reply

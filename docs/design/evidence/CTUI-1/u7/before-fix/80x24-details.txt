@@ -1,0 +1,24 @@
+ chorded-tui demo                      dark: the terminal did not say, no colour
+╭ log ─────────────────────────────────────────────────────────────────────────╮
+│ accent link code success warning error  + added  - removed                   │
+│ 167 line 167, and more, and more, and more, and more, and more,    108 cells │
+│     and more, and more, and more, and more, and more                         │
+│ 168 line 168, and more, and more, and more, and more, and more,    118 cells │
+│     and more, and more, and more, and more, and more, and more               │
+│ 169 line 169                                                         8 cells │
+│ 170 line 170, and more                                              18 cells │
+│ 171 line 171, and more, and more                                    28 cells │
+│ 172 line 172, and more, and more, and more                          38 cells │
+│ 173 line 173, and more, and more, and more, and more                48 cells │
+│ 174 line 174, and more, and more, and more, and more, and more      58 cells │
+│ 175 line 175, and more, and more, and more, and more, and more, and 68 cells │
+│     more                                                                     │
+│ 176 line 176, and more, and more, and more, and more, and more, and 78 cells │
+│     more, and more                                                           │
+│ 177 line 177, and more, and more, and more, and more, and more, and 88 cells │
+│     more, and more, and more                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│>  Say something                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl+o Toggle details  ctrl+t Theme  ctrl+x b Toggle busy  ctrl+x c Clear  ct…

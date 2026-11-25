@@ -1,0 +1,68 @@
+{
+  "status": "Pre-fix CTUI-26 scale evidence; CTUI-53 cancellation cleanup barrier remains mandatory. This is not an all-gates-pass report.",
+  "baseCommit": "2b550b7fd9299b30c9f843967aaf4d82972db441",
+  "originalSourceCommit": "577b58167672e12c999aeaf4eed2a1a988513dc2",
+  "platform": "darwin",
+  "environment": {
+    "TMPDIR": "owned empty directory",
+    "XDG_STATE_HOME": "owned empty directory",
+    "CHORD_SOURCE": "finder-resolved read-only ../chord checkout"
+  },
+  "commands": {
+    "jit": "nice -n 19 dart run benchmark/records.dart --runtime=jit",
+    "aotCompile": "nice -n 19 dart compile exe benchmark/records.dart -o build/records",
+    "aot": "nice -n 19 build/records --runtime=aot",
+    "smallControl": "add --small to the matching runtime command",
+    "picker": "nice -n 19 build/records --picker-only"
+  },
+  "commandScope": "Commands normalize the owned executable output to build/records; source and package locks came from the exact base archive plus the two benchmark/reference files. All runs were sequential in reserved heavy slots.",
+  "instrumentation": {
+    "countsOnly": [
+      "jit-small.json",
+      "aot-small.json",
+      "jit-1.json",
+      "jit-2.json"
+    ],
+    "immediateNamedSnapshots": [
+      "jit-diagnostic.json",
+      "jit-3.json",
+      "aot-small-diagnostic.json",
+      "aot-1.json",
+      "aot-2.json",
+      "aot-3.json"
+    ],
+    "actualPickerHost": [
+      "aot-picker-small.json",
+      "aot-picker-2000.json"
+    ],
+    "limits": "Named snapshots add external lsof calls between stages; original counts-only and diagnostic versions are retained separately. No mixed-instrumentation or cross-runtime speed ratio. Leading slashes in descriptor paths are relative to the owned root, not system paths."
+  },
+  "repetitions": {
+    "fullJit": 3,
+    "fullAot": 3,
+    "extraJitDiagnostic": 1,
+    "smallControls": 3,
+    "smallPicker": 1,
+    "fullPicker": 1
+  },
+  "workloadNotes": "Each default run freshly wrote 2000 records (139890199 bytes), including 64KiB irrelevant payload per file and one additional 8MiB line; OS caches were warm after creation. Selected history was 4000 turns/12000 actions/8000 entries (1401340 bytes). Steady frames are 50 unpaced back-to-back draws and cell diffs. The stalled append is an injected gate, not filesystem flush or durability timing.",
+  "retainedHandleObservations": {
+    "fullJitEndCounts": [
+      0,
+      1,
+      7
+    ],
+    "fullAotEndCounts": [
+      8,
+      0,
+      0
+    ],
+    "jit2": "Initial retained end-handle observation; descriptor name was not captured. The series stopped for the bounded diagnostic, preserving this raw JSON.",
+    "diagnostic": "One DIR /records immediately after cancel; later snapshots zero. It does not identify the earlier retained end handle.",
+    "namedRecurrences": "JIT3 and AOT1 retain REG record-file descriptors from afterCancelScan through root deletion. All names and descriptor numbers are retained in their JSONs.",
+    "disposition": "The historical acceptance of unresolved handles was superseded by CTUI-53; no final cancellation cleanup pass is claimed."
+  },
+  "metricLimits": "Physical isolate count and exit latency are unmeasured. Cancellation latency is request to Future settlement only. OS descriptor counts are direct lsof observations; operation futures and instrumented scanner streams are separate counters. No samples means null, not zero measured latency. RSS peak is cumulative for each process. Bun is a separately labelled original reference with different runtime/features and no synthetic Actions input.",
+  "responsivenessDisposition": "Transcript first-layout/resize hitches and the separate 2000-choice picker navigation redraw hitch are retained. Main deferred the picker all-item redraw concern to a framework follow-up; no framework/cache change or O(visible rows) claim is made here.",
+  "cleanupScope": "Every actual fixture root was deleted; each process exited, scratch binaries and outer TMPDIR/XDG were removed, and no owned process remained. This does not imply zero descriptors before process exit; the pre-fix failure counts above remain failures for CTUI-53."
+}

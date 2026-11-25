@@ -1,0 +1,53 @@
+{
+  "sourceCommit": "a49170c44dc59b0074008f10bc2b5cb75209a850",
+  "compileCommand": "nice -n 19 dart compile exe benchmark/picker.dart -o build/ctui54_picker",
+  "binarySha256": "79b8368882fff4ba6db9a869a60a7c39db077c14fa02982f68b0d793d1398aef",
+  "runs": [
+    {
+      "file": "aot-default-2000.json",
+      "command": "nice -n 19 build/ctui54_picker --count=2000 --kind=default --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.845,
+      "stderrFile": "aot-default-2000.json.stderr"
+    },
+    {
+      "file": "aot-default-10000.json",
+      "command": "nice -n 19 build/ctui54_picker --count=10000 --kind=default --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.304,
+      "stderrFile": "aot-default-10000.json.stderr"
+    },
+    {
+      "file": "aot-exact-2000.json",
+      "command": "nice -n 19 build/ctui54_picker --count=2000 --kind=exact --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.594,
+      "stderrFile": "aot-exact-2000.json.stderr"
+    },
+    {
+      "file": "aot-exact-10000.json",
+      "command": "nice -n 19 build/ctui54_picker --count=10000 --kind=exact --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 9.491,
+      "stderrFile": "aot-exact-10000.json.stderr"
+    },
+    {
+      "file": "aot-fallback-20.json",
+      "command": "nice -n 19 build/ctui54_picker --count=20 --kind=fallback --runtime=aot --source=a49170c44dc59b0074008f10bc2b5cb75209a850",
+      "exitCode": 0,
+      "wallSeconds": 8.666,
+      "stderrFile": "aot-fallback-20.json.stderr"
+    }
+  ],
+  "limits": "Framework-only in-memory corpus. Three repetitions at beginning, middle, end; 50 scheduled samples each. Cold scalar projection is O(N), RSS is process observation rather than retained heap proof. Fallback20 is a separate control. No resume picker, disk, agent, PTY or display timing. Tester execution held during numeric runs. No numeric universal pass threshold.",
+  "cleanup": "Every host disposed, all input timers awaited, no external process started by harness. Runner waited for each benchmark process exit. Scratch binary removal recorded separately.",
+  "cleanupChecks": {
+    "ownedBenchmarkPidsAfterExit": [],
+    "scratchBinaryRemoved": true,
+    "ownedRootsCreated": 0,
+    "tmuxSessionsCreated": 0,
+    "allStderrEmpty": true
+  },
+  "productionCommit": "ffa1efd2f86b9d92013aa0b9ebe7b7d4af73938a",
+  "harnessCommit": "a49170c44dc59b0074008f10bc2b5cb75209a850"
+}

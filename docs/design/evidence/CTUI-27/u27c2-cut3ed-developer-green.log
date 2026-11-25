@@ -1,0 +1,337 @@
+00:00 +0: loading test/ui/app/search_keys_test.dart
+00:00 +0: test/ui/app/search_keys_test.dart: search open and older keys use the original literal state
+00:00 +1: test/ui/app/search_keys_test.dart: accept recalls bash and closes completions without sending/steering
+00:00 +2: test/ui/app/search_keys_test.dart: cancel/no-match leaves saved text cursor and history untouched
+00:00 +3: test/ui/app/search_keys_test.dart: modal and query editing guards preserve original action priority
+00:00 +4: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +5: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +6: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +7: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +8: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +9: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +10: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +11: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +12: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +13: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +14: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +15: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +16: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +17: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +18: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +19: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +20: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +21: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +22: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +23: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +24: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +25: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +26: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +27: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +28: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +29: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +30: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +31: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +32: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +33: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +34: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +35: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +36: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +37: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +38: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +39: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +40: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +41: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +42: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +43: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +44: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +45: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +46: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +47: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +48: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +49: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +50: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +51: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +52: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +53: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +54: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +55: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +56: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +57: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +58: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +59: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +60: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +61: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +62: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +63: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +64: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +65: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +66: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +67: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +68: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +69: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +70: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +71: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +72: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +73: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +74: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +75: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +76: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +77: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +78: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +79: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +80: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +81: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +82: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +83: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +84: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +85: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +86: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +87: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +88: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +89: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +90: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +91: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +92: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +93: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +94: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +95: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +96: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +97: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +98: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +99: test/ui/app/search_window_test.dart: search preserves draft/cursor/undo and accepts without sending Size(120, 40)
+00:00 +100: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +101: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +102: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +103: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +104: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +105: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +106: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +107: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +108: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +109: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +110: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +111: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +112: test/ui/app/steering_window_test.dart: Tab preserves Unicode draft and serializes oldest rows at Size(120, 40)
+00:00 +113: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:00 +114: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:00 +115: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:00 +116: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +117: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +118: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +119: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +120: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +121: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +122: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +123: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +124: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +125: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +126: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +127: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +128: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +129: test/ui/app/steering_window_test.dart: pending label and refused row at Size(120, 40)
+00:01 +130: test/ui/app/steering_window_test.dart: pending label and refused row at Size(120, 40)
+00:01 +131: test/ui/app/steering_window_test.dart: pending label and refused row at Size(120, 40)
+00:01 +132: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +133: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +134: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +135: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +136: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +137: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +138: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +139: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +140: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +141: test/ui/app/commands_window_test.dart: live slash commands advertisement replacement is re-matched before same-chunk acceptance
+00:01 +142: test/ui/app/search_window_test.dart: query tab recalls once at clipped8x3 without sending Size(120, 40)
+00:01 +143: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:01 +144: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:01 +145: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +146: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +147: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +148: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +149: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +150: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +151: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +152: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +153: test/ui/app/code_pick_context_test.dart: permission/form: real selection copy and pick commands precede choices and interrupt Size(120, 40)
+00:02 +154: test/ui/app/shortcuts_window_test.dart: help over the original fake permission help dismissal preserves request, then real choice resolves once at Size(80, 24)
+00:02 +155: test/ui/app/shortcuts_window_test.dart: help over the original fake permission help dismissal preserves request, then real choice resolves once at Size(80, 24)
+00:02 +156: test/ui/app/shortcuts_window_test.dart: help over the original fake permission help dismissal preserves request, then real choice resolves once at Size(80, 24)
+00:02 +157: test/ui/app/shortcuts_window_test.dart: help over the original fake permission help dismissal preserves request, then real choice resolves once at Size(80, 24)
+00:02 +158: test/ui/app/shortcuts_window_test.dart: help over the original fake permission help dismissal preserves request, then real choice resolves once at Size(80, 24)
+00:02 +159: test/ui/app/commands_window_test.dart: live slash commands zero completion room submits typed text and restored room never defers acceptance
+00:02 +160: test/ui/app/commands_window_test.dart: live slash commands zero completion room submits typed text and restored room never defers acceptance
+00:02 +161: test/ui/app/commands_window_test.dart: live slash commands zero completion room submits typed text and restored room never defers acceptance
+00:02 +162: test/ui/app/commands_window_test.dart: live slash commands zero completion room submits typed text and restored room never defers acceptance
+00:02 +163: test/ui/app/commands_window_test.dart: live slash commands zero completion room submits typed text and restored room never defers acceptance
+00:02 +164: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +165: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +166: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +167: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +168: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +169: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +170: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +171: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +172: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +173: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +174: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +175: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +176: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +177: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +178: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +179: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +180: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +181: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +182: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +183: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +184: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +185: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +186: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +187: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +188: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +189: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +190: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +191: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +192: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +193: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +194: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +195: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +196: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +197: test/ui/app/steering_window_test.dart: pending label and refused row at Size(80, 24)
+00:02 +198: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +199: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +200: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +201: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +202: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +203: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +204: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +205: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +206: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +207: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +208: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +209: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +210: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +211: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +212: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +213: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:02 +214: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:03 +215: test/ui/app/commands_window_test.dart: live slash commands agent completion accepts arguments and resize preserves semantic highlight
+00:03 +216: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(80, 24)
+00:03 +217: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(80, 24)
+00:03 +218: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(80, 24)
+00:03 +219: test/ui/app/search_window_test.dart: query enter recalls once at clipped8x3 without sending Size(80, 24)
+00:03 +220: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +221: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +222: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +223: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +224: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +225: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +226: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +227: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +228: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +229: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +230: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +231: test/ui/app/permission_window_test.dart: permission follows plan and queue and returns draft focus at Size(120, 40)
+00:03 +232: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +233: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +234: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +235: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +236: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +237: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +238: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +239: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +240: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +241: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +242: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +243: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +244: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +245: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +246: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +247: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +248: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +249: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +250: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +251: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +252: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +253: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +254: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +255: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +256: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +257: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +258: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +259: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +260: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +261: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +262: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +263: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +264: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +265: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +266: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +267: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +268: test/ui/app/commands_window_test.dart: live slash commands first Escape dismisses completion, editing reopens it, next Escape interrupts at Size(120, 40)
+00:03 +269: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +270: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +271: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +272: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +273: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +274: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +275: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +276: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +277: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +278: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +279: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +280: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +281: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +282: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +283: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +284: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +285: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +286: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +287: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +288: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +289: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +290: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +291: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +292: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +293: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +294: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +295: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +296: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +297: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +298: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +299: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +300: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +301: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +302: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +303: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +304: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +305: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +306: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +307: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +308: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +309: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +310: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +311: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:03 +312: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +313: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +314: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +315: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +316: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +317: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +318: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +319: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:04 +320: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:05 +321: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:05 +322: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:06 +323: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:06 +324: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:06 +325: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:06 +326: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:06 +327: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:07 +328: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:07 +329: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:07 +330: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:07 +331: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:08 +332: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:08 +333: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:08 +334: test/ui/app/steering_window_test.dart: latest note expiry and disposal retire timers
+00:10 +335: All tests passed!

@@ -1,0 +1,73 @@
+{
+  "productionCommit": "c784f3d1f4c745165b100078c4d151ee77163c51",
+  "sourceCommit": "c784f3d1f4c745165b100078c4d151ee77163c51",
+  "harnessCommit": "5674e39d8de00ab936ebbc6a71796493624a5c25",
+  "compileCommand": "nice -n 19 dart compile exe example/chord/benchmark/picker.dart -o build/tester_resume_picker",
+  "binarySha256": "f84a7bfdd54076943b7354f73a6c46f73da7228fb2793133270fc8b5c7fc8376",
+  "runs": [
+    {
+      "file": "aot-baseline-20.json",
+      "stderrFile": "aot-baseline-20.json.stderr",
+      "command": "nice -n 19 build/tester_resume_picker --count=20 --corpus=baseline --runtime=aot-tester-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 9.581
+    },
+    {
+      "file": "aot-baseline-2000.json",
+      "stderrFile": "aot-baseline-2000.json.stderr",
+      "command": "nice -n 19 build/tester_resume_picker --count=2000 --corpus=baseline --runtime=aot-tester-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 9.549
+    },
+    {
+      "file": "aot-baseline-10000.json",
+      "stderrFile": "aot-baseline-10000.json.stderr",
+      "command": "nice -n 19 build/tester_resume_picker --count=10000 --corpus=baseline --runtime=aot-tester-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 11.285
+    },
+    {
+      "file": "aot-wrapped-2000.json",
+      "stderrFile": "aot-wrapped-2000.json.stderr",
+      "command": "nice -n 19 build/tester_resume_picker --count=2000 --corpus=wrapped --runtime=aot-tester-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 9.78
+    },
+    {
+      "file": "aot-wrapped-10000.json",
+      "stderrFile": "aot-wrapped-10000.json.stderr",
+      "command": "nice -n 19 build/tester_resume_picker --count=10000 --corpus=wrapped --runtime=aot-tester-post-cap --source=c784f3d1f4c745165b100078c4d151ee77163c51",
+      "exitCode": 0,
+      "wallSeconds": 12.457
+    }
+  ],
+  "preCapEvidenceCommit": "921684b",
+  "developerPostCapEvidenceCommit": "8d3cc83",
+  "referenceFile": "example/chord/test/fixtures/records/scale/aot-picker-2000.json",
+  "referenceSha256": "ba2868172e488bd267d1e212d754b76774f7802db34e26a2f285f9dffa3675a0",
+  "limits": "Independent exact committed production, same unchanged harness/corpora. First body includes construction, reported separately; corpus setup excluded. Stage input scheduled before body, total and minus requested16ms retained. Stable groups include requested16ms; position setup separate. Numeric counters add observation overhead. Group distributions retained; aggregate p95 is not worst-group p95. RSS process-only, no heap/physical display/agent/IO measurement. Exact cold projection O(N).",
+  "cleanup": "All5subprocesses awaited;15hosts disposed;2250navigation+60stage timers awaited. No external process orfixture root created byharness. Owned benchmark binary removed; owned live fixture quit and tmux server ended.",
+  "cleanupChecks": {
+    "ownedBenchmarkPidsAfterExit": [],
+    "scratchBinaryRemoved": true,
+    "allStderrEmpty": true,
+    "ownedTmuxServerEnded": true,
+    "fixtureRootsCreated": 0,
+    "exactArchiveRemoved": true
+  },
+  "correctness": {
+    "tests": "108 reached cap/resume/start/window tests passed on exact production plus independent tester additions",
+    "analyze": "No issues found",
+    "format": "685 files, 0 changed"
+  },
+  "harnessFileSha256": "f320e84aa1c7a263c43a9fa2d27786e3f7e8be342f91fedad9bd4e50e72eb312",
+  "validation": {
+    "reports": "5 reports,3 repetitions,450 navigation samples each;15hosts total",
+    "cold": "exactly N shared shapes;zero no-edge and edge sizing passes on every first/cold body",
+    "stable": "all choice/line/shaping counters zero,including stage-scheduled input and unchanged frames",
+    "surface": "extentCount=N;mounted/placed<=9baseline,<=7wrapped",
+    "timers": "2250 navigation+60stage timers awaited;15hosts disposed",
+    "referenceConvention": "CTUI-26 scheduledToAcceptanceMs subtracts requested16ms;compare with new stage afterRequestedDelayMs,not stable total delay",
+    "harnessUnchanged": true
+  }
+}

@@ -1,0 +1,25 @@
+ORIGINAL + RECORDING STUB                                                        | PORT + RECORDING BOOTSTRAP
+ ▀▄     chord v0.71.0                                                            |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               |  ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   build/ctui48-s7-project                                                  |  ▄▀▀▀   build/ctui48-s7-project
+ ▀▀     ? for shortcuts · /help                                                  |  ▀▀     ? for shortcuts
+                                                                                 | 
+ ⏺ --no-mcp-servers held back 1 MCP server from fake: chord (chord's own).       |  › markdowncode
+   Without it, fake cannot start other agents or use chord's tools. /mcp lists   | 
+   it.                                                                           |  ⏺ A paragraph before the code.
+                                                                                 | 
+ › markdowncode                                                                  |    ┌ typescript ──[copy]─┐
+                                                                                 |    │   x                 │
+ ⏺ A paragraph before the code.                                                  |    └─────────────────────┘
+                                                                                 | 
+   ┌─ typescript ─[copy]─┐                                                       |    ┌ sh ───────────────────────────────────────────────────────────────[copy]─┐
+   │ x                   │                                                       |    │   bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p  │
+   └─────────────────────┘                                                       |    │ ↪ > /tmp/screen.txt                                                      │
+                                                                                 |    │                                                                          │
+   ┌─ sh ────────────────────────────────────────────────────────[copy]─[run]─┐  |    │   echo done                                                              │
+ ── ↓ 15 lines below · end to jump to the bottom ──────────────────────────────  |  ── ↓ 11 lines below · end to jump to the bottom ──────────────────────────────
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  sent 28 chars to the terminal's clipboard                                      |   sent 28 chars to the terminal's clipboard

@@ -1,0 +1,11 @@
+{
+  "matched_panes": 48,
+  "matched_exit0": 48,
+  "public_demo_final_panes": 2,
+  "public_demo_exit0": 2,
+  "owned_tmux_server": "absent",
+  "owned_fixture_fake_processes": [],
+  "original_isolated_config_state_and_port_journal": "removed after retaining all journals",
+  "setup_probes": "closed normally, retained setup misses explicit",
+  "host_clipboard": "never constructed/called by visual launchers"
+}

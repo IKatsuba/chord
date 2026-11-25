@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › resources
+
+ ⏺ Resources
+   ⎿  Read: 16:45:35 UTC · advisory snapshot
+      claude · 5h: 12.345% used · reset 17:45 UTC · models unknown
+      codex · 5h: 12.345% used · reset 17:45 UTC · models unknown
+
+ ⏺ Resource facts are advisory; unknown data remains unknown.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

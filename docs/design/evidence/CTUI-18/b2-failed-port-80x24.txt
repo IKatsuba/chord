@@ -1,0 +1,24 @@
+Permission fixture: failed
+Transcript
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│    1 - old                                                                   │
+│    1 + proposed line 1                                                       │
+│    2 + proposed line 2                                                       │
+│    3 + proposed line 3                                                       │
+│    4 + proposed line 4                                                       │
+│    5 + proposed line 5                                                       │
+│ ── ↓ 55 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │
+│ The safety review could not run (The reviewer did not respond). Allow it     │
+│ yourself, or deny it.                                                        │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Answer:

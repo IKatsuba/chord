@@ -188,7 +188,7 @@ exit [lindex $result 3]
 awaitText "Selection area"
 send "\x1b\[<0;1;1M\x1b\[<32;9;1M\x1b\[<0;9;1m\x13"
 awaitText "finalize"
-exec /bin/kill -WINCH -[exp_pid]
+exec /bin/kill -WINCH -- -[exp_pid]
 awaitText "finalized: Selection"
 send "\x11"
 ''',
@@ -208,7 +208,7 @@ send "\x11"
 awaitText "Fake Large"
 send "markdowncode\\r"
 awaitText "check"
-exec /bin/kill -WINCH -[exp_pid]
+exec /bin/kill -WINCH -- -[exp_pid]
 awaitText "bun dev check"
 awaitText "\\x1b\\[?2026l"
 send "\\030bc"
@@ -247,7 +247,7 @@ send "\\x03\\x04"
 awaitText "Fake Large"
 send "markdowncode\\r"
 awaitText "check"
-exec /bin/kill -WINCH -[exp_pid]
+exec /bin/kill -WINCH -- -[exp_pid]
 awaitText "bun dev check"
 awaitText "\\x1b\\[?2026l"
 send "\\030bc"

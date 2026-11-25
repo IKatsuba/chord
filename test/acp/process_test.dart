@@ -787,7 +787,11 @@ void main() {
 
     test('an agent closing its stdin while chord writes does not end '
         'chord', () async {
-      final agent = await spawn('exec 0<&-; sleep 0.3');
+      // It closes once chord's first bytes reached it and a second has
+      // passed: by then the pipe is full and a flush is waiting on it.
+      final agent = await spawn(
+        'head -c 1 >/dev/null; sleep 1; exec 0<&-; sleep 0.3',
+      );
       final chunk = List.filled(64 * 1024, 0x61);
       Object? failed;
       try {
@@ -798,9 +802,17 @@ void main() {
       } catch (error) {
         failed = error;
       }
-      expect(failed, isNotNull);
+      if (Platform.isLinux) {
+        // dart:io on Linux takes the hangup of a pipe it is blocked writing
+        // to as a silent close: that flush and every later write complete
+        // with no error, the bytes dropped. Only the exit tells of it.
+        expect(failed, isNull);
+      } else {
+        expect(failed, isA<SocketException>());
+      }
+      expect(await agent.status, const Exit(0));
       await agent.stop(bounds);
-      await agent.status;
+      expect(await inGroupAfterStop(agent.pid), isEmpty);
     });
 
     test('what the writer adds after a flush that was pending at the end '

@@ -4502,3 +4502,15 @@ with Bun tooling for the adapter only. The TypeScript chord is preserved
 at `ts-final` as reference history, not a specification for new behaviour.
 Before the swap, `../chord` and "the original" in this log and the designs
 mean that TypeScript app. Its own decisions log stays at `ts-final`.
+
+## CTUI-192: a pipe the agent closes while chord writes, on Linux
+
+When an agent closes its stdin while a write to it is blocked on a full
+pipe, dart:io on macOS fails that flush with a broken pipe; on Linux it
+takes the hangup as a silent close: that flush and every later write
+complete with no error, the bytes dropped, and the sink's `done` never
+completes. chord does not rely on the write error either way: the
+agent's exit is what tells of it. `test/acp/process_test.dart` drives
+that full-pipe shape deterministically and asserts each host's real
+behaviour, a write error on macOS and none on Linux, with the exit
+observed and a clean stop on both (main's decision; not a loosening).

@@ -435,7 +435,8 @@ void main() {
     /// [runReal]'s run, with how long after the start its shell's exit
     /// was heard, null when it never was, and when the run ended; null as
     /// a whole for the refusal of a run its timeout stopped before its
-    /// shell started, as a loaded machine's slow launcher allows.
+    /// shell started, as a loaded machine's slow launcher allows: its shell
+    /// ended stopped, at or past the timeout. Any other refusal fails.
     Future<((MonitorEnd, List<String>, bool), int?, int)?> runTimed(
       String command, {
       required int timeoutMs,
@@ -443,6 +444,7 @@ void main() {
       final hooks = _Hooks();
       final watch = Stopwatch();
       int? heard;
+      ShellProcess? shell;
       final run = await MonitorRun.start(
         MonitorInfo(
           id: 'm1',
@@ -465,10 +467,16 @@ void main() {
             ),
           );
           process.exited.then((_) => heard = watch.elapsedMilliseconds);
-          return process;
+          return shell = process;
         },
       );
-      if (run is! MonitorRun) return null;
+      if (run is! MonitorRun) {
+        // Reaped first, whatever it was.
+        final end = await shell!.ended;
+        final at = watch.elapsedMilliseconds;
+        if (end.stopped && at >= timeoutMs) return null;
+        fail('refused after ${at}ms, not by its ${timeoutMs}ms timeout: $run');
+      }
       await run.ended;
       final ended = watch.elapsedMilliseconds;
       final (end, rest) = hooks.ends.single;

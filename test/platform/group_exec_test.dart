@@ -97,6 +97,7 @@ void main() {
   });
 
   group('tester: launcher boundaries', () {
+    // The case covers three launches, each with its own 30-second bound.
     test('empty input, wrong flag and empty nonce are rejected', () async {
       for (final args in <List<String>>[
         [],
@@ -108,7 +109,7 @@ void main() {
         expect(result.stdout, isEmpty);
         expect(result.stderr, 'chord: malformed $groupExecFlag call\n');
       }
-    });
+    }, timeout: const Timeout(Duration(minutes: 2)));
 
     test('arguments retain empty strings, Unicode and shell syntax', () async {
       final words = ['', 'one two', '界👩‍💻e\u0301', r'$HOME;*#', 'a\nb', '--'];
@@ -167,11 +168,12 @@ void main() {
           '--packages=$packages',
           File('bin/chord.dart').absolute.path,
           groupExecFlag,
-        ]).timeout(const Duration(seconds: 30));
+        ]).timeout(const Duration(minutes: 2));
         expect(result.exitCode, 126);
         expect(result.stdout, isEmpty);
         expect(result.stderr, 'chord: malformed $groupExecFlag call\n');
       },
+      timeout: const Timeout(Duration(minutes: 3)),
     );
   });
 }

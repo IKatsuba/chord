@@ -45,22 +45,24 @@ Future<void> checkProof(
 }
 
 void main() {
-  final supported = Platform.isMacOS && File('/usr/sbin/lsof').existsSync();
-  test(
-    'public record IO immediate owned descriptors under JIT',
-    () async {
-      await checkProof('jit', Platform.resolvedExecutable, [
-        'run',
-        'tool/record_worker_handles.dart',
-      ]);
-    },
-    skip: supported ? false : 'Own descriptor proof requires macOS lsof.',
-    timeout: const Timeout(Duration(minutes: 3)),
-  );
+  // Linux reads its own descriptors from /proc, macOS through lsof.
+  final supported =
+      Platform.isLinux ||
+      Platform.isMacOS && File('/usr/sbin/lsof').existsSync();
+  const unsupported = 'Own descriptor proof requires /proc or macOS lsof.';
+  test('public record IO immediate owned descriptors under JIT', () async {
+    if (!supported) return markTestSkipped(unsupported);
+    await checkProof('jit', Platform.resolvedExecutable, [
+      'run',
+      'tool/record_worker_handles.dart',
+    ]);
+  }, timeout: const Timeout(Duration(minutes: 3)));
 
   test(
     'public record IO immediate owned descriptors under AOT',
     () async {
+      // In the body: the compile tag runs with --run-skipped.
+      if (!supported) return markTestSkipped(unsupported);
       final root = await Directory.systemTemp.createTemp('record-handles-aot-');
       try {
         final executable = '${root.path}/proof';
@@ -88,7 +90,6 @@ void main() {
       }
     },
     tags: ['compile'],
-    skip: supported ? false : 'Own descriptor proof requires macOS lsof.',
     timeout: const Timeout(Duration(minutes: 4)),
   );
 }

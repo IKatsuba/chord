@@ -52,7 +52,43 @@ final class Gates {
   }
 }
 
-Future<List<Map<String, String>>> descriptors(String root) async {
+Future<List<Map<String, String>>> descriptors(String root) async =>
+    Platform.isLinux ? procDescriptors(root) : lsofDescriptors(root);
+
+/// The own descriptors under [root], read from /proc/self/fd as lsof's
+/// would list them: a descriptor's path is its link, less the
+/// " (deleted)" Linux adds once the file is gone, and its type is lsof's
+/// REG or DIR for what the descriptor holds.
+List<Map<String, String>> procDescriptors(String root) {
+  final found = <Map<String, String>>[];
+  final listed = Directory('/proc/self/fd').listSync(followLinks: false);
+  for (final entry in listed) {
+    final String target;
+    try {
+      target = Link(entry.path).targetSync();
+    } on FileSystemException {
+      // The listing's own descriptor, closed by now.
+      continue;
+    }
+    final path = target.endsWith(' (deleted)')
+        ? target.substring(0, target.length - ' (deleted)'.length)
+        : target;
+    if (path != root && !path.startsWith('$root/')) continue;
+    final type = switch (FileStat.statSync(entry.path).type) {
+      FileSystemEntityType.file => 'REG',
+      FileSystemEntityType.directory => 'DIR',
+      final other => '$other',
+    };
+    found.add({
+      'descriptor': entry.uri.pathSegments.last,
+      'type': type,
+      'path': path == root ? '.' : path.substring(root.length + 1),
+    });
+  }
+  return found;
+}
+
+Future<List<Map<String, String>>> lsofDescriptors(String root) async {
   final result = await Process.run('/usr/sbin/lsof', [
     '-a',
     '-p',

@@ -433,8 +433,10 @@ void main() {
 
   group('a real command', () {
     /// [runReal]'s run, with how long after the start its shell's exit
-    /// was heard, null when it never was, and when the run ended.
-    Future<((MonitorEnd, List<String>, bool), int?, int)> runTimed(
+    /// was heard, null when it never was, and when the run ended; null as
+    /// a whole for the refusal of a run its timeout stopped before its
+    /// shell started, as a loaded machine's slow launcher allows.
+    Future<((MonitorEnd, List<String>, bool), int?, int)?> runTimed(
       String command, {
       required int timeoutMs,
     }) async {
@@ -466,7 +468,8 @@ void main() {
           return process;
         },
       );
-      await (run as MonitorRun).ended;
+      if (run is! MonitorRun) return null;
+      await run.ended;
       final ended = watch.elapsedMilliseconds;
       final (end, rest) = hooks.ends.single;
       final lines = [...hooks.events.expand((e) => e), ...rest.lines];
@@ -481,7 +484,9 @@ void main() {
     Future<(MonitorEnd, List<String>, bool)> runReal(
       String command, {
       int timeoutMs = 600000,
-    }) async => (await runTimed(command, timeoutMs: timeoutMs)).$1;
+    }) async =>
+        (await runTimed(command, timeoutMs: timeoutMs))?.$1 ??
+        fail('the run was refused within its ${timeoutMs}ms timeout');
 
     /// [command] run with a timeout its shell's exit was heard within,
     /// and, with [whileReaped], one that came before the run ended. On a
@@ -498,10 +503,13 @@ void main() {
       final tried = <String>[];
       var timeoutMs = 1000;
       for (var attempt = 0; attempt < 4; attempt++) {
-        final (result, heard, ended) = await runTimed(
-          command,
-          timeoutMs: timeoutMs,
-        );
+        final timed = await runTimed(command, timeoutMs: timeoutMs);
+        if (timed == null) {
+          tried.add('timeout ${timeoutMs}ms: stopped before its shell started');
+          timeoutMs *= 2;
+          continue;
+        }
+        final (result, heard, ended) = timed;
         if (heard != null &&
             heard < timeoutMs &&
             (!whileReaped || ended > timeoutMs)) {

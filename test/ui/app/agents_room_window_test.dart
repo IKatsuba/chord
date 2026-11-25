@@ -10,6 +10,7 @@ import 'package:chord/session/transcript/types.dart' as model;
 import 'package:chord/session/window_agents.dart';
 import 'package:chord/ui/app/state.dart';
 import 'package:chord_tui/chord_tui.dart';
+import 'package:clock/clock.dart';
 import 'package:chord_tui/testing.dart';
 import 'package:test/test.dart';
 
@@ -106,12 +107,26 @@ Future<void> _answered(WidgetTester t, StartConnection connection) async {
   expect(t.screen, shows('Starting fake…'));
 }
 
+/// The instant every case runs at: the rows read `idle 0s` only while
+/// the wall clock does not pass a second, which a loaded machine lets it.
+/// Far past the wall clock, so a stamp taken off it reads years idle.
+final _instant = DateTime.utc(2100);
+
+/// [testWidgets] with the clock stopped at [_instant].
+void _roomTest(
+  String description,
+  Future<void> Function(WidgetTester t) body,
+) => testWidgets(
+  description,
+  (t) => withClock(Clock.fixed(_instant), () => body(t)),
+);
+
 void main() {
   _testerRoomResizes();
   for (final size in const [Size(120, 40), Size(80, 24)]) {
     final short = size.height == 24;
 
-    testWidgets('with no request the list is whole under the status line, '
+    _roomTest('with no request the list is whole under the status line, '
         'at $size', (t) async {
       await _three(t, size);
       expect(_list(t), _whole);
@@ -119,9 +134,7 @@ void main() {
       expect(lines[lines.length - 5], '  Starting fake…');
     });
 
-    testWidgets('a plan box as asked leaves the list whole, at $size', (
-      t,
-    ) async {
+    _roomTest('a plan box as asked leaves the list whole, at $size', (t) async {
       final connection = await _three(t, size);
       _ask(connection, planAsks: const [_plan]);
       await t.pump();
@@ -138,7 +151,7 @@ void main() {
     // list whole; five keep three rows, the list two agents and
     // `… +2 more`, as the original's captures show.
     for (final (words, lines) in const [(35, 3), (58, 5)]) {
-      testWidgets('a Note of $lines lines shares the rows with the list as '
+      _roomTest('a Note of $lines lines shares the rows with the list as '
           'the original does, at $size', (t) async {
         final connection = await _three(t, size);
         _ask(connection, planAsks: const [_plan]);
@@ -180,7 +193,7 @@ void main() {
       });
     }
 
-    testWidgets("a permission body gives way only past the list's floor, "
+    _roomTest("a permission body gives way only past the list's floor, "
         'at $size', (t) async {
       final connection = await _three(t, size);
       _ask(
@@ -198,7 +211,7 @@ void main() {
       await _answered(t, connection);
     });
 
-    testWidgets('a permission over a held form hides the form as the '
+    _roomTest('a permission over a held form hides the form as the '
         'original does; answered, the held form shares the rows with the list, '
         'at $size', (t) async {
       final connection = await _three(t, size);
@@ -241,7 +254,7 @@ void main() {
       await _answered(t, connection);
     });
 
-    testWidgets('a fitting permission leaves the list whole, at $size', (
+    _roomTest('a fitting permission leaves the list whole, at $size', (
       t,
     ) async {
       final connection = await _three(t, size);
@@ -258,7 +271,7 @@ void main() {
       await _answered(t, connection);
     });
 
-    testWidgets('a form with the keys gives no row; the list gives them, at '
+    _roomTest('a form with the keys gives no row; the list gives them, at '
         '$size', (t) async {
       final connection = await _three(t, size);
       _ask(
@@ -277,7 +290,7 @@ void main() {
       await _answered(t, connection);
     });
 
-    testWidgets('a question box with the keys is drawn whole beside the '
+    _roomTest('a question box with the keys is drawn whole beside the '
         'list, at $size', (t) async {
       final connection = await _three(t, size);
       _ask(
@@ -300,7 +313,7 @@ void main() {
       await _answered(t, connection);
     });
 
-    testWidgets('a held link keeps its hint and the list, at $size', (t) async {
+    _roomTest('a held link keeps its hint and the list, at $size', (t) async {
       final connection = await _three(t, size);
       _ask(
         connection,

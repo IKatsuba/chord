@@ -5,6 +5,8 @@ library;
 
 import 'dart:async';
 
+import 'package:clock/clock.dart';
+
 import '../kept.dart';
 import '../notify.dart';
 import 'conversation.dart';
@@ -48,7 +50,8 @@ final class OpenAgents<C extends Driven> {
   }) : _make = conversation,
        _told = heard,
        _toldClosing = closingHeard,
-       _now = now ?? (() => DateTime.now().millisecondsSinceEpoch);
+       // The agents list draws ages by package:clock; stamps share it.
+       _now = now ?? (() => clock.now().millisecondsSinceEpoch);
 
   final C Function(String, void Function(ConversationEvent), int) _make;
   final void Function(int, ConversationEvent, Wait?) _told;

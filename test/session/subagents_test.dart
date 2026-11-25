@@ -88,6 +88,10 @@ void main() {
   test("a subagent's updates reach its parent's session tagged with it, and "
       "none reads as the parent's", () async {
     await withSession(capabilities: _subagents, (session, _) async {
+      // What came before any listener is held for the first alone, as
+      // the commands sent just after the session's reply may be: taken
+      // here, so both listeners below hear the same live updates.
+      session.subscribe((_) {});
       final heard = <acp.SessionUpdate>[];
       session.subscribe(heard.add);
       final ran = await _play(session, 'subagentupdate');
@@ -101,6 +105,7 @@ void main() {
       ]);
       // The plain listener hears the session's own alone.
       expect(heard.length, ran.own.length);
+      expect(heard, ran.own);
       expect({for (final (_, id) in ran.sub) id}, {child});
       expect([
         for (final (u, _) in ran.sub) u.kind,

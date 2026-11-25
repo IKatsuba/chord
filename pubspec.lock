@@ -87,7 +87,7 @@ packages:
       path: "packages/chord_tui"
       relative: true
     source: path
-    version: "0.71.0"
+    version: "0.72.0"
   cli_config:
     dependency: transitive
     description:

@@ -2,7 +2,7 @@ name: chord_tui
 description: >-
   A Flutter-shaped Dart framework for rich terminal interfaces: widgets,
   layout in cells, keys, Markdown, code and diffs, and a headless tester.
-version: 0.71.0
+version: 0.72.0
 repository: https://github.com/IKatsuba/chord/tree/main/packages/chord_tui
 issue_tracker: https://github.com/IKatsuba/chord/issues
 topics:

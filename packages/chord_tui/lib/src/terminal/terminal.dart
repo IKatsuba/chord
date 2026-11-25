@@ -410,6 +410,14 @@ class StdioTerminal extends Terminal {
                 if (!_closed) shared.add(data);
               },
               onError: (Object error, StackTrace stack) {
+                // On Linux, dart:io reports a hung-up tty as an "error
+                // event" just before its end, where macOS ends it plainly:
+                // the terminal's own tty failing is that tty gone, its
+                // input's end, not a failure of the app (CTUI-192).
+                if (_ttyInput) {
+                  _ttyInputEnded = true;
+                  return;
+                }
                 if (!_closed) shared.addError(error, stack);
               },
               onDone: () {

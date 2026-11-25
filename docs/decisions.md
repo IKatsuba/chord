@@ -4526,3 +4526,13 @@ Linux. The owner chose to leave the stdin code as it is and say so: on
 Linux the by-hand note reads "Ctrl-C leaves", on macOS it keeps "Ctrl-D
 or Ctrl-C leaves". The compiled note case sends Ctrl-C on Linux and
 checks chord ends by SIGINT, and keeps the Ctrl-D path on macOS.
+
+## CTUI-192: a hung-up tty's error is its end, not the app's failure
+
+On Linux, when a terminal hangs up, dart:io reports the tty's stdin
+with an error event ("Error event raised in event handler"), then ends
+it; macOS ends it plainly. StdioTerminal forwarded that error, runApp
+recorded it as a failure, and a hung-up app with no signal owner exited
+1 instead of 0. The terminal's own tty input failing now counts as that
+input's end: it marks the terminal hung up and forwards nothing.
+Supplied and non-tty inputs still report their errors.

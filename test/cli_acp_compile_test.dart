@@ -348,7 +348,7 @@ exit [lindex \$result 3]
           expect(groups, isNotEmpty);
           addTearDown(() async {
             for (final group in groups) {
-              await Process.run('kill', ['-KILL', '-$group']);
+              await Process.run('kill', ['-KILL', '--', '-$group']);
             }
           });
           await reading.cancel();
@@ -363,7 +363,7 @@ exit [lindex \$result 3]
           );
           for (final group in groups) {
             expect(
-              (await Process.run('kill', ['-0', '-$group'])).exitCode,
+              (await Process.run('kill', ['-0', '--', '-$group'])).exitCode,
               isNot(0),
               reason: 'native agent group survived',
             );

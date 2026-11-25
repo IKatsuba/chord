@@ -1,6 +1,7 @@
 # The port's CI, modelled on the original's ci.yml, on ubuntu-latest alone
 # (Q380): the static checks, both suites in three shards, the compile tags,
-# the npm shim's node test, and the release's Linux targets compiled. It
+# the npm shim's node test, the release's Linux targets compiled, and
+# packages/cursor-cloud-acp's TypeScript checks on Bun. It
 # reads the repository and nothing else: no secret, no signing, no upload,
 # no release. darwin is built by the owner's local release.
 name: ci
@@ -118,11 +119,29 @@ jobs:
       - run: dart run tool/ci.dart linux-x64
       - run: dart run tool/ci.dart linux-arm64
 
+  # packages/cursor-cloud-acp, still TypeScript and on npm: its quality
+  # checks, then the tests of the root tooling its release runs on.
+  cursor-cloud-acp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+      - run: bun install --frozen-lockfile
+      - run: bun dev quality cursor-cloud-acp
+      - run: bun test ./tests/scripts ./lint
+
   # The check branch protection requires by name: it passes only when the
-  # static checks, every shard, the compile tags, the node test and the
-  # release's targets did.
+  # static checks, every shard, the compile tags, the node test, the
+  # release's targets and cursor-cloud-acp's job did.
   check:
-    needs: [static, tests, compile, node, release]
+    needs: [static, tests, compile, node, release, cursor-cloud-acp]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -132,3 +151,4 @@ jobs:
           test '${{ needs.compile.result }}' = success
           test '${{ needs.node.result }}' = success
           test '${{ needs.release.result }}' = success
+          test '${{ needs.cursor-cloud-acp.result }}' = success

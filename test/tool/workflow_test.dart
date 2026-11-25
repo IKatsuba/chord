@@ -1,4 +1,4 @@
-// The port's CI workflow (CTUI-146): its jobs, their needs and runners, the
+// The CI workflow (CTUI-146, CTUI-190): its jobs, their needs and runners, the
 // aggregate check's conditions, what each runs, and that every test file of
 // both packages is in exactly one of its shards.
 import 'dart:io';
@@ -56,13 +56,14 @@ void main() {
     });
   });
 
-  test('has its six jobs, every one on ubuntu-latest', () {
+  test('has its seven jobs, every one on ubuntu-latest', () {
     expect(jobs.keys, [
       'static',
       'tests',
       'compile',
       'node',
       'release',
+      'cursor-cloud-acp',
       'check',
     ]);
     for (final job in jobs.keys) {
@@ -163,18 +164,44 @@ void main() {
     },
   );
 
-  test('check needs every job, runs always, and passes only when each '
-      'succeeded', () {
-    final check = jobs['check'] as YamlMap;
-    expect(check['needs'], ['static', 'tests', 'compile', 'node', 'release']);
-    expect(check['if'], 'always()');
-    expect(runs('check').single.split('\n'), [
-      for (final job in ['static', 'tests', 'compile', 'node', 'release'])
-        "test '\${{ needs.$job.result }}' = success",
+  test('cursor-cloud-acp checks out without credentials, sets up Bun 1.4.4 '
+      'and Node 22.13, and runs its quality and the tooling tests', () {
+    final checkout = steps('cursor-cloud-acp').first;
+    expect(checkout['uses'], 'actions/checkout@v5');
+    expect((checkout['with'] as YamlMap)['persist-credentials'], isFalse);
+    final bun = steps('cursor-cloud-acp')[1];
+    expect(bun['uses'], 'oven-sh/setup-bun@v2');
+    expect((bun['with'] as YamlMap)['bun-version'].toString(), '1.4.4');
+    final node = steps('cursor-cloud-acp')[2];
+    expect(node['uses'], 'actions/setup-node@v4');
+    expect((node['with'] as YamlMap)['node-version'], '22.13');
+    expect(runs('cursor-cloud-acp'), [
+      'bun install --frozen-lockfile',
+      'bun dev quality cursor-cloud-acp',
+      'bun test ./tests/scripts ./lint',
     ]);
   });
 
-  test('uses only checkout, setup-dart, setup-node and actionlint', () {
+  test('check needs every job, runs always, and passes only when each '
+      'succeeded', () {
+    const needed = [
+      'static',
+      'tests',
+      'compile',
+      'node',
+      'release',
+      'cursor-cloud-acp',
+    ];
+    final check = jobs['check'] as YamlMap;
+    expect(check['needs'], needed);
+    expect(check['if'], 'always()');
+    expect(runs('check').single.split('\n'), [
+      for (final job in needed) "test '\${{ needs.$job.result }}' = success",
+    ]);
+  });
+
+  test('uses only checkout, setup-dart, setup-node, setup-bun and '
+      'actionlint', () {
     expect(
       {
         for (final job in jobs.keys)
@@ -185,6 +212,7 @@ void main() {
         'actions/checkout@v5',
         'dart-lang/setup-dart@v1',
         'actions/setup-node@v4',
+        'oven-sh/setup-bun@v2',
         'docker://rhysd/actionlint:1.7.7',
       },
     );

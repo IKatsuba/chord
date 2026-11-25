@@ -4598,3 +4598,23 @@ non-blocking while the app owns it and blocking while the child has it
 (released the program on macOS, 1 ms; on linux/arm64 5 of 5 still
 stalled, gdb then in the same native read path, signal mask step).
 chord_tui's own fd-0 reader, in place of dart:io's stdin, is CTUI-193.
+
+## CTUI-192: no decision rests on errno read by a second FFI call
+
+chord reads errno through `__errno_location`/`__error`, a second FFI call
+after the syscall, and the VM may make syscalls of its own in between, so
+the errno seen need not be the call's. Two decisions rested on it and
+failed under the whole native linux/arm64 suite's load: `signalGroup`
+fell back to the launcher's pid only on ESRCH, so a launcher before its
+`setsid` could miss the stop (a close that never settled, and a launcher
+left after a run that went on to exec `sh -c sleep 600`); and the
+launcher chose 127 over 126 from ENOENT. Now a failed group kill falls
+back to the pid alone whenever the process has not exited, and a failed
+`execv` exits 127 when the program, or a script's `#!` interpreter, is
+not there, checked on the files; the errno it reports is ENOENT or
+EACCES where the files explain the failure, else the one read (seen
+reading 22 for an EACCES under that load). `GroupProcess.alive` still
+reads EPERM: on macOS it is a group left only with unreaped processes,
+and on Linux a group whose members are all another user's, such as a
+root process an agent started through sudo, so EPERM cannot be read as
+gone on either; it decides only how long a stop waits.

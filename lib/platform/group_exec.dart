@@ -16,7 +16,6 @@ import 'dart:io';
 const groupExecFlag = '--chord-group-exec';
 
 const _sigpipe = 13;
-const _enoent = 2;
 
 /// The JIT path's entry: `dart` runs this file directly as the launcher.
 void main(List<String> args) => groupExec(args);
@@ -58,9 +57,65 @@ Never groupExec(List<String> args) {
   argv[call.argv.length] = nullptr;
   _execv(path, argv);
 
-  final errno = _errno();
-  _write('$frame fail exec $errno\n');
-  _exit(errno == _enoent ? 127 : 126);
+  final read = _errno();
+  // From the files where they explain it, not from errno alone: errno is
+  // read by a second FFI call, and the VM may make syscalls of its own in
+  // between (CTUI-192).
+  final (:code, :errno) = execFailure(
+    call.path,
+    present: (path) =>
+        FileSystemEntity.typeSync(path) != FileSystemEntityType.notFound,
+    runnable: (path) =>
+        FileSystemEntity.typeSync(path) == FileSystemEntityType.file &&
+        _access(_cString(path), _xOk) == 0,
+    firstLine: _firstLine,
+  );
+  _write('$frame fail exec ${errno ?? read}\n');
+  _exit(code);
+}
+
+const _enoent = 2, _eacces = 13, _xOk = 1;
+
+final _access = _libc
+    .lookupFunction<
+      Int32 Function(Pointer<Uint8>, Int32),
+      int Function(Pointer<Uint8>, int)
+    >('access');
+
+/// Why an `execv` of [path] failed, from the files: [code] is 127 when the
+/// program, or a script's `#!` interpreter, is not there (ENOENT, as
+/// CTUI-36 says), else 126; [errno] is ENOENT or EACCES where the files
+/// explain it (not there; not a [runnable] file), else null for the errno
+/// read. [present], [runnable] and [firstLine] look.
+({int code, int? errno}) execFailure(
+  String path, {
+  required bool Function(String path) present,
+  required bool Function(String path) runnable,
+  required String? Function(String path) firstLine,
+}) {
+  if (!present(path)) return (code: 127, errno: _enoent);
+  if (!runnable(path)) return (code: 126, errno: _eacces);
+  final line = firstLine(path);
+  if (line == null || !line.startsWith('#!')) return (code: 126, errno: null);
+  final interpreter = line.substring(2).trim().split(RegExp(r'\s+')).first;
+  if (interpreter.isNotEmpty && !present(interpreter)) {
+    return (code: 127, errno: _enoent);
+  }
+  return (code: 126, errno: null);
+}
+
+String? _firstLine(String path) {
+  try {
+    final file = File(path).openSync();
+    try {
+      final head = String.fromCharCodes(file.readSync(256));
+      return head.split('\n').first;
+    } finally {
+      file.closeSync();
+    }
+  } on FileSystemException {
+    return null;
+  }
 }
 
 /// A launcher call whose shape was checked: a hex nonce, an absolute path,

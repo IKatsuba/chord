@@ -157,22 +157,27 @@ void main() {
       expect(calls, [(-42, 9)]);
     });
 
-    test('does not fall back on another error', () {
-      final calls = <(int, int)>[];
-      expect(
-        signalGroup(
-          (pid, signal) {
-            calls.add((pid, signal));
-            return 1;
-          },
-          42,
-          15,
-          exited: false,
-        ),
-        isFalse,
-      );
-      expect(calls, [(-42, 15)]);
-    });
+    // errno comes from a second FFI call, which need not see kill's: a
+    // group kill that failed is not trusted to say why (CTUI-192).
+    for (final errno in [1, 4, -1]) {
+      test('falls back to the pid alone on any failure before the exit, '
+          'here errno $errno', () {
+        final calls = <(int, int)>[];
+        expect(
+          signalGroup(
+            (pid, signal) {
+              calls.add((pid, signal));
+              return pid < 0 ? errno : 0;
+            },
+            42,
+            15,
+            exited: false,
+          ),
+          isTrue,
+        );
+        expect(calls, [(-42, 15), (42, 15)]);
+      });
+    }
   });
 
   test('Exit reads a signal as 128 and its number', () {

@@ -96,7 +96,6 @@ List<String> defaultLauncher(String nonce, String path) => [
 /// `kill(2)`: 0, or the errno it failed with.
 typedef Kill = int Function(int pid, int signal);
 
-const _esrch = 3;
 const _eperm = 1;
 
 /// A child leading a process group of its own, started through the launcher.
@@ -236,15 +235,16 @@ class GroupProcess {
   }
 }
 
-/// Sends [signal] to group [pid] through [kill], or, on ESRCH while the
-/// process has not [exited], to [pid] alone: before the launcher's `setsid`
-/// no group with that id exists. Whether anything took it.
+/// Sends [signal] to group [pid] through [kill], or, when that fails while
+/// the process has not [exited], to [pid] alone: before the launcher's
+/// `setsid` no group with that id exists. Whether anything took it.
 bool signalGroup(Kill kill, int pid, int signal, {required bool exited}) {
-  final errno = kill(-pid, signal);
-  if (errno == 0) return true;
-  // Only while it runs: once it is reaped its pid may be someone else's.
-  if (errno == _esrch && !exited) return kill(pid, signal) == 0;
-  return false;
+  if (kill(-pid, signal) == 0) return true;
+  // Not on ESRCH alone: errno is read by a second FFI call, and between the
+  // two the VM may make syscalls of its own, so the errno seen need not be
+  // kill's (CTUI-192). Only while it runs: once it is reaped its pid may be
+  // someone else's.
+  return !exited && kill(pid, signal) == 0;
 }
 
 /// Where the launcher's handshake stands.
@@ -516,8 +516,12 @@ final _strerror = _libc
       Pointer<Uint8> Function(int)
     >('strerror');
 
-int _libcKill(int pid, int signal) =>
-    _killFn(pid, signal) == 0 ? 0 : _errnoLocation().value;
+// A failure is never 0, whatever errno reads by then.
+int _libcKill(int pid, int signal) {
+  if (_killFn(pid, signal) == 0) return 0;
+  final errno = _errnoLocation().value;
+  return errno == 0 ? -1 : errno;
+}
 
 /// libc's words for [errno], as `No such file or directory`.
 String strerror(int errno) {

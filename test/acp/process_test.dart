@@ -729,7 +729,9 @@ void main() {
               token.cancel();
             }
             await expectLater(opening, throwsA(isA<AgentExitError>()));
-            expect(signals, [15, 9]);
+            // Each to the group, then, as that failed before any exit, to
+            // the launcher alone: whatever errno said (CTUI-192).
+            expect(signals, [15, 15, 9, 9]);
             expect(child, isNotNull);
           } finally {
             if (child != null) {

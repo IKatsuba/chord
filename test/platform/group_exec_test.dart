@@ -16,6 +16,46 @@ void main() {
     ['--packages=$packages', script, ...args],
   ).timeout(const Duration(seconds: 30));
 
+  test('a failed exec says 127 for a program or #! interpreter not there, '
+      'else 126, with ENOENT or EACCES from the files, not errno', () {
+    ({int code, int? errno}) failure(
+      String path,
+      Set<String> there, {
+      Set<String> runnable = const {},
+      Map<String, String> lines = const {},
+    }) => execFailure(
+      path,
+      present: there.contains,
+      runnable: runnable.contains,
+      firstLine: (path) => lines[path],
+    );
+    expect(failure('/a/agent', {}), (code: 127, errno: 2));
+    // A directory, or a file without x: EACCES, whatever errno reads.
+    expect(failure('/bin', {'/bin'}), (code: 126, errno: 13));
+    expect(failure('/a/agent', {'/a/agent'}, runnable: {'/a/agent'}), (
+      code: 126,
+      errno: null,
+    ));
+    expect(
+      failure(
+        '/a/sh',
+        {'/a/sh'},
+        runnable: {'/a/sh'},
+        lines: {'/a/sh': '#!/nonexistent/interpreter'},
+      ),
+      (code: 127, errno: 2),
+    );
+    expect(
+      failure(
+        '/a/sh',
+        {'/a/sh', '/bin/sh'},
+        runnable: {'/a/sh'},
+        lines: {'/a/sh': '#! /bin/sh -e'},
+      ),
+      (code: 126, errno: null),
+    );
+  });
+
   test('a malformed call prints one line and exits 126', () async {
     for (final args in [
       [groupExecFlag],

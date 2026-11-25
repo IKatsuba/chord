@@ -341,7 +341,7 @@ void main() {
 void _testerRoomResizes() {
   group('CTUI-35 tester: room across frames and resize', () {
     for (final initial in [const Size(120, 40), const Size(80, 24)]) {
-      testWidgets('permission and held form recover their rows from $initial', (
+      _roomTest('permission and held form recover their rows from $initial', (
         t,
       ) async {
         final connection = await _three(t, initial);

@@ -65,24 +65,18 @@ async function refusal(): Promise<string> {
 }
 
 describe('discovery', () => {
-  test('the root alone is chord, by its npm name without the scope', async () => {
+  test('the root is never a package, steps.ts or not', async () => {
     pkg('.', '@chorded/chord');
 
-    const found = await packages(root);
-
-    expect(found.map(({ name, folder }) => ({ name, folder }))).toEqual([
-      { name: 'chord', folder: '.' },
-    ]);
-    expect(found[0]?.steps.lint).toEqual(['eslint']);
+    expect(await packages(root)).toEqual([]);
   });
 
-  test("the root, then its workspaces' packages in order", async () => {
+  test("its workspaces' packages in order, the root not among them", async () => {
     pkg('.', '@chorded/chord', undefined, { workspaces: ['packages/*'] });
     pkg('packages/b-acp', '@chorded/b-acp');
     pkg('packages/a-acp', '@chorded/a-acp');
 
     expect((await packages(root)).map((each) => each.folder)).toEqual([
-      '.',
       'packages/a-acp',
       'packages/b-acp',
     ]);
@@ -106,9 +100,12 @@ describe('discovery', () => {
 
   test('two packages of one name are refused', async () => {
     pkg('.', '@chorded/chord', undefined, { workspaces: ['packages/*'] });
-    pkg('packages/a', '@chorded/chord');
+    pkg('packages/a', '@chorded/a');
+    pkg('packages/b', '@chorded/a');
 
-    expect(await refusal()).toBe("packages/a: @chorded/chord is also .'s name");
+    expect(await refusal()).toBe(
+      "packages/b: @chorded/a is also packages/a's name",
+    );
   });
 
   test.each([
@@ -155,10 +152,11 @@ describe('discovery', () => {
   });
 
   test('a steps file that does not load is named', async () => {
-    pkg('.', '@chorded/chord');
-    write('steps.ts', "throw new Error('broken on purpose');\n");
+    pkg('.', '@chorded/chord', undefined, { workspaces: ['packages/*'] });
+    pkg('packages/a', '@chorded/a');
+    write('packages/a/steps.ts', "throw new Error('broken on purpose');\n");
 
-    expect(await refusal()).toBe('steps.ts: broken on purpose');
+    expect(await refusal()).toBe('packages/a/steps.ts: broken on purpose');
   });
 });
 
@@ -256,7 +254,7 @@ describe('the runner', () => {
   });
 });
 
-test("a type error in a package's tooling fails its quality, never chord's", async () => {
+test("a type error in a package's tooling fails its quality, never another's", async () => {
   const bun = JSON.stringify(process.execPath);
 
   write(
@@ -268,8 +266,9 @@ test("a type error in a package's tooling fails its quality, never chord's", asy
     '{"compilerOptions":{"strict":true},"include":["chord.ts"]}',
   );
   write('chord.ts', 'export const fine: number = 1;\n');
+  write('packages/fine/package.json', '{"name":"@chorded/fine"}');
   write(
-    'steps.ts',
+    'packages/fine/steps.ts',
     `export default { checks: [{ name: 'types', static: true, run: [${bun}, 'check'] }], lint: [], release: [${PUBLISH}] };\n`,
   );
   write('packages/acp/package.json', '{"name":"@chorded/acp"}');
@@ -298,9 +297,9 @@ test("a type error in a package's tooling fails its quality, never chord's", asy
       ),
     output: (line) => void said.push(line),
   };
-  const [chord, acp] = await packages(root);
+  const [acp, fine] = await packages(root);
 
-  expect(await run(chord!, context)).toBe(0);
+  expect(await run(fine!, context)).toBe(0);
   expect(await run(acp!, context)).not.toBe(0);
   expect(said).toEqual([
     expect.stringMatching(/^quality acp: tooling types failed with status/),
@@ -317,16 +316,14 @@ describe('tester: package discovery and runner boundaries', () => {
     pkg('packages/a', '@chorded/a');
     write('packages/ignored/package.json', '{"name":"outside-scope"}');
 
-    expect((await packages(root)).map(({ name }) => name)).toEqual([
-      'chord',
-      'a',
-    ]);
+    expect((await packages(root)).map(({ name }) => name)).toEqual(['a']);
   });
 
   test('discovery imports definitions without running checks or stages', async () => {
-    pkg('.', '@chorded/chord');
+    pkg('.', '@chorded/chord', undefined, { workspaces: ['packages/*'] });
+    pkg('packages/a', '@chorded/a');
     write(
-      'steps.ts',
+      'packages/a/steps.ts',
       `const forbidden = async () => { throw new Error('must stay lazy'); };
 export default {
   checks: [{ name: 'check', run: forbidden }],

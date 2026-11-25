@@ -11,7 +11,10 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { channelOf, VersionError } from '../../../../src/channel.ts';
+import {
+  channelOf,
+  VersionError,
+} from '../../../../scripts/dev/release/channel.ts';
 import {
   PACKAGES,
   PLATFORMS,
@@ -30,7 +33,7 @@ import type { ReleaseState } from '../../../../scripts/dev/release/state.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import { parse } from 'shell-quote';
 import { isPublish, type PackageSteps } from '../../../../scripts/dev/steps.ts';
-import chordSteps from '../../../../steps.ts';
+import chordSteps from './fixtures/chord_steps.ts';
 import {
   executable,
   fetchedArchives,

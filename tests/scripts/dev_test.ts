@@ -1,36 +1,33 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { cp, readFile, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { ValidationError } from '@cliffy/command';
-import stripAnsi from 'strip-ansi';
-import { type DevActions, devCommand } from '../../scripts/dev.ts';
+import {
+  type DevActions,
+  devCommand,
+  type DevPackage,
+} from '../../scripts/dev.ts';
 
-/** Two packages, as a repository with a workspace finds them. */
-const CHORD_STAGES = [
-  'install',
-  'quality',
-  'natives',
-  'compile',
-  'sign',
-  'selftest',
-  'notarise',
-  'pack',
-  'publish',
-];
-const PACKAGES = [
-  { name: 'chord', stages: CHORD_STAGES },
-  {
-    name: 'cursor-cloud-acp',
-    stages: ['install', 'quality', 'build', 'pack', 'publish'],
-  },
-];
+/** The workspace's one package, as the repository finds it. */
+const STAGES = ['install', 'quality', 'build', 'pack', 'publish'];
+const PACKAGES: DevPackage[] = [{ name: 'cursor-cloud-acp', stages: STAGES }];
+
+/** Actions that run nothing, for a command only asked for its help. */
+const IDLE: DevActions = {
+  quality: () => {},
+  lint: () => {},
+  release: () => {},
+  unclear: () => {},
+};
 
 /** Each command `argv` ran, with what it was given; nothing is run. */
-async function parsed(argv: string[]): Promise<unknown[][]> {
+async function parsed(
+  argv: string[],
+  packages: readonly DevPackage[] = PACKAGES,
+): Promise<unknown[][]> {
   const calls: unknown[][] = [];
   const record =
     (name: string) =>
@@ -41,222 +38,19 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
   const actions: DevActions = {
     quality: record('quality'),
     lint: record('lint'),
-    compile: record('compile'),
-    npm: record('npm'),
-    registry: record('registry'),
-    mark: record('mark'),
-    screenshots: record('screenshots'),
-    social: record('social'),
-    memory: record('memory'),
-    selftest: record('selftest'),
     release: record('release'),
     unclear: record('unclear'),
-    chord: record('chord'),
-    qa: record('qa'),
-    test: record('test'),
   };
 
-  await devCommand(actions, PACKAGES).noExit().throwErrors().parse(argv);
+  await devCommand(actions, packages).noExit().throwErrors().parse(argv);
 
   return calls;
 }
 
-describe('compile', () => {
-  test("with no flags builds this machine's target into dist/", async () => {
-    expect(await parsed(['compile'])).toStrictEqual([
-      ['compile', { all: false, install: false }],
-    ]);
-  });
-
-  test('--all and --install are read', async () => {
-    expect(await parsed(['compile', '--all'])).toStrictEqual([
-      ['compile', { all: true, install: false }],
-    ]);
-    expect(await parsed(['compile', '--install'])).toStrictEqual([
-      ['compile', { all: false, install: true }],
-    ]);
-  });
-
-  test('an unknown flag is refused', async () => {
-    await expect(parsed(['compile', '--everything'])).rejects.toThrow(
-      ValidationError,
-    );
-  });
-});
-
-test('npm, registry, mark and social take no arguments', async () => {
-  expect(await parsed(['npm'])).toStrictEqual([['npm']]);
-  expect(await parsed(['registry'])).toStrictEqual([['registry']]);
-  expect(await parsed(['mark'])).toStrictEqual([['mark']]);
-  expect(await parsed(['social'])).toStrictEqual([['social']]);
-  await expect(parsed(['mark', 'extra'])).rejects.toThrow(ValidationError);
-  await expect(parsed(['social', 'extra'])).rejects.toThrow(ValidationError);
-});
-
-test('screenshots takes the shots to retake, or none for all', async () => {
-  expect(await parsed(['screenshots'])).toStrictEqual([['screenshots', []]]);
-  expect(await parsed(['screenshots', 'team', 'edit'])).toStrictEqual([
-    ['screenshots', ['team', 'edit']],
-  ]);
-});
-
-describe('memory', () => {
-  test('has the defaults the check ran on before', async () => {
-    expect(await parsed(['memory'])).toStrictEqual([
-      [
-        'memory',
-        {
-          minutes: 10,
-          sampleSeconds: 10,
-          snapshots: 4,
-          stepMs: 5,
-          development: false,
-        },
-      ],
-    ]);
-  });
-
-  test('reads every flag', async () => {
-    expect(
-      await parsed([
-        'memory',
-        '--minutes',
-        '30',
-        '--sample-seconds',
-        '2.5',
-        '--snapshots',
-        '6',
-        '--step-ms',
-        '1',
-        '--binary',
-        'dist/bun-darwin-arm64/chord',
-        '--development',
-      ]),
-    ).toStrictEqual([
-      [
-        'memory',
-        {
-          minutes: 30,
-          sampleSeconds: 2.5,
-          snapshots: 6,
-          stepMs: 1,
-          binary: 'dist/bun-darwin-arm64/chord',
-          development: true,
-        },
-      ],
-    ]);
-  });
-
-  test('refuses a number that is not one', async () => {
-    await expect(parsed(['memory', '--minutes', 'ten'])).rejects.toThrow(
-      ValidationError,
-    );
-  });
-});
-
-describe('chord', () => {
-  test('passes every argument on to chord', async () => {
-    expect(await parsed(['chord'])).toStrictEqual([['chord', false, []]]);
-    expect(await parsed(['chord', '-p', 'hi'])).toStrictEqual([
-      ['chord', false, ['-p', 'hi']],
-    ]);
-    expect(await parsed(['chord', 'codex', '--resume'])).toStrictEqual([
-      ['chord', false, ['codex', '--resume']],
-    ]);
-  });
-
-  test('--qa <name> makes /tmp/chord-qa.<name> afresh and runs chord there, ahead of its own arguments (CHD-427)', async () => {
-    expect(
-      await parsed(['chord', '--qa', 'tabs', '--fake', '-p', 'hi']),
-    ).toStrictEqual([
-      ['qa', '/tmp/chord-qa.tabs', '/tmp/chord-qa.tabs.state'],
-      [
-        'chord',
-        true,
-        ['-C', '/tmp/chord-qa.tabs', '-p', 'hi'],
-        true,
-        '/tmp/chord-qa.tabs.state',
-      ],
-    ]);
-
-    // Bare, the default place, the owner's Q65, before chord's own options.
-    expect(await parsed(['chord', '--qa', '--fake'])).toStrictEqual([
-      ['qa', '/tmp/chord-qa', '/tmp/chord-qa.state'],
-      ['chord', true, ['-C', '/tmp/chord-qa'], true, '/tmp/chord-qa.state'],
-    ]);
-    expect(await parsed(['chord', '--qa'])).toStrictEqual([
-      ['qa', '/tmp/chord-qa', '/tmp/chord-qa.state'],
-      ['chord', false, ['-C', '/tmp/chord-qa'], true, '/tmp/chord-qa.state'],
-    ]);
-    // An empty name the parser drops: a run as with no --qa, as its help
-    // says (Q65).
-    expect(await parsed(['chord', '--qa', ''])).toStrictEqual([
-      ['chord', false, []],
-    ]);
-
-    for (const name of ['../home', 'a/b', '..', 'with space']) {
-      await expect(parsed(['chord', '--qa', name]), name).rejects.toThrow();
-    }
-  });
-
-  test("--fake before chord's arguments is its own, its state in /tmp/chord-fake (CHD-616)", async () => {
-    expect(await parsed(['chord', '--fake'])).toStrictEqual([
-      ['chord', true, [], undefined, '/tmp/chord-fake'],
-    ]);
-    expect(await parsed(['chord', '--fake', '-p', 'hi'])).toStrictEqual([
-      ['chord', true, ['-p', 'hi'], undefined, '/tmp/chord-fake'],
-    ]);
-  });
-
-  test("--fake after chord's first word is chord's", async () => {
-    expect(await parsed(['chord', 'codex', '--fake'])).toStrictEqual([
-      ['chord', false, ['codex', '--fake']],
-    ]);
-  });
-
-  test('words after -- reach chord, without the --', async () => {
-    expect(await parsed(['chord', '--', '--help'])).toStrictEqual([
-      ['chord', false, ['--help']],
-    ]);
-    expect(
-      await parsed(['chord', '--fake', '-p', 'hi', '--', '--fake']),
-    ).toStrictEqual([
-      ['chord', true, ['-p', 'hi', '--fake'], undefined, '/tmp/chord-fake'],
-    ]);
-  });
-});
-
-describe('test', () => {
-  test('passes every argument on to bun test', async () => {
-    expect(await parsed(['test'])).toStrictEqual([['test', []]]);
-    expect(
-      await parsed(['test', './tests/x_test.ts', '-t', 'a stop']),
-    ).toStrictEqual([['test', ['./tests/x_test.ts', '-t', 'a stop']]]);
-  });
-
-  test("--update-timings is bun test's", async () => {
-    expect(await parsed(['test', '--update-timings'])).toStrictEqual([
-      ['test', ['--update-timings']],
-    ]);
-  });
-
-  test('words after -- follow, without the --', async () => {
-    expect(await parsed(['test', '--changed', '--', '--bail'])).toStrictEqual([
-      ['test', ['--changed', '--bail']],
-    ]);
-  });
-});
-
-test("Bun's own check and fmt are not dev commands", async () => {
-  for (const command of ['check', 'fmt']) {
-    await expect(parsed([command])).rejects.toThrow(ValidationError);
-  }
-});
-
 describe('quality', () => {
   test("runs a package's checks, or only its static ones", async () => {
-    expect(await parsed(['quality', 'chord'])).toStrictEqual([
-      ['quality', 'chord', false],
+    expect(await parsed(['quality', 'cursor-cloud-acp'])).toStrictEqual([
+      ['quality', 'cursor-cloud-acp', false],
     ]);
     expect(
       await parsed(['quality', 'cursor-cloud-acp', '--static']),
@@ -268,15 +62,15 @@ describe('quality', () => {
       'Missing argument(s): package',
     );
     await expect(parsed(['quality', 'x'])).rejects.toThrow(
-      'Argument "package" must be of type "package", but got "x". Expected values: "chord", "cursor-cloud-acp"',
+      'Argument "package" must be of type "package", but got "x". Expected values: "cursor-cloud-acp"',
     );
   });
 
   test('refuses extra arguments and unknown options', async () => {
     for (const argv of [
-      ['quality', 'chord', 'tests/'],
-      ['quality', 'chord', '--fix'],
-      ['quality', 'chord', '--static', 'extra'],
+      ['quality', 'cursor-cloud-acp', 'tests/'],
+      ['quality', 'cursor-cloud-acp', '--fix'],
+      ['quality', 'cursor-cloud-acp', '--static', 'extra'],
     ]) {
       await expect(parsed(argv)).rejects.toThrow(ValidationError);
     }
@@ -292,7 +86,7 @@ describe('quality', () => {
       devCommand(actions, PACKAGES)
         .noExit()
         .throwErrors()
-        .parse(['quality', 'chord']),
+        .parse(['quality', 'cursor-cloud-acp']),
     ).rejects.toBe(failure);
   });
 });
@@ -300,295 +94,136 @@ describe('quality', () => {
 describe('lint', () => {
   test('passes the rest of the arguments to ESLint as they are', async () => {
     expect(
-      await parsed(['lint', 'chord', '--fix', 'a b', '--quiet']),
-    ).toStrictEqual([['lint', 'chord', ['--fix', 'a b', '--quiet']]]);
+      await parsed(['lint', 'cursor-cloud-acp', '--fix', 'a b', '--quiet']),
+    ).toStrictEqual([
+      ['lint', 'cursor-cloud-acp', ['--fix', 'a b', '--quiet']],
+    ]);
     expect(
       await parsed(['lint', 'cursor-cloud-acp', '--fix', '--', '--quiet', '']),
     ).toStrictEqual([['lint', 'cursor-cloud-acp', ['--fix', '--quiet', '']]]);
-    expect(await parsed(['lint', 'chord', '--fix', ''])).toStrictEqual([
-      ['lint', 'chord', ['--fix']],
-    ]);
-    expect(await parsed(['lint', 'chord', '--', '--help'])).toStrictEqual([
-      ['lint', 'chord', ['--help']],
-    ]);
+    expect(
+      await parsed(['lint', 'cursor-cloud-acp', '--fix', '']),
+    ).toStrictEqual([['lint', 'cursor-cloud-acp', ['--fix']]]);
+    expect(
+      await parsed(['lint', 'cursor-cloud-acp', '--', '--help']),
+    ).toStrictEqual([['lint', 'cursor-cloud-acp', ['--help']]]);
   });
 
   test('a missing or unknown package is refused', async () => {
     await expect(parsed(['lint'])).rejects.toThrow(ValidationError);
     await expect(parsed(['lint', '--fix'])).rejects.toThrow(ValidationError);
     await expect(parsed(['lint', 'x', '--fix'])).rejects.toThrow(
-      'Expected values: "chord", "cursor-cloud-acp"',
+      'Expected values: "cursor-cloud-acp"',
     );
   });
 });
 
 test('--help lists every command, and names the packages', () => {
-  const help = stripAnsi(devCommand(undefined, PACKAGES).getHelp());
+  const help = Bun.stripANSI(devCommand(IDLE, PACKAGES).getHelp());
 
   expect(help.replace(/\s+/g, ' ')).toContain(
-    "runs that package's steps from its steps.ts and nothing else: chord or cursor-cloud-acp, its npm name without the scope.",
+    "runs that package's steps from its steps.ts and nothing else: cursor-cloud-acp, its npm name without the scope.",
   );
 
-  for (const name of [
-    'quality',
-    'lint',
-    'chord',
-    'test',
-    'compile',
-    'npm',
-    'registry',
-    'mark',
-    'screenshots',
-    'social',
-    'memory',
-    'selftest',
-    'release',
-  ]) {
+  for (const name of ['quality', 'lint', 'release']) {
     expect(help).toMatch(new RegExp(`^  ${name} `, 'm'));
+  }
+
+  for (const name of ['chord', 'test', 'compile', 'selftest', 'memory']) {
+    expect(help).not.toMatch(new RegExp(`^  ${name} `, 'm'));
   }
 });
 
 test('an unknown command is refused', async () => {
-  await expect(parsed(['publish'])).rejects.toThrow(ValidationError);
-});
-
-describe('tester: migrated command boundaries', () => {
-  test('commands without positional arguments refuse extras', async () => {
-    for (const command of ['compile', 'npm', 'registry', 'mark', 'memory']) {
-      await expect(parsed([command, 'extra'])).rejects.toThrow(ValidationError);
-    }
-  });
-
-  test('options stay with the command that declares them', async () => {
-    for (const argv of [
-      ['npm', '--all'],
-      ['registry', '--install'],
-      ['mark', '--development'],
-      ['compile', '--binary', 'chord'],
-      ['memory', '--all'],
-      ['--install', 'compile'],
-    ]) {
-      await expect(parsed(argv)).rejects.toThrow(ValidationError);
-    }
-  });
-
-  test('every memory value option requires its value', async () => {
-    for (const option of [
-      '--minutes',
-      '--sample-seconds',
-      '--snapshots',
-      '--step-ms',
-      '--binary',
-    ]) {
-      await expect(parsed(['memory', option])).rejects.toThrow(ValidationError);
-    }
-  });
-
-  test('every numeric memory option rejects text', async () => {
-    for (const option of [
-      '--minutes',
-      '--sample-seconds',
-      '--snapshots',
-      '--step-ms',
-    ]) {
-      await expect(parsed(['memory', option, 'invalid'])).rejects.toThrow(
-        ValidationError,
-      );
-    }
-  });
-
-  test('compile retains the combined all and install options', async () => {
-    expect(await parsed(['compile', '--all', '--install'])).toStrictEqual([
-      ['compile', { all: true, install: true }],
-    ]);
-  });
-
-  test('an asynchronous action failure reaches the caller', async () => {
-    const failure = new Error('fixture action failed');
-    const unexpected = () => {
-      throw new Error('another command ran');
-    };
-
-    const actions: DevActions = {
-      unclear: unexpected,
-      quality: unexpected,
-      lint: unexpected,
-      compile: unexpected,
-      npm: unexpected,
-      registry: unexpected,
-      mark: async () => {
-        await Promise.resolve();
-
-        throw failure;
-      },
-      screenshots: unexpected,
-      social: unexpected,
-      memory: unexpected,
-      selftest: unexpected,
-      release: unexpected,
-      chord: unexpected,
-      qa: unexpected,
-      test: unexpected,
-    };
-
-    await expect(
-      devCommand(actions, PACKAGES).noExit().throwErrors().parse(['mark']),
-    ).rejects.toBe(failure);
-  });
+  for (const command of ['publish', 'chord', 'test', 'compile', 'selftest']) {
+    await expect(parsed([command])).rejects.toThrow(ValidationError);
+  }
 });
 
 describe('tester: CHD-411 forwarding boundaries', () => {
   test('quoted and dash-prefixed values retain their boundaries', async () => {
     const args = ['-t', 'a stop with spaces', '--unknown=value'];
 
-    expect(await parsed(['test', ...args])).toStrictEqual([['test', args]]);
-
-    expect(await parsed(['lint', 'chord', ...args])).toStrictEqual([
-      ['lint', 'chord', args],
+    expect(await parsed(['lint', 'cursor-cloud-acp', ...args])).toStrictEqual([
+      ['lint', 'cursor-cloud-acp', args],
     ]);
-    expect(await parsed(['chord', '--fake', ...args])).toStrictEqual([
-      ['chord', true, args, undefined, '/tmp/chord-fake'],
-    ]);
-  });
-
-  test('empty arguments survive only after the literal boundary', async () => {
-    expect(await parsed(['test', '-t', ''])).toStrictEqual([['test', ['-t']]]);
-    expect(await parsed(['test', '--', '-t', ''])).toStrictEqual([
-      ['test', ['-t', '']],
-    ]);
-  });
-
-  test('fake is forwarded after the first chord argument or literal boundary', async () => {
-    for (const args of [
-      ['-p', 'text', '--fake'],
-      ['--', '--fake'],
-    ]) {
-      expect(await parsed(['chord', ...args])).toStrictEqual([
-        ['chord', false, args.filter((arg) => arg !== '--')],
-      ]);
-    }
-  });
-
-  test('quality accepts only its static option', async () => {
-    expect(await parsed(['quality', 'chord'])).toStrictEqual([
-      ['quality', 'chord', false],
-    ]);
-    expect(await parsed(['quality', 'chord', '--static'])).toStrictEqual([
-      ['quality', 'chord', true],
-    ]);
-
-    for (const argv of [
-      ['--fix'],
-      ['--update-timings'],
-      ['--static', 'extra'],
-      ['check'],
-    ]) {
-      await expect(parsed(['quality', 'chord', ...argv])).rejects.toThrow(
-        ValidationError,
-      );
-    }
-  });
-});
-
-describe('selftest', () => {
-  test('takes the binary, natively by default', async () => {
-    expect(
-      await parsed(['selftest', 'dist/bun-darwin-arm64/chord']),
-    ).toStrictEqual([['selftest', 'dist/bun-darwin-arm64/chord', undefined]]);
-  });
-
-  test('--arch runs it under another architecture', async () => {
-    expect(
-      await parsed([
-        'selftest',
-        'dist/bun-darwin-x64/chord',
-        '--arch',
-        'x86_64',
-      ]),
-    ).toStrictEqual([['selftest', 'dist/bun-darwin-x64/chord', 'x86_64']]);
-  });
-
-  test('needs a binary', async () => {
-    await expect(parsed(['selftest'])).rejects.toThrow(ValidationError);
   });
 });
 
 describe('release', () => {
-  /** The stages, options and bump `argv` gives chord's release. */
+  /** The stages, options and bump `argv` gives cursor-cloud-acp's release. */
   async function released(argv: string[]) {
-    const [call] = await parsed(['release', 'chord', ...argv]);
+    const [call] = await parsed(['release', 'cursor-cloud-acp', ...argv]);
 
-    expect(call?.slice(0, 2)).toStrictEqual(['release', 'chord']);
+    expect(call?.slice(0, 2)).toStrictEqual(['release', 'cursor-cloud-acp']);
 
     return { stages: call?.[2], options: call?.[3], bump: call?.[4] };
   }
 
   test('with no options runs every stage of the package', async () => {
     expect(await released([])).toStrictEqual({
-      stages: CHORD_STAGES,
+      stages: STAGES,
       options: {},
       bump: undefined,
     });
-    expect(await parsed(['release', 'cursor-cloud-acp'])).toStrictEqual([
-      [
-        'release',
-        'cursor-cloud-acp',
-        ['install', 'quality', 'build', 'pack', 'publish'],
-        {},
-        undefined,
-      ],
-    ]);
   });
 
   test('--dry-run runs every stage but publish', async () => {
     const { stages, options } = await released(['--dry-run']);
 
-    expect(stages).toStrictEqual(CHORD_STAGES.slice(0, -1));
+    expect(stages).toStrictEqual(STAGES.slice(0, -1));
     expect(options).toStrictEqual({ dryRun: true });
   });
 
   test('--skip takes a comma-separated list', async () => {
     expect(await released(['--skip', 'install,quality'])).toStrictEqual({
-      stages: CHORD_STAGES.slice(2),
+      stages: STAGES.slice(2),
       options: { skip: ['install', 'quality'] },
       bump: undefined,
     });
   });
 
   test("--only, --from and --to over the package's own stages", async () => {
-    expect((await released(['--only', 'pack,sign'])).stages).toStrictEqual([
-      'sign',
+    expect((await released(['--only', 'pack,build'])).stages).toStrictEqual([
+      'build',
       'pack',
     ]);
     expect(
-      (await released(['--from', 'natives', '--to', 'sign'])).stages,
-    ).toStrictEqual(['natives', 'compile', 'sign']);
-    expect(
-      (
-        await parsed(['release', 'cursor-cloud-acp', '--from', 'build'])
-      )[0]?.[2],
-    ).toStrictEqual(['build', 'pack', 'publish']);
+      (await released(['--from', 'quality', '--to', 'build'])).stages,
+    ).toStrictEqual(['quality', 'build']);
+    expect((await released(['--from', 'build'])).stages).toStrictEqual([
+      'build',
+      'pack',
+      'publish',
+    ]);
   });
 
   test("a stage the package does not have is refused, naming the package's stages", async () => {
+    // A second package whose stage cursor-cloud-acp lacks, so Cliffy's
+    // stage type lets it through to the package's own check.
+    const two = [
+      ...PACKAGES,
+      { name: 'other', stages: ['install', 'compile', 'publish'] },
+    ];
+
     await expect(
-      parsed(['release', 'cursor-cloud-acp', '--skip', 'compile']),
+      parsed(['release', 'cursor-cloud-acp', '--skip', 'compile'], two),
     ).rejects.toThrow(
       new ValidationError(
         'cursor-cloud-acp has no stage "compile"; its stages are install, quality, build, pack, publish',
       ),
     );
     await expect(
-      parsed(['release', 'chord', '--only', 'build']),
-    ).rejects.toThrow('chord has no stage "build"');
+      parsed(['release', 'other', '--only', 'build'], two),
+    ).rejects.toThrow('other has no stage "build"');
   });
 
   test.each([
     ['an unknown stage', ['--skip', 'tests']],
     ['an unknown stage in a list', ['--only', 'pack,tests']],
     ['the old check stage', ['--skip', 'check']],
-    ['--package, which is gone', ['--package', 'chord']],
-    ['--npm, which never was', ['--npm', '@chorded/chord']],
+    ['--package, which is gone', ['--package', 'cursor-cloud-acp']],
+    ['--npm, which never was', ['--npm', '@chorded/cursor-cloud-acp']],
     ['--only with --skip', ['--only', 'publish', '--skip', 'quality']],
     ['--only with --from', ['--only', 'publish', '--from', 'pack']],
     ['--only with --to', ['--only', 'pack', '--to', 'pack']],
@@ -597,21 +232,21 @@ describe('release', () => {
     ['a second argument', ['now']],
     ['a version as an argument', ['1.0.0']],
   ])('refuses %s', async (_name, argv) => {
-    await expect(parsed(['release', 'chord', ...argv])).rejects.toThrow(
-      ValidationError,
-    );
+    await expect(
+      parsed(['release', 'cursor-cloud-acp', ...argv]),
+    ).rejects.toThrow(ValidationError);
   });
 
   test('an unknown package is refused, listing the packages', async () => {
     await expect(parsed(['release', 'x'])).rejects.toThrow(
-      'Expected values: "chord", "cursor-cloud-acp"',
+      'Expected values: "cursor-cloud-acp"',
     );
   });
 });
 
 describe('a bare release', () => {
   const line =
-    'release: not clear which package to release: bun dev release <package> (chord, cursor-cloud-acp)';
+    'release: not clear which package to release: bun dev release <package> (cursor-cloud-acp)';
 
   test('releases nothing and says so, whatever options it is given', async () => {
     for (const argv of [
@@ -619,7 +254,7 @@ describe('a bare release', () => {
       ['--dry-run'],
       ['--bump', 'minor', '--channel', 'next'],
       ['--only', 'publish'],
-      ['--skip', 'compile'],
+      ['--skip', 'build'],
     ]) {
       expect(await parsed(['release', ...argv])).toStrictEqual([
         ['unclear', line],
@@ -638,7 +273,7 @@ describe('a bare release', () => {
       ['--only', 'publish', '--skip', 'quality'],
       ['--skip', 'tests'],
       ['--bump', 'v1'],
-      ['--package', 'chord'],
+      ['--package', 'cursor-cloud-acp'],
     ]) {
       await expect(parsed(['release', ...argv])).rejects.toThrow(
         ValidationError,
@@ -657,9 +292,7 @@ describe('a bare release', () => {
       { encoding: 'utf8', timeout: 10_000 },
     );
 
-    expect(result.stderr).toBe(
-      'release: not clear which package to release: bun dev release <package> (chord, cursor-cloud-acp)\n',
-    );
+    expect(result.stderr).toBe(`${line}\n`);
     expect(result.stdout).toBe('');
     expect(result.status).toBe(1);
   });
@@ -670,7 +303,7 @@ describe('release --bump', () => {
     for (const version of ['1.0.0', 'major', 'minor', 'patch', 'fix']) {
       const [call] = await parsed([
         'release',
-        'chord',
+        'cursor-cloud-acp',
         '--bump',
         version,
         '--dry-run',
@@ -685,21 +318,21 @@ describe('release --bump', () => {
     'refuses %s',
     async (version) => {
       await expect(
-        parsed(['release', 'chord', '--bump', version]),
+        parsed(['release', 'cursor-cloud-acp', '--bump', version]),
       ).rejects.toThrow(ValidationError);
     },
   );
 
   test('needs a value', async () => {
-    await expect(parsed(['release', 'chord', '--bump'])).rejects.toThrow(
-      ValidationError,
-    );
+    await expect(
+      parsed(['release', 'cursor-cloud-acp', '--bump']),
+    ).rejects.toThrow(ValidationError);
   });
 
   test('is parsed whatever the stages; the release judges it', async () => {
     const [call] = await parsed([
       'release',
-      'chord',
+      'cursor-cloud-acp',
       '--bump',
       'patch',
       '--only',
@@ -716,7 +349,7 @@ describe('release --channel', () => {
     for (const name of ['next', 'latest', 'Next']) {
       const [call] = await parsed([
         'release',
-        'chord',
+        'cursor-cloud-acp',
         '--bump',
         'major',
         '--channel',
@@ -729,16 +362,21 @@ describe('release --channel', () => {
   });
 
   test('takes no --bump', async () => {
-    const [call] = await parsed(['release', 'chord', '--channel', 'next']);
+    const [call] = await parsed([
+      'release',
+      'cursor-cloud-acp',
+      '--channel',
+      'next',
+    ]);
 
     expect(call?.[3]).toMatchObject({ channel: 'next' });
     expect(call?.[4]).toBeUndefined();
   });
 
   test('needs a name', async () => {
-    await expect(parsed(['release', 'chord', '--channel'])).rejects.toThrow(
-      ValidationError,
-    );
+    await expect(
+      parsed(['release', 'cursor-cloud-acp', '--channel']),
+    ).rejects.toThrow(ValidationError);
   });
 });
 
@@ -749,15 +387,15 @@ test("release's help lists each package's stages", async () => {
   });
 
   try {
-    await devCommand(undefined, PACKAGES).noExit().parse(['release', '--help']);
+    await devCommand(IDLE, PACKAGES).noExit().parse(['release', '--help']);
   } finally {
     log.mockRestore();
   }
 
-  const help = stripAnsi(shown.join('\n')).replace(/ +$/gm, '');
+  const help = Bun.stripANSI(shown.join('\n')).replace(/ +$/gm, '');
 
   expect(help).toContain(
-    '  Stages:\n    chord             install, quality, natives, compile, sign, selftest, notarise, pack, publish\n    cursor-cloud-acp  install, quality, build, pack, publish\n',
+    '  Stages:\n    cursor-cloud-acp  install, quality, build, pack, publish\n',
   );
   expect(help).toContain('--bump');
   expect(help).not.toContain('--package');
@@ -772,17 +410,17 @@ describe('tester: release parsing boundaries', () => {
       ],
       [
         ['--only', 'pack'],
-        ['--from', 'sign'],
+        ['--from', 'build'],
       ],
       [
         ['--only', 'pack'],
         ['--to', 'pack'],
       ],
-      [['--package', 'chord'], ['--dry-run']],
+      [['--package', 'cursor-cloud-acp'], ['--dry-run']],
     ]) {
       for (const parts of [pair, [...pair].reverse()]) {
         await expect(
-          parsed(['release', 'chord', ...parts.flat()]),
+          parsed(['release', 'cursor-cloud-acp', ...parts.flat()]),
         ).rejects.toThrow(ValidationError);
       }
     }
@@ -795,7 +433,7 @@ describe('tester: release parsing boundaries', () => {
       'quality,publish,pack',
     ]) {
       await expect(
-        parsed(['release', 'chord', '--dry-run', '--only', stages]),
+        parsed(['release', 'cursor-cloud-acp', '--dry-run', '--only', stages]),
       ).rejects.toThrow(ValidationError);
     }
   });
@@ -807,12 +445,12 @@ describe('tester: release parsing boundaries', () => {
       ['--from'],
       ['--to'],
       ['--package'],
-      ['--to', 'build'],
+      ['--to', 'compile'],
       ['--skip', 'quality,unknown'],
     ]) {
-      await expect(parsed(['release', 'chord', ...argv])).rejects.toThrow(
-        ValidationError,
-      );
+      await expect(
+        parsed(['release', 'cursor-cloud-acp', ...argv]),
+      ).rejects.toThrow(ValidationError);
     }
   });
 
@@ -823,7 +461,13 @@ describe('tester: release parsing boundaries', () => {
       ['--from', 'install', '--to', 'pack'],
     ]) {
       await expect(
-        parsed(['release', 'chord', ...argv, '--package', 'chord-linux-arm64']),
+        parsed([
+          'release',
+          'cursor-cloud-acp',
+          ...argv,
+          '--package',
+          'cursor-cloud-acp',
+        ]),
       ).rejects.toThrow(ValidationError);
     }
   });
@@ -842,7 +486,7 @@ test('CHD-531 release help discloses mandatory authentication and dry-run effect
 
   expect(result.status).toBe(0);
 
-  const help = stripAnsi(result.stdout).replace(/\s+/g, ' ');
+  const help = Bun.stripANSI(result.stdout).replace(/\s+/g, ' ');
 
   for (const text of [
     'mandatory npm authentication runs for every invocation',
@@ -862,29 +506,29 @@ describe('tester: CHD-577 channel argument boundaries', () => {
     for (const argv of [
       [
         'release',
-        'chord',
+        'cursor-cloud-acp',
         '--channel',
         'beta',
         '--bump',
         '1.0.0',
         '--only',
-        'compile,quality',
+        'build,quality',
       ],
       [
         'release',
-        'chord',
+        'cursor-cloud-acp',
         '--bump',
         '1.0.0',
         '--channel=beta',
         '--only',
-        'compile,quality',
+        'build,quality',
       ],
     ]) {
       const [call] = await parsed(argv);
 
       expect(call?.slice(2)).toEqual([
-        ['quality', 'compile'],
-        { channel: 'beta', only: ['compile', 'quality'] },
+        ['quality', 'build'],
+        { channel: 'beta', only: ['build', 'quality'] },
         '1.0.0',
       ]);
     }
@@ -894,7 +538,7 @@ describe('tester: CHD-577 channel argument boundaries', () => {
     await expect(
       parsed([
         'release',
-        'chord',
+        'cursor-cloud-acp',
         '--channel',
         'next',
         '--dry-run',
@@ -902,63 +546,6 @@ describe('tester: CHD-577 channel argument boundaries', () => {
         'publish',
       ]),
     ).rejects.toThrow(ValidationError);
-  });
-});
-
-describe("a fake or QA run keeps chord's state off the person's (CHD-616)", () => {
-  /** Every file under `dir`, relative to it; none when it is missing. */
-  const files = (dir: string): string[] =>
-    existsSync(dir)
-      ? readdirSync(dir, { recursive: true, withFileTypes: true })
-          .filter((entry) => entry.isFile())
-          .map((entry) => relative(dir, join(entry.parentPath, entry.name)))
-      : [];
-
-  /**
-   * `bun dev` with `args`, its home and XDG places in `person`, standing in
-   * for the person's own.
-   */
-  const run = (person: string, args: readonly string[]) => {
-    const result = spawnSync(
-      process.execPath,
-      [
-        fileURLToPath(new URL('../../scripts/dev.ts', import.meta.url)),
-        ...args,
-      ],
-      {
-        encoding: 'utf8',
-        timeout: 60_000,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        env: {
-          ...process.env,
-          HOME: join(person, 'home'),
-          XDG_STATE_HOME: join(person, 'state'),
-          XDG_CONFIG_HOME: join(person, 'config'),
-          XDG_DATA_HOME: join(person, 'data'),
-          XDG_CACHE_HOME: join(person, 'cache'),
-        },
-      },
-    );
-
-    expect(result.stdout).toContain('Hello, world.');
-  };
-
-  test("--qa leaves the person's state and its own directory nothing", () => {
-    const person = mkdtempSync(join(tmpdir(), 'chord-person-'));
-    const name = `dev-test-${process.pid}`;
-    const dir = `/tmp/chord-qa.${name}`;
-
-    try {
-      run(person, ['chord', '--qa', name, '--fake', '-p', 'hi']);
-
-      expect(files(join(person, 'state'))).toStrictEqual([]);
-      // Nothing in the run's own directory, where @ would list it.
-      expect(files(dir)).toStrictEqual([]);
-    } finally {
-      rmSync(person, { recursive: true, force: true });
-      rmSync(dir, { recursive: true, force: true });
-      rmSync(`${dir}.state`, { recursive: true, force: true });
-    }
   });
 });
 
@@ -975,17 +562,26 @@ describe('tester: direct lint process boundaries', () => {
       await writeFile(
         join(dir, 'package.json'),
         JSON.stringify({
-          name: '@chorded/chord',
+          name: 'chord-workspace',
           type: 'module',
+          workspaces: ['packages/acp'],
           scripts: { dev: 'bun scripts/dev.ts', eslint: 'bun eslint.ts' },
         }),
       );
+      await cp(
+        join(dir, 'package.json'),
+        join(dir, 'packages/acp/package.json'),
+      );
       await writeFile(
-        join(dir, 'steps.ts'),
+        join(dir, 'packages/acp/package.json'),
+        JSON.stringify({ name: '@chorded/cursor-cloud-acp', type: 'module' }),
+      );
+      await writeFile(
+        join(dir, 'packages/acp/steps.ts'),
         `export default {
   checks: [],
   lint: [process.execPath, 'run', 'eslint', '.'],
-  release: [{ name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' }],
+  release: [{ name: 'publish', npm: ['@chorded/cursor-cloud-acp'], tag: 'v{version}' }],
 };\n`,
       );
       await writeFile(
@@ -1000,7 +596,7 @@ describe('tester: direct lint process boundaries', () => {
       for (const status of [0, 23]) {
         const result = spawnSync(
           process.execPath,
-          ['dev', 'lint', 'chord', '--fix', '--', 'a b.ts', ''],
+          ['dev', 'lint', 'cursor-cloud-acp', '--fix', '--', 'a b.ts', ''],
           {
             cwd: dir,
             encoding: 'utf8',
@@ -1028,15 +624,18 @@ describe('tester: CHD-623 package command boundaries', () => {
     expect(await parsed(['lint', 'cursor-cloud-acp', ...args])).toEqual([
       ['lint', 'cursor-cloud-acp', args],
     ]);
-    expect(await parsed(['lint', 'chord', '--', '', '--help'])).toEqual([
-      ['lint', 'chord', ['', '--help']],
-    ]);
+    expect(
+      await parsed(['lint', 'cursor-cloud-acp', '--', '', '--help']),
+    ).toEqual([['lint', 'cursor-cloud-acp', ['', '--help']]]);
   });
 
   test('quality never interprets an npm scope or a folder as a package name', async () => {
-    for (const name of ['@chorded/chord', 'packages/cursor-cloud-acp']) {
+    for (const name of [
+      '@chorded/cursor-cloud-acp',
+      'packages/cursor-cloud-acp',
+    ]) {
       await expect(parsed(['quality', name])).rejects.toThrow(
-        'Expected values: "chord", "cursor-cloud-acp"',
+        'Expected values: "cursor-cloud-acp"',
       );
     }
   });
@@ -1050,7 +649,7 @@ describe('tester: CHD-623 package command boundaries', () => {
     await writeFile(
       join(dir, 'package.json'),
       JSON.stringify({
-        name: '@chorded/chord',
+        name: 'chord-workspace',
         type: 'module',
         workspaces: ['packages/*'],
         scripts: { dev: 'bun scripts/dev.ts' },
@@ -1112,11 +711,10 @@ describe('tester: CHD-623 package command boundaries', () => {
       };
 
       // cp creates the workspace's parents; the runner must still use the root cwd.
-      await writePackage('.', 'chord');
       await writePackage('packages/acp', 'cursor-cloud-acp');
-      await cp(join(dir, 'workspace-manifest.json'), join(dir, 'package.json'));
+      await writePackage('packages/other', 'other');
 
-      for (const name of ['chord', 'cursor-cloud-acp']) {
+      for (const name of ['other', 'cursor-cloud-acp']) {
         const result = invoked(dir, ['quality', name, '--static']);
 
         expect(result.error).toBeUndefined();
@@ -1131,7 +729,7 @@ describe('tester: CHD-623 package command boundaries', () => {
         'quality cursor-cloud-acp: dynamic failed with status 17',
       );
       expect(await readFile(join(dir, 'ran.log'), 'utf8')).toBe(
-        'chord:static\ncursor-cloud-acp:static\ncursor-cloud-acp:static\ncursor-cloud-acp:dynamic\n',
+        'other:static\ncursor-cloud-acp:static\ncursor-cloud-acp:static\ncursor-cloud-acp:dynamic\n',
       );
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -1142,10 +740,6 @@ describe('tester: CHD-623 package command boundaries', () => {
     const dir = await checkout();
 
     try {
-      await writeFile(
-        join(dir, 'steps.ts'),
-        "export default { checks: [], lint: [], release: [{ name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' }] };\n",
-      );
       await cp(
         join(dir, 'workspace-manifest.json'),
         join(dir, 'packages/acp/package.json'),
@@ -1159,7 +753,7 @@ describe('tester: CHD-623 package command boundaries', () => {
         "throw new Error('fixture steps failed');\n",
       );
 
-      for (const args of [['--help'], ['chord', '--fake', '--', '--help']]) {
+      for (const args of [['--help'], ['release', '--help']]) {
         const result = invoked(dir, args);
 
         expect(result.error).toBeUndefined();

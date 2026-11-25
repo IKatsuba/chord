@@ -1,78 +1,51 @@
 # Script rules
 
+These scripts are the TypeScript workspace's tooling, kept for
+`packages/cursor-cloud-acp` alone; chord itself is built and released by
+its Dart tools.
+
 - `bun dev <command>` is the Cliffy CLI in `dev.ts`, with modules in
-  `dev/`; declare its arguments there, not in each module. Only `quality`,
-  `lint` and `release` take a package by its npm name without the scope.
-  Each runs that package's root `steps.ts`: checks, lint argv and release
-  stages, with publish last. `bun check` and `bun fmt` are native Bun commands.
-  chord's checks leave `packages/` out.
-- `bun dev chord --qa [name]` remakes its capture directory and sibling
-  `.state` directory together (`/tmp/chord-qa[.<name>]` and that path plus
-  `.state`). `--fake` without `--qa` uses `/tmp/chord-fake`, made if missing
-  and kept across runs. QA takes precedence. Both set only `XDG_STATE_HOME`,
-  never writing records into the person's own state; config, data and cache
-  stay unchanged. Plain `bun dev chord` keeps the person's
-  XDG state. A bare `--fake --qa` opens the fake agent; plain `--qa` shows
-  the picker. The cursor-cloud fixture uses `--qa` with its explicit
-  `--agent-command`, never `--fake`, which supplies a command of its own.
+  `dev/`; declare its arguments there, not in each module. Its commands
+  are `quality`, `lint` and `release`, each taking a package by its npm name
+  without the scope. The packages are the root `package.json`'s workspaces;
+  the root itself is never one. Each runs that package's own `steps.ts`:
+  checks, lint argv and release stages, with publish last. `bun check` and
+  `bun fmt` are native Bun commands.
+- `bun test ./tests/scripts ./lint` runs the tooling's own tests;
+  `tests/scripts/dev/release/fixtures/chord_steps.ts` keeps the TypeScript
+  chord's release stages as a fixture for the release engine's tests only.
 - `bun dev release <package> [--bump <version|major|minor|patch|fix>]` is
-  the owner's (`docs/decisions.md`, "Releasing"); nobody else publishes.
-  chord's preflight checks every `src/chorded.ts` pin on npm; release the
-  agent package first. cursor-cloud-acp runs install, quality, build, pack
-  and publish, tags `cursor-cloud-acp-v<version>` and makes no GitHub release.
-  A bare release releases nothing. Use `--bump` instead of editing the version
-  by hand. `--channel <name>` makes `<base>-<channel>.<n>`; bumps count from
-  npm's latest stable. If package.json holds that base on that channel, its
-  number goes up; otherwise it starts at 0. Labelled versions are refused;
-  a stable bump from a pre-release needs an exact version. Without `--bump`,
-  `--channel` requires package.json already on that channel.
-- A new version needs a `versioned` stage (chord's `compile`). Before any
-  stage, its package.json is committed alone as `chore: <package> v<version>`.
-  Publishing requires the channel's branch, or main for a stable release,
-  level with origin, and pushes it there. A run with state keeps the commit
-  on a failed push, later failure or signal. A dry run or a run without publish
-  that makes a new version keeps no state and drops its commit, on failure,
-  SIGINT, SIGTERM or SIGHUP too. SIGKILL may leave it: `git reset --keep HEAD~1`.
-- Release stages come from the package's `steps.ts`; `dev/release/` runs them.
-  chord's are `install`, `quality`, `natives`, `compile`, `sign`, `selftest`,
-  `notarise`, `pack`, `publish`. Select with `--skip`, `--only`, `--from`,
-  `--to`; guards always run. `natives`, `sign`, `notarise` need an arm64 Mac.
-  A dry run still submits to Apple unless `--skip notarise` is passed.
-  chord's publish requires signed-in `gh`, checked with `gh auth status`.
-  After the guards, every named release requires npm authentication, even
-  dry runs and runs without publish. Successful `npm whoami` needs no terminal.
-  On failure, stdin and stdout must be terminals for one plain `npm login`
-  and a successful `npm whoami` recheck. Missing terminals, failed or cancelled
-  login, signals or a failed recheck stop the release. npm may open a browser
-  and save credentials or registry settings even in a dry run.
-- chord's `pack` fetches FFmpeg and zlib source with `curl` into
-  `dist/release/source/` and checks sums against OpenTUI's `FFMPEG-SOURCE.md`.
-  Failed downloads or mismatches stop the release; dry runs need network too.
-  Publish rechecks the archives and needs `pack` done in this run or the state.
-  It publishes all five npm packages in order. Channel packages use
-  `--tag <channel>`, leaving latest unchanged; a channel dry run prints its
-  stages and npm publish arguments. After pushing the tag, publish creates a
-  draft GitHub release with the archives, marked `--prerelease` for a channel.
-  The owner writes its notes and publishes it.
+  the owner's; nobody else publishes. cursor-cloud-acp runs install,
+  quality, build, pack and publish, tags `cursor-cloud-acp-v<version>` and
+  makes no GitHub release. A bare release releases nothing. Use `--bump`
+  instead of editing the version by hand. `--channel <name>` makes
+  `<base>-<channel>.<n>`; bumps count from npm's latest stable. If
+  package.json holds that base on that channel, its number goes up;
+  otherwise it starts at 0. Labelled versions are refused; a stable bump
+  from a pre-release needs an exact version. Without `--bump`, `--channel`
+  requires package.json already on that channel.
+- Before any stage, a new version's package.json is committed alone as
+  `chore: <package> v<version>`. Publishing requires the channel's branch,
+  or main for a stable release, level with origin, and pushes it there. A
+  run with state keeps the commit on a failed push, later failure or signal.
+  A dry run or a run without publish that makes a new version keeps no state
+  and drops its commit, on failure, SIGINT, SIGTERM or SIGHUP too. SIGKILL
+  may leave it: `git reset --keep HEAD~1`.
+- Select stages with `--skip`, `--only`, `--from`, `--to`; guards always
+  run. After the guards, every named release requires npm authentication,
+  even dry runs and runs without publish. Successful `npm whoami` needs no
+  terminal. On failure, stdin and stdout must be terminals for one plain
+  `npm login` and a successful `npm whoami` recheck. Missing terminals,
+  failed or cancelled login, signals or a failed recheck stop the release.
+  npm may open a browser and save credentials or registry settings even in
+  a dry run.
 - A publishing run, or one at package.json's version without `--dry-run`,
   records progress in `.release/<package>/state.json`, gitignored. Rerun
-  `bun dev release <package>` to continue, including a failed draft. The state
-  refuses `--bump` and `--dry-run` while unfinished. Missing or changed output
-  names the stage to rerun from (after signing, `--from compile`). Completion
-  removes state; abandon it by hand with `rm -r .release/<package>`.
-  The checkout-wide lock in git's common directory never goes stale. A lock
-  left by SIGKILL, a crash or reboot is refused with its pid and path, to
-  remove by hand.
-- `dev/compile.ts` uses `Bun.build` with a plugin resolving OpenTUI's
-  `react/jsx-dev-runtime` imports to `dev/jsx_dev_runtime.ts` on React's
-  production runtime. It installs all target packages and refuses any
-  Cursor SDK or keyring file in the binary.
-  Its `buildOptions` also builds the boundary test.
-- `bun dev selftest <binary>` checks the version, `-p`, ACP stdio, the window
-  and clipboard with the fake agent.
-- `targets.ts` is the one list of release platforms. Resource collector support
-  is separately guarded; compiling a target does not enable its collectors.
-  Keep the resource worker in the same binary and provider executables external.
-- `bun dev memory` is too slow for `bun dev quality chord` (`docs/memory.md`).
+  `bun dev release <package>` to continue. The state refuses `--bump` and
+  `--dry-run` while unfinished. Completion removes state; abandon it by hand
+  with `rm -r .release/<package>`. The checkout-wide lock in git's common
+  directory, `chord-release.lock`, is shared with chord's Dart release, so
+  the two never run at once; it never goes stale. A lock left by SIGKILL, a
+  crash or reboot is refused with its pid and path, to remove by hand.
 - Scripts run on Bun; no `npx`. The release runs npm on node through
-  `dev/release/lib.ts` (the owner's exception in `docs/decisions.md`).
+  `dev/release/lib.ts`.

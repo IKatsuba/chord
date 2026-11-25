@@ -11,7 +11,7 @@
 import process from 'node:process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { channelOf } from '../../../src/channel.ts';
+import { channelOf } from './channel.ts';
 import { die, type Release, type ReleasePackage, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 import { sha256 } from './sums.ts';

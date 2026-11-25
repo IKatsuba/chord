@@ -5,8 +5,6 @@
     "moduleResolution": "bundler",
     "lib": ["ESNext"],
     "types": ["bun"],
-    "jsx": "react-jsx",
-    "jsxImportSource": "@opentui/react",
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": true,
@@ -14,34 +12,7 @@
     "verbatimModuleSyntax": false,
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "paths": {
-      "convert-layout/ru.js": ["./src/ui/shortcuts/convert-layout.d.ts"]
-    }
+    "exactOptionalPropertyTypes": true
   },
-  "include": [
-    "src/",
-    "tests/",
-    "scripts/",
-    "lint/",
-    "eslint.config.ts",
-    "steps.ts"
-  ],
-  "files": [
-    "tests/ui/agents/Agents_test.tsx",
-    "tests/ui/app/Crash_test.tsx",
-    "tests/ui/app/Selection_test.tsx",
-    "tests/ui/app/Tasks_test.tsx",
-    "tests/ui/background/Background_test.tsx",
-    "tests/ui/dialogs/Asker_test.tsx",
-    "tests/ui/dialogs/Form_test.tsx",
-    "tests/ui/dialogs/Permission_test.tsx",
-    "tests/ui/dialogs/Questions_test.tsx",
-    "tests/ui/plan/Plan_test.tsx",
-    "tests/ui/prompt/Overlay_test.tsx",
-    "tests/ui/prompt/Prompt_test.tsx",
-    "tests/ui/splash/Splash_test.tsx",
-    "tests/ui/status/Status_test.tsx",
-    "tests/ui/teams/Teams_test.tsx"
-  ]
+  "include": ["scripts/", "tests/", "lint/", "eslint.config.ts"]
 }

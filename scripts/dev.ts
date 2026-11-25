@@ -1,15 +1,12 @@
 /**
- * chord's own tooling as one command, run from the tree:
+ * The workspace's TypeScript tooling as one command, run from the tree:
  *
  *   bun dev <command>   see `bun dev --help`
  */
 import { Command, EnumType, ValidationError } from '@cliffy/command';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import type { CompileOptions } from './dev/compile.ts';
-import type { MemoryOptions } from './dev/memory.ts';
 import { packages as findPackages, StepsError } from './dev/steps.ts';
-import chordSteps from '../steps.ts';
 import {
   BUMPS,
   isVersionArgument,
@@ -28,14 +25,6 @@ export interface DevActions {
   quality(name: string, only: boolean): void | Promise<void>;
   /** ESLint with `name`'s argv, `args` after it. */
   lint(name: string, args: readonly string[]): void | Promise<void>;
-  compile(options: CompileOptions): void | Promise<void>;
-  npm(): void | Promise<void>;
-  registry(): void | Promise<void>;
-  mark(): void | Promise<void>;
-  screenshots(names: readonly string[]): void | Promise<void>;
-  social(): void | Promise<void>;
-  memory(options: MemoryOptions): void | Promise<void>;
-  selftest(binary: string, arch: string | undefined): void | Promise<void>;
   /** Releases `name`'s `stages`, at `bump` if given. */
   release(
     name: string,
@@ -45,52 +34,7 @@ export interface DevActions {
   ): void | Promise<void>;
   /** A run that cannot say what to do: `line` on stderr, status 1. */
   unclear(line: string): void | Promise<void>;
-  /** `state` holds chord's state in place of the person's (CHD-616). */
-  chord(
-    fake: boolean,
-    args: readonly string[],
-    fixtureResources?: boolean,
-    state?: string,
-  ): void | Promise<void>;
-  /** Makes `dir` and `state`, a capture's places for `chord --qa`, afresh. */
-  qa(dir: string, state: string): void | Promise<void>;
-  test(args: readonly string[]): void | Promise<void>;
 }
-
-/**
- * Where `chord --qa [name]` runs: a fixed place under /tmp, named by the
- * capture, never the per-user temp directory, whose path names the machine
- * (CHD-427); `/tmp/chord-qa` for a bare `--qa`, which the parser gives as
- * `true`. A name that is not a plain word is refused.
- */
-export function qaDir(name: string | true): string {
-  if (name === true) {
-    return '/tmp/chord-qa';
-  }
-
-  if (!/^[A-Za-z0-9._-]+$/.test(name) || /^\.+$/.test(name)) {
-    throw new ValidationError(
-      `--qa takes letters, digits, . _ and -, not ${JSON.stringify(name)}`,
-    );
-  }
-
-  return `/tmp/chord-qa.${name}`;
-}
-
-/**
- * Where a `--qa` run keeps chord's state: beside its directory, made afresh
- * with it, never the person's own; not in it, where the @ file picker would
- * list it in captures (CHD-616).
- */
-export function qaState(dir: string): string {
-  return `${dir}.state`;
-}
-
-/**
- * Where a `--fake` run without `--qa` keeps chord's state: one fixed place,
- * kept from run to run, never the person's own (CHD-616).
- */
-export const FAKE_STATE = '/tmp/chord-fake';
 
 // The checkout this file is in, every package's steps run from.
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -115,21 +59,6 @@ const RUN: DevActions = {
 
     process.exitCode = await lint(await found(name), args, stepContext(ROOT));
   },
-  compile: async (options) =>
-    (await import('./dev/compile.ts')).compile(options),
-  npm: async () => (await import('./dev/npm.ts')).npm(),
-  registry: async () => (await import('./dev/registry.ts')).registry(),
-  mark: async () => (await import('./dev/mark.ts')).mark(),
-  screenshots: async (names) =>
-    (await import('./dev/screenshots.ts')).screenshots(names),
-  social: async () => (await import('./dev/social.ts')).social(),
-  memory: async (options) => (await import('./dev/memory.ts')).memory(options),
-  selftest: async (binary, arch) => {
-    const { dying, release } = await import('./dev/release/lib.ts');
-    const { selftest } = await import('./dev/release/selftest.ts');
-
-    await dying(() => selftest(release(), binary, arch));
-  },
   release: async (name, stages, options, bump) => {
     const { dying, release } = await import('./dev/release/lib.ts');
     const { runRelease } = await import('./dev/release/stages.ts');
@@ -143,20 +72,6 @@ const RUN: DevActions = {
     process.stderr.write(`${line}\n`);
 
     process.exitCode = 1;
-  },
-  chord: async (fake, args, fixtureResources, state) => {
-    process.exitCode = (await import('./dev/tools.ts')).chord(
-      fake,
-      args,
-      undefined,
-      fixtureResources,
-      state,
-    );
-  },
-  qa: async (dir, state) =>
-    (await import('./dev/tools.ts')).qaPlace(dir, state),
-  test: async (args) => {
-    process.exitCode = (await import('./dev/tools.ts')).test(args);
   },
 };
 
@@ -172,19 +87,13 @@ export interface DevPackage {
   readonly stages: readonly string[];
 }
 
-/** chord's, as its steps.ts lists them: the default tree's one package. */
-const CHORD: DevPackage = {
-  name: 'chord',
-  stages: chordSteps.release.map((stage) => stage.name),
-};
-
 /**
  * `bun dev`'s commands, declared, each running through `actions`; a
  * command that takes `<package>` takes one of `packages`.
  */
 export function devCommand(
-  actions: DevActions = RUN,
-  packages: readonly DevPackage[] = [CHORD],
+  actions: DevActions,
+  packages: readonly DevPackage[],
 ) {
   const names = packages.map((each) => each.name);
   const stageNames = packages.flatMap((each) => each.stages);
@@ -194,7 +103,7 @@ export function devCommand(
     new Command()
       .name('bun dev')
       .description(
-        `chord's build, release and maintenance tools. A command that takes <package> runs that package's steps from its steps.ts and nothing else: ${names.join(' or ')}, its npm name without the scope.`,
+        `The workspace's TypeScript tooling: quality, lint and release. A command that takes <package> runs that package's steps from its steps.ts and nothing else: ${names.join(' or ')}, its npm name without the scope.`,
       )
       .action(function () {
         this.showHelp();
@@ -210,7 +119,10 @@ export function devCommand(
           .option('--static', 'Only the checks marked static.', {
             default: false,
           })
-          .example("chord's static checks", 'bun dev quality chord --static')
+          .example(
+            "cursor-cloud-acp's static checks",
+            'bun dev quality cursor-cloud-acp --static',
+          )
           .action(({ static: only }, name) => actions.quality(name, only)),
       )
       .command(
@@ -222,166 +134,13 @@ export function devCommand(
           .type('package', new EnumType(names))
           .arguments('<package:package> [args...:string]')
           .stopEarly()
-          .example('what ESLint can fix, fixed', 'bun dev lint chord --fix')
+          .example(
+            'what ESLint can fix, fixed',
+            'bun dev lint cursor-cloud-acp --fix',
+          )
           .action(function (_options, name, ...args) {
             return actions.lint(name, [...args, ...this.getLiteralArgs()]);
           }),
-      )
-      .command(
-        'chord',
-        new Command()
-          .description(
-            "Run chord from source with React's production build; the rest of the arguments are chord's, an empty one only after --.",
-          )
-          .option(
-            '--fake',
-            'On the fake agent in tests/fixtures/fake_agent/ instead of a real one.',
-            { default: false },
-          )
-          .option(
-            '--qa [name:string]',
-            "In /tmp/chord-qa.<name>, made afresh, as its directory: a capture's neutral place, never the per-user temp one (letters, digits, . _ -); with no name, /tmp/chord-qa. An empty name, as --qa '' or --qa=, is dropped by the parser: chord then runs where it is, as with no --qa.",
-          )
-          .arguments('[args...:string]')
-          // Everything from chord's first word or option on is chord's.
-          .stopEarly()
-          .example('an agent', 'bun dev chord codex')
-          .example('the fake agent, one prompt', 'bun dev chord --fake -p hi')
-          .example("chord's own help", 'bun dev chord -- --help')
-          .example(
-            'a capture of the fake, in /tmp/chord-qa.tabs',
-            'bun dev chord --qa tabs --fake',
-          )
-          .action(async function ({ fake, qa }, ...args) {
-            const given = [...args, ...this.getLiteralArgs()];
-
-            if (qa === undefined) {
-              return fake
-                ? actions.chord(fake, given, undefined, FAKE_STATE)
-                : actions.chord(fake, given);
-            }
-
-            const dir = qaDir(qa);
-
-            await actions.qa(dir, qaState(dir));
-
-            return actions.chord(
-              fake,
-              ['-C', dir, ...given],
-              true,
-              qaState(dir),
-            );
-          }),
-      )
-      .command(
-        'test',
-        new Command()
-          .description(
-            "Run the whole suite with bun test, a worker per core, the slowest files first by the times in tests/timings.json; the rest of the arguments are bun test's, an empty one only after --. Its status is the tests'.",
-          )
-          .arguments('[args...:string]')
-          .stopEarly()
-          .example('only the uncommitted changes', 'bun dev test --changed')
-          .example('an empty pattern, after --', "bun dev test -- -t ''")
-          .action(function (_options, ...args) {
-            return actions.test([...args, ...this.getLiteralArgs()]);
-          }),
-      )
-      .command(
-        'compile',
-        new Command()
-          .description(
-            "Compile chord with bun build --compile: this machine's binary into dist/<target>/chord.",
-          )
-          .option('--all', 'Every release target in scripts/targets.ts.', {
-            default: false,
-          })
-          .option('--install', 'Into ~/.local/bin/chord instead of dist/.', {
-            default: false,
-          })
-          .action(({ all, install }) => actions.compile({ all, install })),
-      )
-      .command(
-        'npm',
-        new Command()
-          .description('Lay out npm/ from the binaries in dist/.')
-          .action(() => actions.npm()),
-      )
-      .command(
-        'registry',
-        new Command()
-          .description('Refetch the ACP Registry into src/registry.ts.')
-          .action(() => actions.registry()),
-      )
-      .command(
-        'mark',
-        new Command()
-          .description('Rasterise scripts/mark.svg into src/ui/header/mark.ts.')
-          .action(() => actions.mark()),
-      )
-      .command(
-        'screenshots',
-        new Command()
-          .description(
-            'Retake docs/images/ from chord on the fake agent, or only the shots named.',
-          )
-          .arguments('[names...:string]')
-          .action((_options, ...names) => actions.screenshots(names)),
-      )
-      .command(
-        'social',
-        new Command()
-          .description(
-            "Lay out GitHub's social preview from docs/images into dist/social-preview.png.",
-          )
-          .action(() => actions.social()),
-      )
-      .command(
-        'memory',
-        new Command()
-          .description(
-            "The long-run memory check: chord's window on the fake agent's soak, its memory sampled and its heap compared.",
-          )
-          .option('--minutes <minutes:number>', 'How long the run lasts.', {
-            default: 10,
-          })
-          .option(
-            '--sample-seconds <seconds:number>',
-            'Seconds between samples.',
-            { default: 10 },
-          )
-          .option(
-            '--snapshots <count:number>',
-            'Heap snapshots over the run, at least 2.',
-            { default: 4 },
-          )
-          .option(
-            '--step-ms <ms:number>',
-            "The fake agent's delay between streamed steps.",
-            { default: 5 },
-          )
-          .option('--binary <path:string>', 'Run this binary, not the source.')
-          .option('--development', "React's development build, from source.", {
-            default: false,
-          })
-          .action((options) => actions.memory(options)),
-      )
-      .command(
-        'selftest',
-        new Command()
-          .description(
-            "What the release's self-test does: --version must say package.json's version, -p must answer, and the window must open, answer a prompt and read the clipboard in a tmux of its own.",
-          )
-          .arguments('<binary:string>')
-          .option(
-            '--arch <arch:string>',
-            'Run it all under `arch -<arch>` (x86_64: Rosetta).',
-          )
-          .example(
-            'The x64 binary under Rosetta',
-            'bun dev selftest dist/bun-darwin-x64/chord --arch x86_64',
-          )
-          .action(({ arch }, binary) => actions.selftest(binary, arch)),
       )
       .command(
         'release',
@@ -430,27 +189,30 @@ export function devCommand(
           )
           .option('--from <stage:stage>', 'Start at this stage.')
           .option('--to <stage:stage>', 'Stop after this stage.')
-          .example('the whole release', 'bun dev release chord')
+          .example('the whole release', 'bun dev release cursor-cloud-acp')
           .example(
             'the next minor version',
-            'bun dev release chord --bump minor',
+            'bun dev release cursor-cloud-acp --bump minor',
           )
-          .example('an exact version', 'bun dev release chord --bump 1.0.0')
+          .example(
+            'an exact version',
+            'bun dev release cursor-cloud-acp --bump 1.0.0',
+          )
           .example(
             "the next pre-release on a channel, from that channel's branch",
-            'bun dev release chord --bump major --channel next',
+            'bun dev release cursor-cloud-acp --bump major --channel next',
           )
           .example(
             'a dry run of the next patch, package.json as it was after',
-            'bun dev release chord --bump patch --dry-run --skip notarise',
+            'bun dev release cursor-cloud-acp --bump patch --dry-run',
           )
           .example(
             'without the checks and tests',
-            'bun dev release chord --skip install,quality',
+            'bun dev release cursor-cloud-acp --skip install,quality',
           )
           .example(
-            'rerun from the self-test',
-            'bun dev release chord --from selftest',
+            'rerun from the build',
+            'bun dev release cursor-cloud-acp --from build',
           )
           .action(({ bump, ...options }, name) => {
             if (name === undefined) {

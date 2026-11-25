@@ -12,6 +12,18 @@ void main() {
       test(
         'scripted service editor success=${!failed} at ${columns}x$rows cleans its file',
         () async {
+          // In the body, as --run-skipped overrides skip:. On Linux, after
+          // the editor child that shared the tty exits, dart:io's stdin can
+          // stall the isolate until the next byte arrives, so the demo's
+          // "Editor: exited" frame waits for a key (docs/decisions.md,
+          // CTUI-192; chord_tui's own fd-0 reader is CTUI-193).
+          if (Platform.isLinux) {
+            markTestSkipped(
+              'dart:io stdin stalls after an inheritStdio child on Linux '
+              '(CTUI-192); own fd-0 reader is CTUI-193',
+            );
+            return;
+          }
           final dir = Directory.systemTemp.createTempSync('service-demo-pty-');
           addTearDown(() => dir.deleteSync(recursive: true));
           final temporary = Directory('${dir.path}/owned')..createSync();

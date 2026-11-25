@@ -4536,3 +4536,65 @@ recorded it as a failure, and a hung-up app with no signal owner exited
 1 instead of 0. The terminal's own tty input failing now counts as that
 input's end: it marks the terminal hung up and forwards nothing.
 Supplied and non-tty inputs still report their errors.
+
+## CTUI-192: dart:io stdin can stall an app after an inheritStdio child
+
+After `StdioTerminal.runEditor` lends the terminal to an editor child
+(`ProcessStartMode.inheritStdio`) and takes it back, the app's isolate
+can stall inside dart:io's terminal-stdin read until the next byte
+arrives: the window does not redraw, and timers and microtasks do not
+run. One key releases it (four of four stalls on native linux/arm64
+under load, a right-arrow each time). This is the user-facing effect:
+after the external editor returns, the window may freeze until the next
+key. It stays; the owner chose to record it, not work around it.
+
+Seen in chord_tui's `terminal_services_example_pty_test`: native
+linux/arm64, Dart 3.13.5, 8 CPU burners at nice 19: 8 of 10 runs failed,
+the frame after the editor drawn only when the test's expect closed the
+pty 15 s later. gdb at the stall: the main thread waits in
+`Dart_RunLoop`; a worker running the isolate is in `read(fd=0, buf, 1)`
+on the blocking tty, called from Dart code through dart:io's stdin
+native read path. dart:io reads a terminal stdin as
+`_Socket._readPipe(0)`; the likely cause is a readiness report for
+bytes the child already consumed. That case is skipped on Linux, in
+its body, with this reason; macOS still runs it.
+
+A minimal program, fit to file upstream (filing is the owner's), run
+on a pty (expect spawns it, waits for `CHILD READY`, sends a line):
+
+```dart
+import 'dart:async';
+import 'dart:io';
+
+Future<void> main(List<String> args) async {
+  if (args.contains('--child')) {
+    stdout.writeln('CHILD READY');
+    stdin.readLineSync();
+    return;
+  }
+  final sub = stdin.listen((_) {});
+  sub.pause();
+  final child = await Process.start(
+    Platform.resolvedExecutable,
+    [Platform.script.toFilePath(), '--child'],
+    mode: ProcessStartMode.inheritStdio,
+  );
+  await child.exitCode;
+  sub.resume();
+  final watch = Stopwatch()..start();
+  Timer(Duration.zero, () {
+    stdout.writeln('FIRED ${watch.elapsedMilliseconds} ms');
+    exit(0);
+  });
+}
+```
+
+Dart 3.13.5: the timer never fired within 20 s on native linux/arm64,
+linux/amd64 (emulated) and macOS arm64; it is timing-sensitive on
+linux/arm64, where one run of several fired. Without `sub.resume()` it
+fired at 0-3 ms. Tried and not taken: drawing the post-resume frame by
+microtask (7 of 10 still failed: the isolate itself is stuck), and fd 0
+non-blocking while the app owns it and blocking while the child has it
+(released the program on macOS, 1 ms; on linux/arm64 5 of 5 still
+stalled, gdb then in the same native read path, signal mask step).
+chord_tui's own fd-0 reader, in place of dart:io's stdin, is CTUI-193.

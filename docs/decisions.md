@@ -4611,9 +4611,12 @@ left after a run that went on to exec `sh -c sleep 600`); and the
 launcher chose 127 over 126 from ENOENT. Now a failed group kill falls
 back to the pid alone whenever the process has not exited, and a failed
 `execv` exits 127 when the program, or a script's `#!` interpreter, is
-not there, checked on the files; the errno it reports is ENOENT or
-EACCES where the files explain the failure, else the one read (seen
-reading 22 for an EACCES under that load). `GroupProcess.alive` still
+proven not there by the files (a searchable directory without that name,
+or a missing directory on the way); the errno it reports is ENOENT or
+EACCES where the files show it, and both come from the errno read where
+they cannot, as under a directory that may not be searched or through a
+link that does not resolve, where a stat fails as if nothing were there
+(errno was seen reading 22 for an EACCES under that load). `GroupProcess.alive` still
 reads EPERM: on macOS it is a group left only with unreaped processes,
 and on Linux a group whose members are all another user's, such as a
 root process an agent started through sudo, so EPERM cannot be read as

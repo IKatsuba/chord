@@ -58,19 +58,21 @@ Never groupExec(List<String> args) {
   _execv(path, argv);
 
   final read = _errno();
-  // From the files where they explain it, not from errno alone: errno is
-  // read by a second FFI call, and the VM may make syscalls of its own in
-  // between (CTUI-192).
+  // From the files where they show it, not from errno alone: errno is read
+  // by a second FFI call, and the VM may make syscalls of its own in
+  // between (CTUI-192). Where the files cannot show it, errno decides.
   final (:code, :errno) = execFailure(
     call.path,
-    present: (path) =>
-        FileSystemEntity.typeSync(path) != FileSystemEntityType.notFound,
+    read: read,
+    kind: (path, {required followLinks}) =>
+        FileSystemEntity.typeSync(path, followLinks: followLinks),
+    searchable: (dir) => _access(_cString(dir), _xOk) == 0,
     runnable: (path) =>
         FileSystemEntity.typeSync(path) == FileSystemEntityType.file &&
         _access(_cString(path), _xOk) == 0,
     firstLine: _firstLine,
   );
-  _write('$frame fail exec ${errno ?? read}\n');
+  _write('$frame fail exec $errno\n');
   _exit(code);
 }
 
@@ -82,26 +84,88 @@ final _access = _libc
       int Function(Pointer<Uint8>, int)
     >('access');
 
-/// Why an `execv` of [path] failed, from the files: [code] is 127 when the
-/// program, or a script's `#!` interpreter, is not there (ENOENT, as
-/// CTUI-36 says), else 126; [errno] is ENOENT or EACCES where the files
-/// explain it (not there; not a [runnable] file), else null for the errno
-/// read. [present], [runnable] and [firstLine] look.
-({int code, int? errno}) execFailure(
+/// What a lookup of a path shows: there, proven not there, or neither,
+/// as when a directory on the way may not be searched.
+enum Lookup {
+  /// It is there.
+  found,
+
+  /// A searchable directory holds no such name, or a directory on the way
+  /// is itself missing.
+  missing,
+
+  /// The files cannot tell: a directory on the way that may not be
+  /// searched, or a link that does not resolve.
+  unknown,
+}
+
+/// How [path] looks up: [kind] stats it (a failure reads as not found,
+/// as dart:io's does), and [searchable] says a directory may be searched.
+Lookup lookup(
   String path, {
-  required bool Function(String path) present,
+  required FileSystemEntityType Function(
+    String path, {
+    required bool followLinks,
+  })
+  kind,
+  required bool Function(String dir) searchable,
+}) {
+  if (kind(path, followLinks: false) != FileSystemEntityType.notFound) {
+    // A link that does not resolve may be dangling or a loop.
+    return kind(path, followLinks: true) == FileSystemEntityType.notFound
+        ? Lookup.unknown
+        : Lookup.found;
+  }
+  final slash = path.lastIndexOf('/');
+  if (slash < 0) return Lookup.unknown;
+  final parent = slash == 0 ? '/' : path.substring(0, slash);
+  if (parent == path) return Lookup.unknown;
+  return switch (lookup(parent, kind: kind, searchable: searchable)) {
+    Lookup.found =>
+      kind(parent, followLinks: true) == FileSystemEntityType.directory &&
+              searchable(parent)
+          ? Lookup.missing
+          : Lookup.unknown,
+    Lookup.missing => Lookup.missing,
+    Lookup.unknown => Lookup.unknown,
+  };
+}
+
+/// Why an `execv` of [path] failed: [code] is 127 when the program, or a
+/// script's `#!` interpreter, is not there (ENOENT, as CTUI-36 says), else
+/// 126; [errno] is the one to report. Both come from the files where they
+/// show it (not there; not a [runnable] file), and from [read], the errno
+/// read after the call, where they cannot.
+({int code, int errno}) execFailure(
+  String path, {
+  required int read,
+  required FileSystemEntityType Function(
+    String path, {
+    required bool followLinks,
+  })
+  kind,
+  required bool Function(String dir) searchable,
   required bool Function(String path) runnable,
   required String? Function(String path) firstLine,
 }) {
-  if (!present(path)) return (code: 127, errno: _enoent);
+  final fromErrno = (code: read == _enoent ? 127 : 126, errno: read);
+  Lookup look(String path) => lookup(path, kind: kind, searchable: searchable);
+  switch (look(path)) {
+    case Lookup.missing:
+      return (code: 127, errno: _enoent);
+    case Lookup.unknown:
+      return fromErrno;
+    case Lookup.found:
+  }
   if (!runnable(path)) return (code: 126, errno: _eacces);
   final line = firstLine(path);
-  if (line == null || !line.startsWith('#!')) return (code: 126, errno: null);
+  if (line == null || !line.startsWith('#!')) return fromErrno;
   final interpreter = line.substring(2).trim().split(RegExp(r'\s+')).first;
-  if (interpreter.isNotEmpty && !present(interpreter)) {
-    return (code: 127, errno: _enoent);
-  }
-  return (code: 126, errno: null);
+  if (interpreter.isEmpty) return fromErrno;
+  return switch (look(interpreter)) {
+    Lookup.missing => (code: 127, errno: _enoent),
+    Lookup.unknown || Lookup.found => fromErrno,
+  };
 }
 
 String? _firstLine(String path) {

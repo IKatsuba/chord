@@ -16,45 +16,114 @@ void main() {
     ['--packages=$packages', script, ...args],
   ).timeout(const Duration(seconds: 30));
 
-  test('a failed exec says 127 for a program or #! interpreter not there, '
-      'else 126, with ENOENT or EACCES from the files, not errno', () {
-    ({int code, int? errno}) failure(
+  group('a failed exec, from the files where they show it', () {
+    // A tree of paths: each is a directory (searchable or not), a file, or
+    // a link that does not resolve; any other path is not there.
+    ({int code, int errno}) failure(
       String path,
-      Set<String> there, {
+      Map<String, String> tree, {
+      int read = 99,
       Set<String> runnable = const {},
       Map<String, String> lines = const {},
     }) => execFailure(
       path,
-      present: there.contains,
+      read: read,
+      kind: (path, {required followLinks}) => switch (tree[path]) {
+        'dir' || 'locked' => FileSystemEntityType.directory,
+        'file' => FileSystemEntityType.file,
+        'loop' when !followLinks => FileSystemEntityType.link,
+        _ => FileSystemEntityType.notFound,
+      },
+      searchable: (dir) => tree[dir] == 'dir',
       runnable: runnable.contains,
       firstLine: (path) => lines[path],
     );
-    expect(failure('/a/agent', {}), (code: 127, errno: 2));
-    // A directory, or a file without x: EACCES, whatever errno reads.
-    expect(failure('/bin', {'/bin'}), (code: 126, errno: 13));
-    expect(failure('/a/agent', {'/a/agent'}, runnable: {'/a/agent'}), (
-      code: 126,
-      errno: null,
-    ));
-    expect(
-      failure(
+    final root = {'/': 'dir', '/a': 'dir'};
+
+    test('a program not there is 127 and ENOENT', () {
+      expect(failure('/a/agent', root), (code: 127, errno: 2));
+      expect(failure('/a/b/agent', root), (code: 127, errno: 2));
+    });
+
+    test('one under a directory that may not be searched is the errno '
+        'read: the files cannot show it is not there', () {
+      final tree = {...root, '/a/locked': 'locked'};
+      expect(failure('/a/locked/agent', tree, read: 13), (
+        code: 126,
+        errno: 13,
+      ));
+      expect(failure('/a/locked/agent', tree, read: 2), (code: 127, errno: 2));
+    });
+
+    test('a link that does not resolve is the errno read', () {
+      final tree = {...root, '/a/agent': 'loop'};
+      expect(failure('/a/agent', tree, read: 40), (code: 126, errno: 40));
+    });
+
+    test('a directory, or a file without x, is 126 and EACCES', () {
+      expect(failure('/a', root, read: 22), (code: 126, errno: 13));
+      final tree = {...root, '/a/agent': 'file'};
+      expect(failure('/a/agent', tree, read: 22), (code: 126, errno: 13));
+    });
+
+    test("a script's #! interpreter not there is 127 and ENOENT; one the "
+        'files cannot show is the errno read', () {
+      final tree = {...root, '/a/sh': 'file', '/a/locked': 'locked'};
+      ({int code, int errno}) script(String line, int read) => failure(
         '/a/sh',
-        {'/a/sh'},
+        tree,
+        read: read,
         runnable: {'/a/sh'},
-        lines: {'/a/sh': '#!/nonexistent/interpreter'},
-      ),
-      (code: 127, errno: 2),
-    );
-    expect(
-      failure(
-        '/a/sh',
-        {'/a/sh', '/bin/sh'},
-        runnable: {'/a/sh'},
-        lines: {'/a/sh': '#! /bin/sh -e'},
-      ),
-      (code: 126, errno: null),
-    );
+        lines: {'/a/sh': line},
+      );
+      expect(script('#!/nonexistent/interpreter', 99), (code: 127, errno: 2));
+      expect(script('#!/a/locked/interp -e', 13), (code: 126, errno: 13));
+      expect(script('#! /a/sh -e', 8), (code: 126, errno: 8));
+    });
   });
+
+  // Run as a user who cannot search the directory: root can.
+  final unprivileged =
+      Process.runSync('id', ['-u']).stdout.toString().trim() != '0';
+
+  test('a program under a directory that may not be searched is not said to '
+      'be missing', () async {
+    final dir = Directory.systemTemp.createTempSync('chord-exec-locked-');
+    final locked = Directory('${dir.path}/locked')..createSync();
+    final agent = File('${locked.path}/agent')
+      ..writeAsStringSync('#!/bin/sh\nexit 0\n');
+    Process.runSync('chmod', ['755', agent.path]);
+    Process.runSync('chmod', ['000', locked.path]);
+    addTearDown(() {
+      Process.runSync('chmod', ['755', locked.path]);
+      dir.deleteSync(recursive: true);
+    });
+    final result = await launch([groupExecFlag, 'ab', agent.path, '--', 'a']);
+    expect(result.exitCode, 126, reason: '${result.stderr}');
+    expect(
+      result.stderr,
+      startsWith('chord-exec ab ok\nchord-exec ab fail exec '),
+    );
+    expect(result.stderr, isNot(endsWith(' fail exec 2\n')));
+  }, skip: unprivileged ? false : 'root searches every directory');
+
+  test("a script whose #! interpreter is under a directory that may not be "
+      'searched is not said to be missing', () async {
+    final dir = Directory.systemTemp.createTempSync('chord-exec-locked-');
+    final locked = Directory('${dir.path}/locked')..createSync();
+    File('${locked.path}/interp').writeAsStringSync('');
+    final script = File('${dir.path}/agent')
+      ..writeAsStringSync('#!${locked.path}/interp\n');
+    Process.runSync('chmod', ['755', script.path]);
+    Process.runSync('chmod', ['000', locked.path]);
+    addTearDown(() {
+      Process.runSync('chmod', ['755', locked.path]);
+      dir.deleteSync(recursive: true);
+    });
+    final result = await launch([groupExecFlag, 'ab', script.path, '--', 'a']);
+    expect(result.exitCode, 126, reason: '${result.stderr}');
+    expect(result.stderr, isNot(endsWith(' fail exec 2\n')));
+  }, skip: unprivileged ? false : 'root searches every directory');
 
   test('a malformed call prints one line and exits 126', () async {
     for (final args in [

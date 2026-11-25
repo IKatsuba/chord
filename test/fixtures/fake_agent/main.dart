@@ -1193,6 +1193,7 @@ Map<String, NotificationSpec> _notifications() => {
 /// A wedged agent ignores SIGTERM and goes only with SIGKILL or its parent.
 void _wedge() {
   ProcessSignal.sigterm.watch().listen((_) {});
+  if (sayWedged) stderr.writeln('wedged');
   // On a loaded machine ps can say nothing; the parent is the first one it
   // names, never compared against an unknown one.
   var parent = _parentOf(pid);

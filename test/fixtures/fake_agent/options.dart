@@ -175,6 +175,10 @@ final String? setTitleMode = () {
   throw StateError('unknown --set-title "$chosen"');
 }();
 
+/// A wedged agent says `wedged` on stderr once SIGTERM is ignored, for a
+/// test that times the stop ladder from there.
+final sayWedged = _flag('--say-wedged');
+
 /// It opens every session in `auto`, which `fake-small` lacks (CHD-629).
 final autoFallback = _flag('--auto-fallback', 'CHORD_FAKE_AUTO_FALLBACK');
 

@@ -783,10 +783,16 @@ void main() {
 
       test('a start that never answers initialize waits until given up, '
           'then the whole ladder ends it', () async {
-        final run = startFake(flags: ['--hang', 'start']);
+        final run = startFake(flags: ['--hang', 'start', '--say-wedged']);
         final process = await run.process;
         await run.traffic.next(
           (t) => t is ChordTraffic && t.message['method'] == 'initialize',
+        );
+        // Chord's initialize can go out before the fake's VM reaches main,
+        // where SIGTERM would still end it: the ladder is timed from its
+        // word that SIGTERM is ignored.
+        await run.traffic.next(
+          (t) => t is StderrTraffic && t.text.contains('wedged'),
         );
         expect(await pending(run.agent), isTrue);
         final watch = Stopwatch()..start();

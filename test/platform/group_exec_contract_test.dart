@@ -54,7 +54,10 @@ void main() {
     for (final nonce in seen) {
       expect(nonce, matches(RegExp(r'^[0-9a-f]{1,8}$')));
     }
-  });
+    // Twenty launches, each compiling group_exec.dart on the JIT: about
+    // 0.5 s each on macOS, 1.1 s in an emulated Linux container, and the
+    // case near 30 s there under load.
+  }, timeout: const Timeout(Duration(minutes: 3)));
 
   test("the parent reads the launcher's frames as written", () {
     final ok = GroupHandshake('c0ffee');

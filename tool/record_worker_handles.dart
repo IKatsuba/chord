@@ -370,7 +370,7 @@ Future<void> main() async {
         'mode': const bool.fromEnvironment('dart.vm.product') ? 'AOT' : 'JIT',
         'pathMatching': 'Canonical owned root; relative descriptor names only.',
         'snapshotPolicy':
-            'Immediate single lsof snapshot after public Future; no polling.',
+            'Immediate single descriptor snapshot after public Future; no polling.',
         'physicalIsolateCount': null,
         'physicalExitLatency': null,
         'operations': reports,

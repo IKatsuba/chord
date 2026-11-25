@@ -5,6 +5,51 @@ import 'package:chord_tui/chord_tui.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('tester: supplied input errors stay observable', () {
+    test(
+      'both listeners retain the error and continue until source EOF',
+      () async {
+        final source = StreamController<List<int>>();
+        final terminal = StdioTerminal(input: source.stream);
+        final text = [<String>[], <String>[]];
+        final errors = [<Object>[], <Object>[]];
+        final stacks = [<StackTrace>[], <StackTrace>[]];
+        final ended = [Completer<void>(), Completer<void>()];
+        final listeners = [
+          for (var i = 0; i < 2; i++)
+            terminal.input.listen(
+              text[i].add,
+              onError: (Object error, StackTrace stack) {
+                errors[i].add(error);
+                stacks[i].add(stack);
+              },
+              onDone: ended[i].complete,
+            ),
+        ];
+        addTearDown(() async {
+          for (final listener in listeners) {
+            await listener.cancel();
+          }
+          await terminal.close();
+          await source.close();
+        });
+        final failure = StateError('caller input failed');
+        final stack = StackTrace.current;
+        source.add(utf8.encode('before 界'));
+        source.addError(failure, stack);
+        source.add(utf8.encode('after 🙂e\u0301\x1b[31m'));
+        await pumpEventQueue();
+        for (var i = 0; i < 2; i++) {
+          expect(text[i], ['before 界', 'after 🙂e\u0301\x1b[31m']);
+          expect(errors[i], [same(failure)]);
+          expect(stacks[i], [same(stack)]);
+          expect(ended[i].isCompleted, isFalse);
+        }
+        await source.close();
+        await Future.wait([for (final done in ended) done.future]);
+      },
+    );
+  });
   group('tester: borrowed terminal input ownership', () {
     test(
       'last listener pauses source and resume keeps decoder across split UTF8',

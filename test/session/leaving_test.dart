@@ -598,7 +598,7 @@ void main() {
           final groups = ProcessGroups();
           final process = await spawnGroup(
             'sh',
-            ['-c', 'sleep 60'],
+            ['-c', 'exec sleep 60'],
             cwd: Directory.systemTemp.path,
             groups: groups,
           );

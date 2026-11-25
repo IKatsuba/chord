@@ -108,19 +108,30 @@ void main() {
       final signals = StreamController<ProcessSignal>();
       addTearDown(signals.close);
       var current = root.path, attempt = 0;
-      final off = snapshotOnSignal(
-        () => current,
-        signals: signals.stream,
-        now: () => DateTime.utc(2026, 11, 24),
-        write: (_) async {
-          throw StateError('attempt ${++attempt}');
-        },
+      final errorWrites = <Future<File>>[];
+      final outside = Zone.current;
+      final off = IOOverrides.runZoned(
+        () => snapshotOnSignal(
+          () => current,
+          signals: signals.stream,
+          now: () => DateTime.utc(2026, 11, 24),
+          write: (_) async {
+            throw StateError('attempt ${++attempt}');
+          },
+        ),
+        createFile: (path) =>
+            _ObservedErrorFile(outside.run(() => File(path)), errorWrites.add),
       );
       addTearDown(off);
       final error = File(p.join(root.path, 'heap-error.txt'));
       error.writeAsStringSync('old bytes' * 1000);
       signals.add(heapSignal);
       await _until(() => error.readAsStringSync().contains('attempt 1'));
+      // Content can become visible before writeAsString closes its file.
+      // Await that real IO, then drain the handler's finally continuation.
+      expect(errorWrites, hasLength(1));
+      await errorWrites.single;
+      await pumpEventQueue();
       expect(error.readAsStringSync(), isNot(contains('old bytes')));
       current = (Directory(p.join(root.path, 'second'))..createSync()).path;
       final nextError = File(p.join(current, 'heap-error.txt'));
@@ -134,4 +145,32 @@ void main() {
       expect(nextError.readAsStringSync(), isNot(contains('attempt 1')));
     });
   });
+}
+
+/// Only the handler's error-file write is overridden; it still uses real IO.
+final class _ObservedErrorFile implements File {
+  _ObservedErrorFile(this.file, this.observe);
+
+  final File file;
+  final void Function(Future<File>) observe;
+
+  @override
+  Future<File> writeAsString(
+    String contents, {
+    FileMode mode = FileMode.write,
+    Encoding encoding = utf8,
+    bool flush = false,
+  }) {
+    final done = file.writeAsString(
+      contents,
+      mode: mode,
+      encoding: encoding,
+      flush: flush,
+    );
+    observe(done);
+    return done;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

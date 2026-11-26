@@ -10,5 +10,10 @@ dependencies:
   chord_tui:
     path: ../packages/chord_tui
 dev_dependencies:
+  archive: ^4.7.1
+  crypto: ^3.0.8
+  http: ^1.6.0
   lints: ^6.1.0
+  path: ^1.9.1
+  puppeteer: ^3.28.0
   test: ^1.33.0

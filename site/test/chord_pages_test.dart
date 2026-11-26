@@ -36,75 +36,131 @@ String _recording(int cols, int rows) => jsonEncode({
 final _files = {
   'permission.120x36.rec.json': _recording(120, 36),
   'permission.80x20.rec.json': _recording(80, 20),
+  'permission.48x32.rec.json': _recording(48, 32),
 };
 
 const _names = ['permission', 'start'];
 
 void main() {
-  test('the largest recording that fits is chosen, else the smallest', () {
-    expect(recordingSizeFor(120, 36), (cols: 120, rows: 36));
-    expect(recordingSizeFor(119, 36), (cols: 80, rows: 20));
-    expect(recordingSizeFor(80, 20), (cols: 80, rows: 20));
-    expect(recordingSizeFor(43, 33), (cols: 80, rows: 20));
+  test('the largest recording that fits with its frame, caption and bar '
+      'is chosen; else 48x32 bare; else 48x32 clipped', () {
+    // Pages at the design's grids: the window less the nav and help rows,
+    // and a phone's key row.
+    expect(recordingFitFor(205, 51), (
+      cols: 120,
+      rows: 36,
+      framed: true,
+      clipped: false,
+    ));
+    expect(recordingFitFor(182, 45), (
+      cols: 120,
+      rows: 36,
+      framed: true,
+      clipped: false,
+    ));
+    expect(recordingFitFor(122, 42), (
+      cols: 120,
+      rows: 36,
+      framed: true,
+      clipped: false,
+    ));
+    expect(recordingFitFor(121, 42), (
+      cols: 80,
+      rows: 20,
+      framed: true,
+      clipped: false,
+    ));
+    expect(recordingFitFor(117, 68), (
+      cols: 80,
+      rows: 20,
+      framed: true,
+      clipped: false,
+    ));
+    expect(recordingFitFor(55, 46), (
+      cols: 48,
+      rows: 32,
+      framed: true,
+      clipped: false,
+    ));
+    expect(recordingFitFor(51, 34), (
+      cols: 48,
+      rows: 32,
+      framed: false,
+      clipped: false,
+    ));
+    expect(recordingFitFor(43, 31), (
+      cols: 48,
+      rows: 32,
+      framed: false,
+      clipped: true,
+    ));
   });
 
-  for (final size in const [Size(120, 40), Size(80, 24)]) {
-    testWidgets('/chord lists the screens with their captions, $size', (
+  // Windows where each size fits with its frame: the page is the window
+  // less the nav's four rows and the help row, and a phone's key row.
+  for (final (size, rec) in const [
+    (Size(122, 47), '120x36'),
+    (Size(82, 31), '80x20'),
+    (Size(55, 52), '48x32'),
+  ]) {
+    testWidgets('a recording page plays $rec in its cream frame at $size', (
       t,
     ) async {
-      final host = FakeHost('/chord');
-      await t.pumpWidget(
-        Site(host: host, recordings: _names),
-        size: size,
-      );
-      expect(t.screen, shows('One terminal for every coding agent.'));
-      expect(t.screen, shows('1. start'));
-      expect(t.screen, shows('2. permission'));
-      expect(t.screen, shows('the permission prompt'));
-      await t.press('2');
-      expect(host.pushed, ['/chord/permission']);
-      expect(host.titles.last, 'permission · chord');
-    });
-  }
-
-  // Windows each recording fits under the nav: 36 rows and the bar under
-  // four nav rows and the help row, and 20 and the bar.
-  for (final size in const [Size(120, 42), Size(80, 26)]) {
-    testWidgets('a recording page plays the size that fits, $size', (t) async {
       final host = FakeHost('/chord/permission', _files);
       await t.pumpWidget(
         Site(host: host, recordings: _names),
         size: size,
       );
-      expect(t.screen, shows('loading permission…'));
+      expect(t.screen, shows('LOADING PERMISSION…'));
       await t.pump();
-      final big = size.width >= 120;
-      expect(host.fetched, [
-        big ? 'permission.120x36.rec.json' : 'permission.80x20.rec.json',
-      ]);
-      // The nav's three rows and rule, then the recording.
-      expect(t.screen.lines[3], startsWith('──'));
+      expect(host.fetched, ['permission.$rec.rec.json']);
+      final phone = size.width < 60;
+      final caption = t.screen.lines.indexWhere((l) => l.contains('01 / '));
       expect(
-        t.screen.lines[4],
-        big ? 'recorded at 120x36' : 'recorded at 80x20',
+        t.screen.lines[caption].trim(),
+        phone ? '01 / PERMISSION' : '01 / THE APP / PERMISSION',
       );
-      // The bar sits one cell in, in line with the help row under it.
-      expect(t.screen.lines[size.height - 2], startsWith(' ▶ 0:00 / 0:'));
-      // The whole row fits 80 columns.
       expect(
-        t.screen.lines.last,
-        startsWith(
-          ' space Play/pause  right/l Next  left/h Previous  r Restart  '
-          'escape up  ? keys',
-        ),
+        t.screen.styleAt(t.screen.lines[caption].indexOf('01'), caption),
+        ThemeData.dark().accent.merge(Style.bold),
+      );
+      // A blank row, the frame's cream row, then the recording, centred.
+      final top = caption + 2;
+      final cols = int.parse(rec.split('x').first);
+      final left = (size.width - cols - 2) ~/ 2;
+      expect(t.screen.styleAt(left, top).isInverse, isTrue, reason: 'frame');
+      expect(t.screen.styleAt(left + cols + 1, top + 1).isInverse, isTrue);
+      expect(t.screen.lines[top + 1].indexOf('recorded at $rec'), left + 1);
+      // The bar under it after a blank, centred: the orange cell first.
+      final bar = top + int.parse(rec.split('x').last) + 3;
+      expect(t.screen.lines[bar].trim(), startsWith('▶  0:00 / 0:'));
+      final cell = t.screen.lines[bar].indexOf('▶') - 1;
+      expect(
+        t.screen.styleAt(cell, bar),
+        ThemeData.dark().accent.merge(const Style(bold: true, inverse: true)),
       );
       await t.press('right');
-      expect(t.screen.lines[4], startsWith('typed at'));
-      expect(t.screen, shows('step 1 of 1 · typed the prompt'));
+      expect(t.screen.lines[top + 1], contains('typed at'));
+      expect(t.screen.lines[bar], contains(' · TYPED THE PROMPT'));
+      if (!phone) expect(t.screen.lines[caption], endsWith('STEP 1 OF 1'));
       await t.press('esc');
       expect(host.pushed, ['/chord']);
     });
   }
+
+  testWidgets('a 360 px phone drops the frame and caption, and 48x32 fits '
+      'whole', (t) async {
+    final host = FakeHost('/chord/permission', _files);
+    await t.pumpWidget(
+      Site(host: host, recordings: _names),
+      size: const Size(51, 40),
+    );
+    await t.pump();
+    expect(host.fetched, ['permission.48x32.rec.json']);
+    expect(t.screen, isNot(shows('01 / PERMISSION')));
+    expect(t.screen.lines[4].trim(), 'recorded at 48x32');
+    expect(t.screen.lines[4 + 33].trim(), startsWith('▶  0:00'));
+  });
 
   testWidgets('ten screens keep their names in one column', (t) async {
     await t.pumpWidget(
@@ -127,7 +183,7 @@ void main() {
     final host = FakeHost('/chord/start', _files);
     await t.pumpWidget(Site(host: host, recordings: _names));
     await t.pump();
-    expect(t.screen, shows("couldn't load start"));
+    expect(t.screen, shows("COULDN'T LOAD START"));
     expect(t.screen.lines.last, contains('escape up'));
   });
 
@@ -153,10 +209,10 @@ void main() {
     });
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 42),
+      size: const Size(122, 47),
     );
     await t.pump();
-    expect(t.screen, shows(RegExp(r'▶ 0:00 / 0:01')));
+    expect(t.screen, shows(RegExp(r'▶  0:00 / 0:01')));
   });
 
   testWidgets('the phone key row pans a clipped recording', (t) async {
@@ -186,7 +242,7 @@ void main() {
       size: const Size(43, 37),
     );
     await t.pump();
-    expect(host.fetched, ['permission.80x20.rec.json']);
+    expect(host.fetched, ['permission.48x32.rec.json']);
     expect(t.screen.lines[4], endsWith('›'));
   });
 }

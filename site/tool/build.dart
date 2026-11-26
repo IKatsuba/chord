@@ -133,12 +133,19 @@ String pageFor(String template, String base) {
   );
 }
 
-/// The names of the shots recorded at both sizes, from [images]' files.
+/// The sizes every shipped shot is recorded at, largest first.
+const shotSizes = ['120x36', '80x20', '48x32'];
+
+/// The names of the shots recorded at every one of [shotSizes], from
+/// [images]' files.
 List<String> recordedShots(Iterable<String> files) {
   final names = <String>{};
   for (final file in files) {
     final match = RegExp(r'^(.+)\.120x36\.rec\.json$').firstMatch(file);
-    if (match != null && files.contains('${match[1]}.80x20.rec.json')) {
+    if (match != null &&
+        shotSizes.every(
+          (size) => files.contains('${match[1]}.$size.rec.json'),
+        )) {
       names.add(match[1]!);
     }
   }
@@ -226,7 +233,7 @@ Future<void> _build(String base, String siteDir) async {
 
   final recordings = Directory(p.join(build.path, 'recordings'))..createSync();
   for (final shot in shots) {
-    for (final size in ['120x36', '80x20']) {
+    for (final size in shotSizes) {
       File(
         p.join(images.path, '$shot.$size.rec.json'),
       ).copySync(p.join(recordings.path, '$shot.$size.rec.json'));

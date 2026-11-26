@@ -53,8 +53,9 @@ void main() {
       Directory('../docs/images').listSync().map((f) => p.basename(f.path)),
     );
     for (final shot in shots) {
-      expect(files, contains('recordings/$shot.80x20.rec.json'));
-      expect(files, contains('recordings/$shot.120x36.rec.json'));
+      for (final size in shotSizes) {
+        expect(files, contains('recordings/$shot.$size.rec.json'));
+      }
     }
     expect(
       files.where((f) => f.endsWith('.map') || f.endsWith('.d.ts')),

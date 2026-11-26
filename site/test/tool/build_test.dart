@@ -64,11 +64,14 @@ void main() {
     }
   });
 
-  test('a shot is shipped when it was recorded at both sizes', () {
+  test('a shot is shipped when it was recorded at all three sizes', () {
     expect(
       recordedShots([
         'team.120x36.rec.json',
         'team.80x20.rec.json',
+        'team.48x32.rec.json',
+        'fork.120x36.rec.json',
+        'fork.80x20.rec.json',
         'edit.120x36.rec.json',
         'start.80x20.rec.json',
         'notes.txt',

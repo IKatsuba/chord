@@ -9,16 +9,16 @@ void main() {
   group('tester: committed terminal recording artifacts', () {
     final expected = <String>{
       for (final name in screenCaptions.keys)
-        for (final grid in ['120x36', '80x20']) '$name.$grid.rec.json',
+        for (final grid in ['120x36', '80x20', '48x32']) '$name.$grid.rec.json',
     };
-    test('every named screen has both recording grids', () {
+    test('every named screen has all three recording grids', () {
       final actual = Directory('../docs/images')
           .listSync()
           .whereType<File>()
           .where((file) => file.path.endsWith('.rec.json'))
           .map((file) => file.uri.pathSegments.last)
           .toSet();
-      expect(expected, hasLength(20));
+      expect(expected, hasLength(30));
       expect(actual, expected);
     });
     for (final name in expected) {
@@ -29,6 +29,16 @@ void main() {
         final grid = name.split('.')[1].split('x').map(int.parse).toList();
         expect((recording.cols, recording.rows), (grid[0], grid[1]));
         expect(recording.frames, isNotEmpty);
+        if (grid[0] == 48) {
+          expect(recording.frames.first.at, Duration.zero);
+          if (!name.startsWith('start.')) {
+            expect(
+              recording.frames.any((frame) => frame.label != null),
+              isTrue,
+              reason: 'phone recording retains labelled steps',
+            );
+          }
+        }
         var previous = Duration.zero;
         final personalPath = RegExp(
           r'/(?:Users|home)/[^/\s]+/|[A-Z]:\\Users\\',

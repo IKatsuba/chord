@@ -1,0 +1,24 @@
+
+  CHORD / CHORD_TUI                                                     MENU m
+
+────────────────────────────────────────────────────────────────────────────────
+    Home › Install                                                             ┃
+                                                                               ┃
+    INSTALL                                                                    ┃
+    Three ways in.                                                             ┃
+                                                                               ┃
+    chord is one native binary for macOS and Linux, arm64 and x64. Pick a      ┃
+    way; c copies its command.                                                 ┃
+                                                                               ┃
+    ╭─────────────────────────────────────────────────────────────────────╮
+    │                                                                     │
+    │  Homebrew                                                   copy c  │
+    │                                                                     │
+    │  $ brew install ikatsuba/tap/chord                                  │
+    │                                                                     │
+    │  macOS and Linux. brew upgrade keeps it current.                    │
+    │                                                                     │
+    ╰─────────────────────────────────────────────────────────────────────╯
+
+    ╭─────────────────────────────────────────────────────────────────────╮
+ left/right/up/down move  c copy  escape up  ? keys  m menu

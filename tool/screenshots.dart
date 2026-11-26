@@ -25,6 +25,12 @@
 /// scenario each shot plays comes from `CHORD_FAKE_SCENARIO`, so the prompt
 /// typed can be a person's words.
 ///
+/// Beside each picture but the logos it writes the shot as two recordings,
+/// `docs/images/<name>.120x36.rec.json` and `<name>.80x20.rec.json`
+/// (`tool/recordings.dart`): the shot played again at each size, a frame
+/// after every step and every 100 ms while it waits, for the site's
+/// Playback.
+///
 /// `logo` takes the README's two logos the same way: the title page in each
 /// theme, kept to its art, with no window and a transparent background.
 ///
@@ -45,6 +51,7 @@ import 'package:puppeteer/puppeteer.dart' as browsers;
 
 import '../test/fixtures/fake.dart';
 import 'dev.dart' show fakeRuntimesDefine, fixtureDefine, shellWord;
+import 'recordings.dart';
 
 /// What a shot does to the window before it is taken.
 sealed class Step {
@@ -730,7 +737,11 @@ String _tmux(List<String> argv) {
 
 String _screen() => _tmux(['capture-pane', '-p', '-t', 'shot']);
 
-Future<void> _waitFor(bool Function() done, String what) async {
+Future<void> _waitFor(
+  bool Function() done,
+  String what, {
+  void Function()? each,
+}) async {
   // chord from source compiles first, which a cold cache takes a while for.
   final end = DateTime.now().add(const Duration(seconds: 90));
   while (!done()) {
@@ -738,11 +749,60 @@ Future<void> _waitFor(bool Function() done, String what) async {
       throw StateError('$what\n${_screen()}');
     }
     await Future<void>.delayed(const Duration(milliseconds: 100));
+    each?.call();
   }
 }
 
-/// The shot's screen as chord drew it, with its colours.
-Future<String> capture(Shot shot, String portDir) async {
+/// How a recording labels a key tmux names, in chord_tui's spelling:
+/// `Enter` is `enter`, `C-o` is `ctrl+o`, `BTab` is `shift+tab`.
+String keyLabel(String tmux) {
+  const named = {
+    'Enter': 'enter',
+    'Escape': 'escape',
+    'Tab': 'tab',
+    'BTab': 'shift+tab',
+    'BSpace': 'backspace',
+    'Space': 'space',
+    'Up': 'up',
+    'Down': 'down',
+    'Left': 'left',
+    'Right': 'right',
+    'PageUp': 'pageup',
+    'PageDown': 'pagedown',
+    'Home': 'home',
+    'End': 'end',
+  };
+  if (named[tmux] case final name?) return name;
+  for (final (prefix, modifier) in const [
+    ('C-', 'ctrl+'),
+    ('M-', 'alt+'),
+    ('S-', 'shift+'),
+  ]) {
+    if (tmux.startsWith(prefix) && tmux.length > prefix.length) {
+      return '$modifier${keyLabel(tmux.substring(prefix.length))}';
+    }
+  }
+  return tmux.toLowerCase();
+}
+
+/// What a recording calls [step]; null for waits, which add frames only.
+String? stepLabel(Step step) => switch (step) {
+  TypeText(:final text) => cutLabel('typed $text'),
+  SendKeys(:final keys) => keys.map(keyLabel).join(' '),
+  Respawn() => 'started again',
+  Exited() => 'left',
+  UntilShown() || Pause() || Aged() => null,
+};
+
+/// The shot's screen as chord drew it, with its colours, in a [cols] by
+/// [rows] pane; with [recording], every frame it went through on the way.
+Future<String> capture(
+  Shot shot,
+  String portDir, {
+  int cols = columns,
+  int rows = rows,
+  RecordingWriter? recording,
+}) async {
   final dir = shotDir(shot.name);
   if (Directory(dir).existsSync()) Directory(dir).deleteSync(recursive: true);
   final home = p.join(dir, 'home');
@@ -778,7 +838,7 @@ Future<String> capture(Shot shot, String portDir) async {
       '-s',
       'shot',
       '-x',
-      '$columns',
+      '$cols',
       '-y',
       '$rows',
       '-c',
@@ -794,18 +854,39 @@ Future<String> capture(Shot shot, String portDir) async {
       '${shot.name}: "${shot.first}" never came.',
     );
 
+    // The recording's clock starts at chord's first screen, after the
+    // build from source a person would not watch.
+    final clock = Stopwatch()..start();
+    String colours() => _tmux(['capture-pane', '-p', '-e', '-t', 'shot']);
+    void sample() => recording?.add(clock.elapsed, colours());
+    Future<void> idle(Duration time) async {
+      final end = clock.elapsed + time;
+      while (clock.elapsed < end) {
+        final left = end - clock.elapsed;
+        await Future<void>.delayed(
+          left < const Duration(milliseconds: 100)
+              ? left
+              : const Duration(milliseconds: 100),
+        );
+        sample();
+      }
+    }
+
+    sample();
     for (final step in shot.steps) {
+      if (stepLabel(step) case final label?) recording?.step(label);
       switch (step) {
         case TypeText(:final text):
           _tmux(['send-keys', '-t', 'shot', '-l', text]);
-          await Future<void>.delayed(const Duration(milliseconds: 300));
+          await idle(const Duration(milliseconds: 300));
         case SendKeys(:final keys):
           _tmux(['send-keys', '-t', 'shot', ...keys]);
-          await Future<void>.delayed(const Duration(milliseconds: 300));
+          await idle(const Duration(milliseconds: 300));
         case UntilShown(:final text):
           await _waitFor(
             () => _screen().contains(text),
             '${shot.name}: "$text" never came.',
+            each: sample,
           );
         case Exited():
           await _waitFor(
@@ -813,19 +894,20 @@ Future<String> capture(Shot shot, String portDir) async {
                 _tmux(['display', '-p', '-t', 'shot', '#{pane_dead}']).trim() ==
                 '1',
             '${shot.name}: chord never left.',
+            each: sample,
           );
         case Aged(:final hours):
           age(p.join(dir, 'state', 'chord', 'records'), hours);
         case Respawn(:final args):
           _tmux(['respawn-pane', '-k', '-t', 'shot', chord(args)]);
         case Pause(:final ms):
-          await Future<void>.delayed(Duration(milliseconds: ms));
+          await idle(Duration(milliseconds: ms));
       }
     }
 
     // What the last keys set off drawn, and the spinner's frame with it.
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    return _tmux(['capture-pane', '-p', '-e', '-t', 'shot']);
+    await idle(const Duration(milliseconds: 400));
+    return colours();
   } finally {
     Process.runSync('tmux', ['-L', _socket, 'kill-server']);
     if (Directory(dir).existsSync()) Directory(dir).deleteSync(recursive: true);
@@ -876,6 +958,21 @@ Future<void> main(List<String> names) async {
       );
       File(p.join(images.path, '${shot.name}.png')).writeAsBytesSync(png);
       stdout.writeln('docs/images/${shot.name}.png');
+      if (shot.group == 'logo') continue;
+      // Played again at each size the site shows a recording at.
+      for (final size in recordingSizes) {
+        final recording = RecordingWriter(size.cols, size.rows);
+        await capture(
+          shot,
+          portDir,
+          cols: size.cols,
+          rows: size.rows,
+          recording: recording,
+        );
+        final name = recordingName(shot.name, size);
+        File(p.join(images.path, name)).writeAsStringSync(recording.toJson());
+        stdout.writeln('docs/images/$name');
+      }
     }
   } finally {
     await browser.close();

@@ -31,6 +31,7 @@ Future<int> _seek(WidgetTester t, Pattern text) async {
 void main() {
   _backWhileEntered();
   _reviewFixes();
+  _resizeKeepsDraft();
   test('the index shows from 110 columns, the margin from 150', () {
     expect(articleIndexWidth, 110);
     expect(articleMarginWidth, 150);
@@ -272,5 +273,34 @@ void _reviewFixes() {
         }
       },
     );
+  }
+}
+
+void _resizeKeepsDraft() {
+  for (final (from, to) in const [
+    (Size(117, 40), Size(80, 40)),
+    (Size(80, 40), Size(117, 40)),
+    (Size(160, 40), Size(54, 56)),
+  ]) {
+    testWidgets('a draft survives the index folding or unfolding, '
+        '${from.width} to ${to.width} columns', (t) async {
+      await t.pumpWidget(
+        Site(host: FakeHost('/chord_tui/text_area'), gallery: siteGallery),
+        size: from,
+      );
+      await t.pump();
+      await t.press('tab');
+      await t.type('draft');
+      await t.press('esc');
+      await t.resize(to);
+      await t.press('tab');
+      await t.type('ed');
+      expect(t.screen, shows('drafted'));
+      await t.press('esc');
+      await t.resize(from);
+      await t.press('tab');
+      await t.type('!');
+      expect(t.screen, shows('drafted!'));
+    });
   }
 }

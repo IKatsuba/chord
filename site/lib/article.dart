@@ -324,81 +324,79 @@ class _ArticlePageState extends State<ArticlePage> {
         controller: _scroll,
         child: _CopyOwnerScope(owner: _copies, child: article),
       );
-      Widget page;
-      if (wide) {
-        final articleWidth = width - 1 - margin - indexColumns - 4;
-        final room = articleWidth < articleMeasure
-            ? articleWidth
-            : articleMeasure;
-        final rail = width >= articleMarginWidth;
-        page = Scrollbar(
-          controller: _scroll,
-          thumbStyle: theme.dim,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      // One tree at every width, so the article and its live example keep
+      // their state as the index folds and unfolds: the index, the article
+      // and the margin are always the row's three cells, some of them empty.
+      final rail = width >= articleMarginWidth;
+      final left = wide ? margin + indexColumns + 4 : margin;
+      final room = width - 1 - left - (wide ? 0 : margin);
+      final articleWidth = room < articleMeasure ? room : articleMeasure;
+      final page = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(width: margin),
-              SizedBox(width: indexColumns, child: _index(theme)),
-              const SizedBox(width: 4),
-              SizedBox(width: room, child: scrolled),
-              if (rail) ...[
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: marginColumns,
-                  child: ListenableBuilder(
-                    listenable: _scroll,
-                    builder: (_) => _rail(theme),
-                  ),
+              if (!wide) ...[
+                Text(''),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: margin),
+                  child: _bar(theme),
                 ),
+                Text('─' * (width - 1), style: theme.border, softWrap: false),
               ],
             ],
           ),
-        );
-      } else {
-        page = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(''),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: margin),
-              child: _bar(theme),
-            ),
-            Text('─' * (width - 1), style: theme.border, softWrap: false),
-            // The list opens over the article, which stays mounted with its
-            // live example's state.
-            Expanded(
-              child: Stack(
-                children: [
-                  Scrollbar(
-                    controller: _scroll,
-                    thumbStyle: theme.dim,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: margin),
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: SizedBox(
-                          width: width - 1 - 2 * margin < articleMeasure
-                              ? width - 1 - 2 * margin
-                              : articleMeasure,
-                          child: scrolled,
-                        ),
+          Expanded(
+            child: Stack(
+              children: [
+                Scrollbar(
+                  controller: _scroll,
+                  thumbStyle: theme.dim,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: left,
+                        child: wide
+                            ? Padding(
+                                padding: EdgeInsets.only(left: margin),
+                                child: SizedBox(
+                                  width: indexColumns,
+                                  child: _index(theme),
+                                ),
+                              )
+                            : null,
                       ),
-                    ),
+                      SizedBox(width: articleWidth, child: scrolled),
+                      SizedBox(
+                        width: wide && rail ? 6 + marginColumns : 0,
+                        child: wide && rail
+                            ? Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: ListenableBuilder(
+                                  listenable: _scroll,
+                                  builder: (_) => _rail(theme),
+                                ),
+                              )
+                            : null,
+                      ),
+                    ],
                   ),
-                  if (_indexOpen)
-                    Positioned(
-                      left: 0,
-                      top: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: _indexList(theme, margin),
-                    ),
-                ],
-              ),
+                ),
+                if (_indexOpen)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: _indexList(theme, margin),
+                  ),
+              ],
             ),
-          ],
-        );
-      }
+          ),
+        ],
+      );
       // The help row reads inner first: scrolling, the page's own keys,
       // then the pages.
       return Actions(

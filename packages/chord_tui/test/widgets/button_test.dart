@@ -246,6 +246,30 @@ void main() {
         );
       });
 
+      testWidgets('the help row lists enter and space while a button has '
+          'focus', (t) async {
+        await t.pumpWidget(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FilledButton(
+                autofocus: true,
+                onPressed: () {},
+                child: Text('Save'),
+              ),
+              Focus(child: Text('elsewhere')),
+              const Spacer(),
+              const KeyHelp(),
+            ],
+          ),
+          size: size,
+        );
+        expect(t.screen.lines.last, 'enter/space press');
+        await t.press('tab');
+        await t.pump();
+        expect(t.screen.lines.last, '');
+      });
+
       testWidgets('a press and release inside presses it; a release outside '
           'does not', (t) async {
         var pressed = 0;

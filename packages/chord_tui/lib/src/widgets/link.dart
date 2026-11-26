@@ -124,47 +124,54 @@ class _LinkState extends State<Link> {
         : focused
         ? theme.focus.merge(const Style(inverse: true, underline: true))
         : theme.link.merge(Style.underline);
-    return Focus(
-      focusNode: _node,
-      // requestFocus does not ask canRequestFocus: a disabled one must not ask.
-      autofocus: widget.autofocus && enabled,
-      canRequestFocus: enabled,
-      onKey: (event) {
-        if (press == null || !event.matches('enter')) return false;
-        press();
-        return true;
-      },
-      child: Listener(
-        captureController: _capture,
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (event) {
-          if (press == null || event.button != MouseButton.primary) return;
-          _capture.capture();
-          _pressing = _capture.isCaptured;
-        },
-        onPointerUp: (event) {
-          final was = _pressing;
-          _pressing = false;
-          if (!was || event.button != MouseButton.primary) return;
-          // What the last build allowed: a lookup belongs to build.
-          if (_bounds.contains(event.position)) _press?.call();
-        },
-        onPointerCancel: (_) => _pressing = false,
-        child: PressBoundsBox(
-          bounds: _bounds,
-          child: Text.rich(
-            TextSpan(
-              '',
-              children: [
-                TextSpan(
-                  widget.external ? '${widget.text} ↗' : widget.text,
-                  style: face,
-                ),
-                if (enabled && binding != null)
-                  TextSpan(' ${binding.chord}', style: theme.dim),
-              ],
+    // Bound, not handled, so the help row lists them while it has focus.
+    return Actions(
+      bindings: [
+        Binding(
+          'enter',
+          'open',
+          () => press?.call(),
+          id: 'link:open',
+          enabled: press != null,
+        ),
+      ],
+      child: Focus(
+        focusNode: _node,
+        // requestFocus does not ask canRequestFocus: a disabled one must not ask.
+        autofocus: widget.autofocus && enabled,
+        canRequestFocus: enabled,
+        child: Listener(
+          captureController: _capture,
+          behavior: HitTestBehavior.opaque,
+          onPointerDown: (event) {
+            if (press == null || event.button != MouseButton.primary) return;
+            _capture.capture();
+            _pressing = _capture.isCaptured;
+          },
+          onPointerUp: (event) {
+            final was = _pressing;
+            _pressing = false;
+            if (!was || event.button != MouseButton.primary) return;
+            // What the last build allowed: a lookup belongs to build.
+            if (_bounds.contains(event.position)) _press?.call();
+          },
+          onPointerCancel: (_) => _pressing = false,
+          child: PressBoundsBox(
+            bounds: _bounds,
+            child: Text.rich(
+              TextSpan(
+                '',
+                children: [
+                  TextSpan(
+                    widget.external ? '${widget.text} ↗' : widget.text,
+                    style: face,
+                  ),
+                  if (enabled && binding != null)
+                    TextSpan(' ${binding.chord}', style: theme.dim),
+                ],
+              ),
+              softWrap: false,
             ),
-            softWrap: false,
           ),
         ),
       ),

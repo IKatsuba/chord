@@ -51,6 +51,25 @@ void main() {
         expect(t.terminal.openedUrls, ['https://example.com/docs']);
       });
 
+      testWidgets('the help row lists enter while a link has focus', (t) async {
+        await t.pumpWidget(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Link('Docs', onPressed: () {}, autofocus: true),
+              Focus(child: Text('elsewhere')),
+              const Spacer(),
+              const KeyHelp(),
+            ],
+          ),
+          size: size,
+        );
+        expect(t.screen.lines.last, 'enter open');
+        await t.press('tab');
+        await t.pump();
+        expect(t.screen.lines.last, '');
+      });
+
       testWidgets('an action link shows its key after the text and invokes '
           'the binding', (t) async {
         var opened = 0;

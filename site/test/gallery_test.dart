@@ -11,8 +11,28 @@ import 'fake_host.dart';
 
 const _sizes = [Size(120, 40), Size(80, 24)];
 
+/// Text each example draws itself, so a frame with nothing of it fails.
+const _markers = {
+  'demo': 'chorded-tui demo',
+  'markdown': 'Terminal cells',
+  'picker': 'Pick one',
+  'form': 'New deployment',
+  'text_area': 'Text area',
+  'diff': 'src/greeting.ts',
+  'dialog': 'The transcript is here.',
+  'layers': 'of the transcript',
+  'mouse': 'Pointer events · reports',
+};
+
+/// The rows inside the frame, between its borders.
+List<String> _framed(WidgetTester t) => [
+  for (final l in t.screen.lines)
+    if (l.startsWith(' │')) l,
+];
+
 void main() {
   test('every entry is an example file, and none is named gallery', () {
+    expect(_markers.keys, [for (final e in siteGallery.entries) e.name]);
     for (final entry in siteGallery.entries) {
       expect(
         File('../packages/chord_tui/example/${entry.name}.dart').existsSync(),
@@ -68,12 +88,11 @@ void main() {
         );
         expect(t.screen, shows('example/${entry.name}.dart'));
         expect(t.screen, shows(entry.description));
-        // Something of the example is drawn inside the frame.
-        final inside = t.screen.lines
-            .skipWhile((l) => !l.contains('example/${entry.name}.dart'))
-            .skip(1)
-            .where((l) => l.replaceAll(RegExp(r'[│ ]'), '').isNotEmpty);
-        expect(inside, isNotEmpty);
+        // The example itself is drawn inside the frame.
+        expect(
+          _framed(t).where((l) => l.contains(_markers[entry.name]!)),
+          isNotEmpty,
+        );
       });
     }
 
@@ -98,8 +117,9 @@ void main() {
               ? ' ctrl+q home  ? keys'
               : ' escape up  ctrl+q home  ? keys',
         );
-        // The frame's rows: the example's keys, never the site's or Quit.
-        final framed = lines.where((l) => l.startsWith(' │')).join('\n');
+        // The frame's rows: the example's own, never the site's keys or Quit.
+        final framed = _framed(t).join('\n');
+        expect(framed, contains(_markers[entry.name]!));
         for (final site in ['? keys', 'open GitHub', 'ctrl+q', 'Quit']) {
           expect(framed, isNot(contains(site)), reason: site);
         }

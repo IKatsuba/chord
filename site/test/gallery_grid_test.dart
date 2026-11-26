@@ -93,6 +93,22 @@ void main() {
     expect(t.screen.lines[y], isNot(contains('3  Picker')));
   });
 
+  test('no preview line is wider than the 26 cells a card has at 80 '
+      'columns', () {
+    for (final entry in siteGallery.entries) {
+      expect(entry.preview, hasLength(4), reason: entry.name);
+      for (final row in entry.preview) {
+        expect(cellWidth(row), lessThanOrEqualTo(26), reason: row);
+      }
+    }
+  });
+
+  testWidgets('every preview shows whole at 80x60', (t) async {
+    await gallery(t, const Size(80, 60));
+    await t.press('end');
+    expect(t.screen, shows('12  + store = Records();'));
+  });
+
   testWidgets('a card is 13 rows: frame, padding, name, preview, '
       'description', (t) async {
     await gallery(t, const Size(171, 50));
@@ -117,9 +133,9 @@ void main() {
       t.screen.styleAt(px + 6, py),
       theme.cursor.copyWith(bg: SiteColors.raised),
     );
-    final (rx, ry) = find(t, '12  - final store');
+    final (rx, ry) = find(t, '12  - store');
     expect(t.screen.styleAt(rx + 4, ry).fg, theme.diff.removed.fg);
-    final (ax, ay) = find(t, '12  + final store');
+    final (ax, ay) = find(t, '12  + store');
     expect(t.screen.styleAt(ax + 4, ay).fg, theme.diff.added.fg);
   });
 

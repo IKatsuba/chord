@@ -69,7 +69,7 @@ final _entries = [
     blurb: 'Validated fields, choices and buttons.',
     preview: const [
       'Name   chord█',
-      'Agent  ( ) codex (•) claude',
+      'Agent  (•) claude',
       '',
       '[ Save ]  [ Cancel ]',
     ],
@@ -94,8 +94,8 @@ final _entries = [
     title: 'Diff',
     blurb: 'Numbered, highlighted, wrapped unified diffs.',
     preview: const [
-      '12  - final store = Store();',
-      '12  + final store = Records();',
+      '12  - store = Store();',
+      '12  + store = Records();',
       '13    store.open(dir);',
       '',
     ],

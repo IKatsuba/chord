@@ -1,6 +1,6 @@
 import 'package:chord_tui/chord_tui.dart';
 
-import 'site.dart' show narrowWidth;
+import 'site.dart' show narrowWidth, panelOnly;
 
 /// The measure of home and install, in columns.
 const narrowMeasure = 124;
@@ -19,6 +19,7 @@ class SitePage extends StatefulWidget {
     required this.sections,
     this.measure = narrowMeasure,
     this.controller,
+    this.bindings = const [],
   });
 
   /// The page's parts, top to bottom, each as wide as the measure.
@@ -30,6 +31,9 @@ class SitePage extends StatefulWidget {
   /// The page's scroll, for a page that moves it itself; one of its own
   /// when null.
   final ScrollController? controller;
+
+  /// The page's own keys, which win over its scroll keys: a grid's arrows.
+  final List<Binding> bindings;
 
   @override
   State<SitePage> createState() => _SitePageState();
@@ -49,20 +53,34 @@ class _SitePageState extends State<SitePage> {
       final left = (width - content) ~/ 2;
       final sections = widget.sections;
       return Actions(
-        bindings: scrollBindings(
-          _scroll,
-          keys: const ScrollKeys(lineUp: ['up'], lineDown: ['down']),
-        ),
-        child: Focus(
-          autofocus: true,
-          child: Scrollbar(
-            controller: _scroll,
-            child: ListView.builder(
+        bindings: [
+          // ↑↓ are the help row's; the page and end keys the panel's.
+          for (final b in scrollBindings(
+            _scroll,
+            keys: const ScrollKeys(lineUp: ['up'], lineDown: ['down']),
+          ))
+            b.id == 'scroll:lineUp' || b.id == 'scroll:lineDown'
+                ? Binding('${b.chord}', 'scroll', b.onInvoke, id: 'page:scroll')
+                : Binding(
+                    '${b.chord}',
+                    b.description,
+                    b.onInvoke,
+                    id: '$panelOnly${b.id}',
+                  ),
+        ],
+        child: Actions(
+          bindings: widget.bindings,
+          child: Focus(
+            autofocus: true,
+            child: Scrollbar(
               controller: _scroll,
-              itemCount: sections.length,
-              itemBuilder: (context, i) => Padding(
-                padding: EdgeInsets.only(left: left),
-                child: SizedBox(width: content, child: sections[i]),
+              child: ListView.builder(
+                controller: _scroll,
+                itemCount: sections.length,
+                itemBuilder: (context, i) => Padding(
+                  padding: EdgeInsets.only(left: left),
+                  child: SizedBox(width: content, child: sections[i]),
+                ),
               ),
             ),
           ),

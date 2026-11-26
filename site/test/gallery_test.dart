@@ -179,7 +179,7 @@ void main() {
     );
     expect(
       t.screen.lines.last,
-      ' up/down move  enter open  1–9 jump  escape up  ? keys',
+      ' left/right/up/down move  enter run  1–9 open  escape up  ? keys',
     );
   });
 
@@ -189,8 +189,13 @@ void main() {
       Site(host: host, gallery: siteGallery),
       size: const Size(120, 40),
     );
-    for (final entry in siteGallery.entries) {
-      expect(t.screen, shows(entry.name));
+    // Every card, the page scrolled to its end for the last row.
+    for (final entry in siteGallery.entries.take(6)) {
+      expect(t.screen, shows(entry.title));
+    }
+    await t.press('end');
+    for (final entry in siteGallery.entries.skip(6)) {
+      expect(t.screen, shows(entry.title));
     }
     await t.press('2');
     expect(host.pushed, ['/chord_tui/markdown']);

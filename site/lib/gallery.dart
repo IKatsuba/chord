@@ -9,7 +9,11 @@ class GalleryEntry {
     this.description,
     this.build, {
     this.ownsEscape = false,
-  });
+    String? title,
+    String? blurb,
+    this.preview = const [],
+  }) : title = title ?? name,
+       blurb = blurb ?? description;
 
   /// The example's file name, and its path under `/chord_tui`.
   final String name;
@@ -22,6 +26,15 @@ class GalleryEntry {
 
   /// Whether the example binds Esc itself, so Esc does not go up there.
   final bool ownsEscape;
+
+  /// Its name on a gallery card, `Text area` for `text_area`.
+  final String title;
+
+  /// What it shows, as a card says it in a sentence.
+  final String blurb;
+
+  /// The card's still picture of it: four rows of plain text.
+  final List<String> preview;
 }
 
 /// The framework's examples the site runs. They live in the framework's

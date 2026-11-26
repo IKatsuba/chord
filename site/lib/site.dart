@@ -11,6 +11,7 @@ import 'palette.dart';
 import 'pages/chord.dart';
 import 'pages/chord_tui.dart';
 import 'pages/gallery.dart';
+import 'pages/gallery_grid.dart';
 import 'pages/home.dart';
 import 'pages/install.dart';
 import 'pages/not_found.dart';

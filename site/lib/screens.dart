@@ -21,3 +21,15 @@ List<String> orderedScreens(Iterable<String> names) => [
   for (final name in names)
     if (!screenCaptions.containsKey(name)) name,
 ];
+
+/// One `name:seconds` entry the build passes for a shipped shot, as its name
+/// and length; a bare name has no length.
+(String, Duration?) parseShot(String entry) {
+  final colon = entry.lastIndexOf(':');
+  if (colon < 0) return (entry, null);
+  final seconds = int.tryParse(entry.substring(colon + 1));
+  return (
+    entry.substring(0, colon),
+    seconds == null ? null : Duration(seconds: seconds),
+  );
+}

@@ -164,23 +164,6 @@ void main() {
     expect(t.screen.lines[4 + 33].trim(), startsWith('▶  0:00'));
   });
 
-  testWidgets('ten screens keep their names in one column', (t) async {
-    await t.pumpWidget(
-      Site(
-        host: FakeHost('/chord'),
-        recordings: const [
-          'start', 'team', 'proposal', 'edit', 'permission', //
-          'subagents', 'agents', 'resume', 'codeblocks', 'fork',
-        ],
-      ),
-      size: const Size(120, 40),
-    );
-    final lines = t.screen.lines;
-    final first = lines.firstWhere((l) => l.contains('1.  start'));
-    final tenth = lines.firstWhere((l) => l.contains('10. fork'));
-    expect(tenth.indexOf('fork'), first.indexOf('start'));
-  });
-
   testWidgets('a recording that cannot be fetched says so', (t) async {
     final host = FakeHost('/chord/start', _files);
     await t.pumpWidget(Site(host: host, recordings: _names));

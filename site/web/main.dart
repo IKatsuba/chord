@@ -1,5 +1,6 @@
 import 'package:chord_site/palette.dart';
 import 'package:chord_site/router.dart';
+import 'package:chord_site/screens.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_site/web/browser_host.dart';
 import 'package:chord_tui/chord_tui.dart';
@@ -14,7 +15,12 @@ Future<void> main() async {
   // failure ends the loop, already said on the console.
   for (;;) {
     await runApp(
-      Site(host: host, gallery: siteGallery, recordings: _recordings),
+      Site(
+        host: host,
+        gallery: siteGallery,
+        recordings: [for (final (name, _) in _recordings) name],
+        lengths: {for (final (name, length) in _recordings) name: ?length},
+      ),
       terminal: terminal,
       theme: siteTheme(),
       exitProcess: false,
@@ -24,11 +30,11 @@ Future<void> main() async {
   }
 }
 
-/// The recordings the build shipped under recordings/, by name, as it
-/// passes them with -DCHORD_RECORDINGS.
+/// The recordings the build shipped under recordings/, by name with their
+/// lengths, as it passes them with -DCHORD_RECORDINGS (`start:9,team:12`).
 final _recordings = [
-  for (final name in const String.fromEnvironment(
+  for (final entry in const String.fromEnvironment(
     'CHORD_RECORDINGS',
   ).split(','))
-    if (name.isNotEmpty) name,
+    if (entry.isNotEmpty) parseShot(entry),
 ];

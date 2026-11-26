@@ -5,7 +5,10 @@ import 'package:chord_tui/chord_tui.dart';
 /// the room above the input, and the input clears. No agent answers.
 class LivePrompt extends StatefulWidget {
   /// The prompt fixture.
-  const LivePrompt({super.key});
+  const LivePrompt({super.key, this.onLines});
+
+  /// Told the draft's line count as it changes, for a room that grows.
+  final void Function(int lines)? onLines;
 
   @override
   State<LivePrompt> createState() => _LivePromptState();
@@ -14,6 +17,20 @@ class LivePrompt extends StatefulWidget {
 class _LivePromptState extends State<LivePrompt> {
   final _draft = TextAreaController();
   var _sent = '';
+  var _lines = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _draft.addListener(_drafted);
+  }
+
+  void _drafted() {
+    final lines = '\n'.allMatches(_draft.text).length + 1;
+    if (lines == _lines) return;
+    _lines = lines;
+    widget.onLines?.call(lines);
+  }
 
   @override
   void dispose() {

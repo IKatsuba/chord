@@ -73,7 +73,10 @@ void main() {
       expect(live.value, isFalse);
       await t.press('tab');
       expect(live.value, isTrue);
-      expect(t.screen, shows('FIG. 2 EXAMPLE/FIELD.DART ·  ESC LEAVES'));
+      // The tag sits at the caption row's right end.
+      final caption = t.screen.lines.firstWhere((l) => l.contains('FIG. 2'));
+      expect(caption, contains('FIG. 2 EXAMPLE/FIELD.DART '));
+      expect(caption.trimRight(), endsWith('ESC LEAVES'));
       await t.press('x');
       expect(t.screen, shows('typed "x"'));
       expect(t.screen, shows('page keys 1'));

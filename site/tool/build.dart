@@ -19,6 +19,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:chord_site/pacing.dart';
+import 'package:chord_tui/chord_tui.dart' show TerminalRecording;
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -133,6 +135,17 @@ String pageFor(String template, String base) {
   );
 }
 
+/// [shots] with each one's paced length in whole seconds, rounded up, as
+/// the page lists them: `start:9,team:12`. [read] gives a shot's 120x36
+/// recording.
+String shotsWithLengths(
+  List<String> shots,
+  String Function(String shot) read,
+) => [
+  for (final shot in shots)
+    '$shot:${(paced(TerminalRecording.fromJson(jsonDecode(read(shot)))).duration.inMilliseconds / 1000).ceil()}',
+].join(',');
+
 /// The sizes every shipped shot is recorded at, largest first.
 const shotSizes = ['120x36', '80x20', '48x32'];
 
@@ -188,7 +201,7 @@ Future<void> _build(String base, String siteDir) async {
     'wasm',
     '-O4',
     '-DCHORD_VERSION=$version',
-    '-DCHORD_RECORDINGS=${shots.join(',')}',
+    '-DCHORD_RECORDINGS=${shotsWithLengths(shots, (shot) => File(p.join(images.path, '$shot.120x36.rec.json')).readAsStringSync())}',
     p.join(siteDir, 'web', 'main.dart'),
     '-o',
     p.join(build.path, 'main.wasm'),

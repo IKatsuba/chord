@@ -54,6 +54,7 @@ class Site extends StatefulWidget {
     required this.host,
     this.gallery,
     this.recordings = const [],
+    this.lengths = const {},
   });
 
   /// The page the site runs on.
@@ -64,6 +65,9 @@ class Site extends StatefulWidget {
 
   /// The names of chord's recordings that have pages.
   final List<String> recordings;
+
+  /// How long each recording plays, paced, by name, where the build said.
+  final Map<String, Duration> lengths;
 
   @override
   State<Site> createState() => _SiteState();
@@ -446,7 +450,12 @@ class _SiteState extends State<Site> {
 
   Widget _page(int width, int rows) => switch (_route) {
     HomeRoute() => HomePage(host: widget.host, open: _open),
-    ChordRoute() => ChordPage(widget.recordings, _open),
+    ChordRoute() => ChordPage(
+      widget.recordings,
+      _open,
+      lengths: widget.lengths,
+      home: () => _open(const HomeRoute()),
+    ),
     RecordingRoute(:final name) => RecordingPage(
       key: ValueKey(name),
       host: widget.host,

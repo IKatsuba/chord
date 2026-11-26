@@ -77,7 +77,7 @@ void main() {
     await t.pumpWidget(Site(host: host), size: const Size(80, 24));
     host.popped.add('/chord');
     await t.pump();
-    expect(t.screen, shows('One terminal for every coding agent.'));
+    expect(t.screen, shows('01 / THE APP'));
     expect(host.pushed, isEmpty);
     expect(host.titles.last, 'chord');
   });

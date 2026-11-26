@@ -26,7 +26,11 @@ class ScrollPage extends StatefulWidget {
     required this.sections,
     this.bindings = const [],
     this.controller,
+    this.focusNode,
   });
+
+  /// The node the page holds the focus with; one of its own when null.
+  final FocusNode? focusNode;
 
   /// The page's parts, top to bottom.
   final List<Widget> sections;
@@ -78,6 +82,7 @@ class _ScrollPageState extends State<ScrollPage> {
         child: Actions(
           bindings: widget.bindings,
           child: Focus(
+            focusNode: widget.focusNode,
             autofocus: true,
             child: Scrollbar(
               controller: _scroll,

@@ -44,8 +44,12 @@ class LivePlate extends StatefulWidget {
     super.key,
     required this.controller,
     required this.figure,
+    this.figureDigits = 1,
     required this.title,
+    this.idle,
     required this.rows,
+    this.focusNode,
+    this.onEscape,
     required this.home,
     required this.child,
     this.ownsEscape = false,
@@ -57,11 +61,24 @@ class LivePlate extends StatefulWidget {
   /// The figure's number on its page.
   final int figure;
 
+  /// The digits the figure's number takes: 2 writes `01`.
+  final int figureDigits;
+
   /// What it shows, in caps on the caption row.
   final String title;
 
   /// The example's rows.
   final int rows;
+
+  /// The caption while not entered; [title] and how to enter by default.
+  final String? idle;
+
+  /// The node a page's Tab focuses the plate with; Enter enters it then,
+  /// and its caption says so. None: the plate takes no focus of its own.
+  final FocusNode? focusNode;
+
+  /// Esc on the focused plate, not entered: the page takes the focus back.
+  final void Function()? onEscape;
 
   /// Goes home: Ctrl+Q inside, where Esc leaves.
   final void Function() home;
@@ -73,6 +90,7 @@ class LivePlate extends StatefulWidget {
   final bool ownsEscape;
 
   static final _esc = KeyCombo.parse('esc');
+  static final _enterKey = KeyCombo.parse('enter');
   static final _scrolls = {
     for (final key in ['up', 'down', 'pageup', 'pagedown', 'home', 'end'])
       KeyCombo.parse(key),
@@ -95,11 +113,34 @@ class _LivePlateState extends State<LivePlate> {
   void initState() {
     super.initState();
     widget.controller._plate = this;
+    widget.focusNode?.addListener(_focusChanged);
+  }
+
+  void _focusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  // Keys on the focused plate before it is entered.
+  bool _onPlateKey(KeyEvent event) {
+    if (_entered || !(widget.focusNode?.hasPrimaryFocus ?? false)) return false;
+    if (event.combo == LivePlate._enterKey) {
+      _enter();
+      return true;
+    }
+    if (event.combo == LivePlate._esc && widget.onEscape != null) {
+      widget.onEscape!();
+      return true;
+    }
+    return false;
   }
 
   @override
   void didUpdateWidget(LivePlate oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      oldWidget.focusNode?.removeListener(_focusChanged);
+      widget.focusNode?.addListener(_focusChanged);
+    }
     if (oldWidget.controller != widget.controller) {
       if (oldWidget.controller._plate == this) {
         oldWidget.controller._plate = null;
@@ -116,6 +157,7 @@ class _LivePlateState extends State<LivePlate> {
 
   @override
   void dispose() {
+    widget.focusNode?.removeListener(_focusChanged);
     if (widget.controller._plate == this) widget.controller._plate = null;
     if (_entered) _live?.value = false;
     _scope.dispose();
@@ -165,36 +207,47 @@ class _LivePlateState extends State<LivePlate> {
     final bold = cream.merge(Style.bold);
     final orange = theme.accent.merge(const Style(bold: true, inverse: true));
     final leaves = widget.ownsEscape ? 'CTRL+Q LEAVES' : 'ESC LEAVES';
-    return Box(
+    final focused = widget.focusNode?.hasPrimaryFocus ?? false;
+    final tag = _entered ? leaves : (focused ? '⏎ ENTER' : null);
+    final plate = Box(
       background: cream,
       padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text.rich(
-            TextSpan(
-              '',
-              children: [
-                // Orange on the cream: the colours swapped back by inverse.
-                TextSpan(
-                  'FIG. ${widget.figure} ',
-                  style: Style(
-                    fg: SiteColors.cream,
-                    bg: theme.accent.fg,
-                    bold: true,
-                    inverse: true,
+          Row(
+            children: [
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    '',
+                    children: [
+                      // Orange on the cream: the colours swapped back by inverse.
+                      TextSpan(
+                        'FIG. ${widget.figure.toString().padLeft(widget.figureDigits, '0')} ',
+                        style: Style(
+                          fg: SiteColors.cream,
+                          bg: theme.accent.fg,
+                          bold: true,
+                          inverse: true,
+                        ),
+                      ),
+                      TextSpan(
+                        _entered
+                            ? widget.title.toUpperCase()
+                            : (widget.idle ?? '${widget.title} · TAB TO ENTER')
+                                  .toUpperCase(),
+                        style: bold,
+                      ),
+                    ],
                   ),
+                  softWrap: false,
                 ),
-                TextSpan(widget.title.toUpperCase(), style: bold),
-                if (_entered) ...[
-                  TextSpan(' · ', style: bold),
-                  TextSpan(' $leaves ', style: orange),
-                ] else
-                  TextSpan(' · TAB TO ENTER', style: bold),
-              ],
-            ),
-            softWrap: false,
+              ),
+              // On the right of the caption row: how to leave, or Enter.
+              if (tag != null) Text(' $tag ', style: orange, softWrap: false),
+            ],
           ),
           Text('', style: cream),
           SizedBox(
@@ -250,5 +303,9 @@ class _LivePlateState extends State<LivePlate> {
         ],
       ),
     );
+    final node = widget.focusNode;
+    return node == null
+        ? plate
+        : Focus(focusNode: node, onKey: _onPlateKey, child: plate);
   }
 }

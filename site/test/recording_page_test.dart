@@ -113,7 +113,7 @@ void main() {
     );
     host.popped.add('/chord');
     await t.pump();
-    expect(t.screen, shows('One terminal for every coding agent.'));
+    expect(t.screen, shows('01 / THE APP'));
     host.pending.single.$2.complete(_big);
     await t.pump();
     expect(t.screen, isNot(shows('big recording')));

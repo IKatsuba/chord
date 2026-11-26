@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:chord_tui/chord_tui.dart';
 
+import '../band.dart';
 import '../giant.dart';
 import '../host.dart';
 import '../nav.dart';
@@ -270,7 +271,7 @@ class _HomePageState extends State<HomePage> {
           Text(''),
           hero,
           Text(''),
-          FullBleed(_band(theme, constraints.maxWidth - 1)),
+          FullBleed(Band(_slogans, width: constraints.maxWidth - 1)),
           Text(''),
           for (var r = 0; r * perRow < homeColumns.length; r++) ...[
             _columnsRow(theme, r, perRow, content),
@@ -303,25 +304,6 @@ class _HomePageState extends State<HomePage> {
       );
     },
   );
-
-  /// The orange band, edge to edge: slogans in ink bold, 2 columns in,
-  /// repeated to [width] and clipped there.
-  Widget _band(ThemeData theme, int width) {
-    final face = theme.accent.merge(const Style(bold: true, inverse: true));
-    final line = '  ${_slogans * (width ~/ _slogans.length + 2)}';
-    return Box(
-      background: face,
-      width: width,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(''),
-          Text(line, style: face, softWrap: false),
-          Text(''),
-        ],
-      ),
-    );
-  }
 
   /// Row [r] of the numbered columns, [perRow] to a row, 4 apart.
   Widget _columnsRow(ThemeData theme, int r, int perRow, int content) {

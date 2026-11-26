@@ -4,9 +4,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:test/test.dart';
 
+import 'package:chord_site/screens.dart';
+
 import '../../tool/build.dart';
 
 void main() {
+  _lengths();
   test('a pinned file matches only its own digest', () {
     final bytes = utf8.encode('wterm');
     final npm = Pinned(
@@ -96,5 +99,36 @@ void main() {
     expect(wtermFileShipped('package/dist/index.d.ts'), isFalse);
     expect(wtermFileShipped('package/dist/index.js.map'), isFalse);
     expect(wtermFileShipped('package/wasm/wterm.wasm'), isFalse);
+  });
+}
+
+void _lengths() {
+  test('each shot goes in with its paced length, rounded up to a second', () {
+    String recording(int lastMs) => jsonEncode({
+      'version': 1,
+      'cols': 120,
+      'rows': 36,
+      'frames': [
+        {
+          'at': 0,
+          'rows': ['a'],
+          'label': null,
+        },
+        {
+          'at': lastMs,
+          'rows': ['b'],
+          'label': null,
+        },
+      ],
+    });
+    expect(
+      shotsWithLengths([
+        'start',
+        'team',
+      ], (shot) => shot == 'start' ? recording(8200) : recording(12000)),
+      'start:9,team:12',
+    );
+    expect(parseShot('start:9'), ('start', const Duration(seconds: 9)));
+    expect(parseShot('start'), ('start', null));
   });
 }

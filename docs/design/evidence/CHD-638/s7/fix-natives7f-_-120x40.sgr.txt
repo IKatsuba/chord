@@ -1,0 +1,40 @@
+ESC[48;2;22;23;29m
+  ESC[38;2;71;231;165m◆ ESC[1mESC[39mchordESC[0mESC[48;2;22;23;29m    ESC[2m1 ESC[0mESC[48;2;22;23;29mchord   ESC[2m2 ESC[0mESC[48;2;22;23;29mchord_tui   ESC[2m3 ESC[0mESC[48;2;22;23;29mGallery   ESC[2m4 ESC[0mESC[48;2;22;23;29mInstall                                            ESC[4mESC[38;2;140;200;255mGitHub ↗ESC[0;2mESC[48;2;22;23;29m gESC[0mESC[48;2;22;23;29m   ESC[2mdevESC[0mESC[48;2;22;23;29m
+
+ESC[38;5;244mESC[49m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ESC[39m
+  A terminal window for coding agents, and the Flutter-shaped Dart framework it is built on.
+  This page is that framework, compiled to WebAssembly.
+
+  ESC[38;2;71;231;165m❯ ESC[1mESC[39m1. chord    ESC[0;2m    the app: sessions, agents, teams, permissions, plansESC[0m
+  ESC[38;2;71;231;165m  ESC[39m2. chord_tuiESC[2m    the framework: widgets, layout, text, keys, the testerESC[0m
+  ESC[38;2;71;231;165m  ESC[39m3. Gallery  ESC[2m    the framework's examples, running hereESC[0m
+  ESC[38;2;71;231;165m  ESC[39m4. Install  ESC[2m    Homebrew, npm, from sourceESC[0m
+
+  ESC[38;5;244m┌ESC[2mESC[39m Try it ESC[0mESC[38;5;244m──────────────────────────────────────────────────────────────────────────────────────────────────────────┐ESC[39m
+  ESC[38;5;244m│ESC[39m Every action has a key. Press ? for all of them, Esc to go up a level.                                           ESC[38;5;244m│ESC[39m
+  ESC[38;5;244m└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ESC[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ESC[48;2;22;23;29m ESC[1mup/downESC[0;2mESC[48;2;22;23;29m moveESC[0mESC[48;2;22;23;29m  ESC[1menterESC[0;2mESC[48;2;22;23;29m openESC[0mESC[48;2;22;23;29m  ESC[1m1–4ESC[0;2mESC[48;2;22;23;29m jumpESC[0mESC[48;2;22;23;29m  ESC[1m?ESC[0;2mESC[48;2;22;23;29m keysESC[0mESC[48;2;22;23;29m

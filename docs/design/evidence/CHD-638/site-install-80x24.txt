@@ -1,0 +1,24 @@
+ chord › install                                                            dev
+ github.com/IKatsuba/chord
+────────────────────────────────────────────────────────────────────────────────
+
+  npm, or bun, pnpm and yarn
+      npm install -g @chorded/chord
+  A small shim around a prebuilt binary for macOS and Linux, arm64 and x64.
+  chord upgrade updates it the way it was installed.
+
+  Homebrew, for stable releases
+      brew install ikatsuba/tap/chord
+
+  From source, with Dart 3.12 or newer
+      git clone https://github.com/IKatsuba/chord && cd chord
+      dart pub get
+      dart compile exe bin/chord.dart -o build/chord
+      ./build/chord
+
+
+
+
+
+
+ escape up  ? keys

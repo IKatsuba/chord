@@ -122,4 +122,36 @@ void main() {
     await t.press('x');
     expect(log, ['second']);
   });
+
+  group('a scope turned on under one that is off', () {
+    late FocusManager manager;
+    late FocusScopeNode outer, inner;
+    late FocusNode asked;
+
+    setUp(() {
+      manager = FocusManager();
+      outer = FocusScopeNode(active: false)..attach(manager.root);
+      inner = FocusScopeNode(active: false)..attach(outer);
+      asked = FocusNode()..attach(inner);
+      asked.requestFocus();
+    });
+
+    for (final (label, takeFocus, autofocus, expected) in [
+      ('with neither flag passes no request up', false, false, false),
+      ('with autofocus passes the asked node up', false, true, true),
+      ('with takeFocus passes the asked node up', true, false, true),
+    ]) {
+      test(label, () {
+        manager.setScopeActive(
+          inner,
+          true,
+          takeFocus: takeFocus,
+          autofocus: autofocus,
+        );
+        expect(manager.primaryFocus, isNull, reason: 'nothing moves yet');
+        manager.setScopeActive(outer, true, autofocus: true);
+        expect(asked.hasPrimaryFocus, expected);
+      });
+    }
+  });
 }

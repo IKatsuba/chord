@@ -604,7 +604,11 @@ class FocusManager extends ChangeNotifier {
     final asked = scope._autofocus;
     scope._autofocus = null;
     if (_offAbove(scope) case final off?) {
-      final wanted = takeFocus ? (asked ?? scope) : asked;
+      final wanted = takeFocus
+          ? (asked ?? scope)
+          : autofocus
+          ? asked
+          : null;
       if (wanted != null) off._autofocus = wanted;
       return;
     }

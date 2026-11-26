@@ -64,4 +64,33 @@ void main() {
       );
     },
   );
+  test('a merged wheel report scrolls as that many single steps', () {
+    for (final scroll in const [
+      ScrollState(content: 100, view: 20, following: true),
+      ScrollState(content: 100, view: 20, top: 2),
+      ScrollState(content: 100, view: 20, top: 78),
+      ScrollState(content: 10, view: 20),
+    ]) {
+      final state = AppState(scroll: scroll);
+      for (final (merged, single) in const [
+        (WheeledAction.up(3), WheeledAction.up()),
+        (WheeledAction.down(3), WheeledAction.down()),
+      ]) {
+        var stepped = state;
+        for (var i = 0; i < 3; i++) {
+          stepped = reduceWindow(stepped, single);
+        }
+        expect(reduceWindow(state, merged).scroll, stepped.scroll);
+      }
+    }
+    const state = AppState(
+      scroll: ScrollState(content: 100, view: 20, following: true),
+    );
+    final back = reduceWindow(state, const WheeledAction.up(5));
+    expect(back.scroll.offset, 75);
+    expect(
+      reduceWindow(back, const WheeledAction.down(5)).scroll.following,
+      isTrue,
+    );
+  });
 }

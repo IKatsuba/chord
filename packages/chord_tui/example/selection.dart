@@ -184,11 +184,12 @@ class _FixtureState extends State<SelectionDemo> {
                     Expanded(
                       child: Listener(
                         onPointerSignal: (event) {
-                          if (event.scrollDelta.y < 0) {
-                            _explicitScroll(_scroll.lineUp);
-                          }
-                          if (event.scrollDelta.y > 0) {
-                            _explicitScroll(_scroll.lineDown);
+                          for (var i = 0; i < event.scrollDelta.y.abs(); i++) {
+                            _explicitScroll(
+                              event.scrollDelta.y < 0
+                                  ? _scroll.lineUp
+                                  : _scroll.lineDown,
+                            );
                           }
                         },
                         child: ListView.builder(

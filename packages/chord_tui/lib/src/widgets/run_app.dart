@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../input/keys.dart';
 import '../input/parser.dart';
+import '../input/wheel.dart';
 import '../terminal/background.dart';
 import '../terminal/buffer.dart';
 import '../terminal/renderer.dart';
@@ -158,7 +159,7 @@ Future<void> runApp(
   }
 
   void handle(List<InputEvent> events) {
-    for (final e in events) {
+    for (final e in coalesceWheel(events)) {
       if (suspended || done.isCompleted) break;
       if (e is KeyboardProtocolEvent) {
         if (keyboardAwaiting) {

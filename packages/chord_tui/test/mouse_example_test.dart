@@ -97,5 +97,26 @@ void main() {
         expect(t.screen, shows('draft stays here'));
       },
     );
+    testWidgets('a merged report scrolls by its size at $size', (t) async {
+      await t.pumpWidget(const MouseExample(), size: size);
+      expect(t.screen.lines[2], 'Sample log row 5');
+      await t.mouse(
+        const MouseEvent(
+          MouseEventKind.wheel,
+          position: Offset(0, 0),
+          scrollDelta: Offset(0, -3),
+        ),
+      );
+      expect(t.screen, shows('reports: 1'));
+      expect(t.screen.lines[2], 'Sample log row 2');
+      await t.mouse(
+        const MouseEvent(
+          MouseEventKind.wheel,
+          position: Offset(0, 0),
+          scrollDelta: Offset(0, 2),
+        ),
+      );
+      expect(t.screen.lines[2], 'Sample log row 4');
+    });
   }
 }

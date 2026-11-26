@@ -42,8 +42,9 @@ class _MouseState extends State<MouseExample> {
       _lines.add('#$_reports $line');
     });
     if (event.kind == MouseEventKind.wheel) {
-      if (event.scrollDelta.y < 0) _scroll.lineUp();
-      if (event.scrollDelta.y > 0) _scroll.lineDown();
+      for (var i = 0; i < event.scrollDelta.y.abs(); i++) {
+        event.scrollDelta.y < 0 ? _scroll.lineUp() : _scroll.lineDown();
+      }
     }
   }
 

@@ -1,0 +1,6 @@
+  ESC[4mESC[38;2;140;200;255mpub.dev ↗ESC[0m
+  ESC[4;7mESC[38;2;177;185;249mGitHub ↗ESC[0;2m gESC[0m
+  ESC[4mESC[38;2;140;200;255mRead about chord_tuiESC[0m
+  ESC[2mNowhereESC[0m
+  Last: nothing yet
+  ESC[1mgESC[0;2m Open GitHubESC[0m  ESC[1mctrl+qESC[0;2m QuitESC[0m

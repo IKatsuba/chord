@@ -1,0 +1,24 @@
+ chord › chord_tui › gallery                                                dev
+ github.com/IKatsuba/chord
+────────────────────────────────────────────────────────────────────────────────
+
+  The framework's examples, running here, as they are in example/.
+
+  ❯ 1. demo         themes, text and layout
+    2. markdown     Markdown, and a streamed reply
+    3. picker       numbered choices with a fuzzy filter
+    4. form         validated fields, choices and buttons
+    5. text_area    multiline editing, wrapping and scrolling
+    6. diff         numbered, highlighted, wrapped diffs
+    7. dialog       a framed question over the window
+    8. layers       anchored layers over a streaming list
+    9. mouse        pointer reports and the wheel
+
+
+
+
+
+
+
+
+ up/down move  enter open  1–9 jump  escape up  ? keys

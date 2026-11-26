@@ -1,0 +1,40 @@
+ chord › chord_tui                                                                      github.com/IKatsuba/chord   dev
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  The Flutter way, for the terminal: a Dart framework for rich terminal interfaces.
+  Widgets, state, layout in cells, rich text and keyboard actions, with a headless tester. Written from scratch.
+
+  enter Gallery    the framework's examples, running here
+
+ README's example: ctrl+o opens the fold
+ ┌ example/main.dart ─────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │▸ Run checks                                                                                                        │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │                                                                                                                    │
+ │ctrl+o Toggle tool details                                                                                          │
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+ enter gallery  escape up  ctrl+q home  ? keys

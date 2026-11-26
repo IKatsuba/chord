@@ -5,6 +5,7 @@ import '../terminal/style.dart';
 import '../text/layout.dart';
 import '../text/span.dart';
 import 'basic.dart';
+import 'focus.dart';
 import 'framework.dart';
 import 'focus_manager.dart';
 import 'theme.dart';
@@ -46,6 +47,9 @@ class KeyHelp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fm = context.owner.focusManager;
+    final boundary = context
+        .dependOnInheritedWidgetOfExactType<_BoundaryScope>()
+        ?.node;
     final theme = Theme.of(context);
     final keyStyle = this.keyStyle ?? theme.text.merge(Style.bold);
     final descriptionStyle = this.descriptionStyle ?? theme.dim;
@@ -57,12 +61,12 @@ class KeyHelp extends StatelessWidget {
         if (builder != null) {
           return builder(
             context,
-            List<Binding>.unmodifiable(fm.activeBindings),
+            List<Binding>.unmodifiable(listedBindings(fm, boundary)),
             List<KeyCombo>.unmodifiable(pending),
           );
         }
         final spans = <TextSpan>[];
-        for (final group in groupBindings(fm.activeBindings)) {
+        for (final group in groupBindings(listedBindings(fm, boundary))) {
           final chords = [
             for (final chord in group.chords)
               if (pending.isEmpty || chord.startsWith(pending)) chord,
@@ -117,4 +121,95 @@ List<BindingGroup> groupBindings(List<Binding> bindings) {
     (groups[key] ??= []).add(b);
   }
   return [for (final group in groups.values) BindingGroup(group)];
+}
+
+/// The keys a host takes before an embedded tree sees them, by the
+/// boundary's node.
+final _taken = Expando<Set<KeyCombo>>();
+
+/// Marks where an embedded tree's key help begins: help built inside lists
+/// only the bindings inside, and no help lists the bindings inside on the
+/// keys [taken] by the host.
+///
+/// It changes what [KeyHelp] and [KeyHelp.builder] list, nothing else: every
+/// binding fires as without it. A binding is inside when its node is below
+/// the boundary on the focus path. Help inside lists the bindings inside the
+/// nearest boundary; help outside lists every binding. A binding whose
+/// chord starts with a key one of its enclosing boundaries takes is listed
+/// by none; taking the key is the host's own capture handler's work.
+class KeyHelpBoundary extends StatefulWidget {
+  /// A boundary around [child], whose bindings on [taken] keys go unlisted.
+  const KeyHelpBoundary({
+    super.key,
+    this.taken = const {},
+    required this.child,
+  });
+
+  /// The keys the host takes first, so no help lists them from inside.
+  final Set<KeyCombo> taken;
+
+  /// The embedded tree.
+  final Widget child;
+
+  @override
+  State<KeyHelpBoundary> createState() => _KeyHelpBoundaryState();
+}
+
+class _KeyHelpBoundaryState extends State<KeyHelpBoundary> {
+  // A node that never takes focus marks the boundary on the focus path, as
+  // an Actions node does, so keys and traversal pass it by.
+  final _node = FocusNode(canRequestFocus: false, debugLabel: 'key help');
+
+  @override
+  void dispose() {
+    _node.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    _taken[_node] = widget.taken;
+    return Focus(
+      focusNode: _node,
+      canRequestFocus: false,
+      child: _BoundaryScope(node: _node, child: widget.child),
+    );
+  }
+}
+
+class _BoundaryScope extends InheritedWidget {
+  const _BoundaryScope({required this.node, required super.child});
+
+  final FocusNode node;
+
+  @override
+  bool updateShouldNotify(_BoundaryScope oldWidget) => node != oldWidget.node;
+}
+
+/// What help built under [boundary] lists of [fm]'s active bindings: those
+/// inside [boundary], or all when it is null, less those on keys a boundary
+/// around them takes. Inner bindings shadow outer ones first, as for keys.
+@visibleForTesting
+List<Binding> listedBindings(FocusManager fm, FocusNode? boundary) {
+  final path = fm.focusPath;
+  final inside = boundary == null ? path.length : path.indexOf(boundary);
+  if (inside < 0) return const [];
+  // The keys taken above each node: every boundary further out adds its own.
+  final takenAbove = List<Set<KeyCombo>>.filled(path.length, const {});
+  var taken = <KeyCombo>{};
+  for (var i = path.length - 1; i >= 0; i--) {
+    takenAbove[i] = taken;
+    if (_taken[path[i]] case final more?) taken = {...taken, ...more};
+  }
+  final seen = <Chord>{};
+  final out = <Binding>[];
+  for (var i = 0; i < path.length; i++) {
+    for (final b in path[i].bindings) {
+      if (!b.enabled || !seen.add(b.chord)) continue;
+      if (i >= inside) continue;
+      if (takenAbove[i].contains(b.chord.combos.first)) continue;
+      out.add(b);
+    }
+  }
+  return out;
 }

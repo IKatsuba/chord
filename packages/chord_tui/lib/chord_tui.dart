@@ -63,7 +63,7 @@ export 'src/widgets/focus.dart' hide NoFocusRequests;
 export 'src/widgets/focus_manager.dart';
 export 'src/widgets/framework.dart';
 export 'src/widgets/host.dart';
-export 'src/widgets/key_help.dart';
+export 'src/widgets/key_help.dart' hide listedBindings;
 export 'src/widgets/keymap.dart';
 export 'src/widgets/layout_builder.dart';
 export 'src/widgets/list_view.dart';

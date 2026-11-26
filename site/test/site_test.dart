@@ -13,7 +13,7 @@ void main() {
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));
     final lines = t.screen.lines;
     expect(lines[0], startsWith(' chord'));
-    expect(lines[0], endsWith('github.com/IKatsuba/chord   vdev'));
+    expect(lines[0], endsWith('github.com/IKatsuba/chord   dev'));
     expect(lines[1], '─' * 120);
     expect(t.screen, shows('❯ 1. chord'));
     expect(t.screen, shows('4. Install'));
@@ -25,7 +25,7 @@ void main() {
   testWidgets('home at 80x24: the link folds under the name', (t) async {
     await t.pumpWidget(Site(host: FakeHost()), size: const Size(80, 24));
     final lines = t.screen.lines;
-    expect(lines[0], matches(RegExp(r'^ chord +vdev$')));
+    expect(lines[0], matches(RegExp(r'^ chord +dev$')));
     expect(lines[1], ' github.com/IKatsuba/chord');
     expect(lines[2], '─' * 80);
     expect(t.screen, isNot(shows('Try it')));
@@ -38,7 +38,7 @@ void main() {
       size: const Size(43, 37),
     );
     final lines = t.screen.lines;
-    expect(lines[0], matches(RegExp(r'^ chord › install +vdev$')));
+    expect(lines[0], matches(RegExp(r'^ chord › install +dev$')));
     expect(t.screen, isNot(shows('github.com')));
     expect(lines[35], startsWith('  esc   tab   ←   ↑   ↓   →   enter'));
     expect(lines.last, ' escape up  ? keys');
@@ -94,7 +94,12 @@ void main() {
       expect(t.screen, shows('Nothing here: /chord_tui/markdwon'));
       expect(t.screen, shows('❯ home'));
       expect(host.titles, ['not found · chord']);
-      expect(t.screen.lines.last, contains('escape home  ? keys'));
+      expect(
+        t.screen.lines.last,
+        size.width < 60
+            ? ' escape home  ? keys'
+            : ' enter open  escape home  ? keys',
+      );
       await t.press('enter');
       expect(host.pushed, ['/']);
     });
@@ -134,6 +139,31 @@ void main() {
       'https://github.com/IKatsuba/chord',
       'https://github.com/IKatsuba/chord',
     ]);
+  });
+
+  testWidgets('an overflowing help row ends in an ellipsis', (t) async {
+    await t.pumpWidget(
+      Actions(
+        bindings: [Binding('f5', 'a description too long for the row', () {})],
+        child: Site(host: FakeHost()),
+      ),
+      size: const Size(64, 24),
+    );
+    expect(t.screen.lines.last, hasLength(64));
+    expect(t.screen.lines.last, endsWith('…'));
+  });
+
+  testWidgets('panel-only keys stay out of the help row', (t) async {
+    await t.pumpWidget(
+      Actions(
+        bindings: [Binding('f2', 'back', () {}, id: '${panelOnly}back')],
+        child: Site(host: FakeHost()),
+      ),
+      size: const Size(120, 40),
+    );
+    expect(t.screen.lines.last, isNot(contains('back')));
+    await t.press('?');
+    expect(t.screen, shows(RegExp(r'f2\s+back')));
   });
 
   testWidgets('the key row taps send keys to the page', (t) async {

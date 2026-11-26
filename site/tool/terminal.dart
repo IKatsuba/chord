@@ -50,10 +50,22 @@ Future<void> main(List<String> args) async {
     Builder(
       builder: (context) => Actions(
         bindings: [
-          Binding('f2', 'Back', () => host.move(-1)),
-          Binding('f3', 'Forward', () => host.move(1)),
+          // Listed in the ? panel only, so the help row reads as in the
+          // browser.
+          Binding('f2', 'back', () => host.move(-1), id: '${panelOnly}back'),
+          Binding(
+            'f3',
+            'forward',
+            () => host.move(1),
+            id: '${panelOnly}forward',
+          ),
           // The site keeps Ctrl+Q and Ctrl+C for home; this ends the run.
-          Binding('ctrl+x', 'Leave', () => exitApp(context)),
+          Binding(
+            'ctrl+x',
+            'leave',
+            () => exitApp(context),
+            id: '${panelOnly}leave',
+          ),
         ],
         child: Site(host: host),
       ),

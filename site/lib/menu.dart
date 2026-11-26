@@ -49,8 +49,9 @@ class _SiteMenuState extends State<SiteMenu> {
     );
     return Actions(
       bindings: [
-        Binding('up', 'move', () => _move(-1)),
-        Binding('down', 'move', () => _move(1)),
+        // One row has nowhere to move.
+        Binding('up', 'move', () => _move(-1), enabled: items.length > 1),
+        Binding('down', 'move', () => _move(1), enabled: items.length > 1),
         Binding('enter', 'open', () => items[_selected].onOpen()),
         if (widget.numbered)
           for (var n = 1; n <= items.length && n <= 9; n++)

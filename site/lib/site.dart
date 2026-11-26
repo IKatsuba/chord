@@ -16,8 +16,12 @@ const narrowWidth = 60;
 /// Below this many columns the header's link moves under the name.
 const wideWidth = 100;
 
-const _homeKeysId = 'site:home-keys';
-const _repositoryId = 'site:repository';
+/// The id prefix of bindings the `?` panel lists and the help row leaves
+/// out.
+const panelOnly = 'panel:';
+
+const _homeKeysId = '${panelOnly}home-keys';
+const _repositoryId = '${panelOnly}repository';
 
 /// The whole site: a header, the page the route names, and its keys.
 ///
@@ -136,7 +140,11 @@ class _SiteState extends State<Site> {
         style: theme.link,
       ),
     );
-    final version = Text('v$chordVersion ', style: theme.dim);
+    // Only a real version number reads with a v in front.
+    final version = Text(
+      chordVersion == 'dev' ? 'dev ' : 'v$chordVersion ',
+      style: theme.dim,
+    );
     final name = Text(
       ' ${_crumbs(_route)}',
       style: theme.text.merge(Style.bold),
@@ -184,8 +192,8 @@ String _crumbs(SiteRoute route) {
   return [if (segments.first != 'chord') 'chord', ...segments].join(' › ');
 }
 
-/// The keys in scope on one row: on a phone only Esc and `?`; never the
-/// keys that only repeat home or the header's link.
+/// The keys in scope on one row, `…` where they overflow: on a phone only
+/// Esc and `?`; never the [panelOnly] ones.
 class _HelpRow extends StatelessWidget {
   const _HelpRow({required this.narrow});
 
@@ -197,7 +205,7 @@ class _HelpRow extends StatelessWidget {
       final theme = Theme.of(context);
       final spans = <TextSpan>[TextSpan(' ')];
       for (final group in groupBindings(bindings)) {
-        if (group.id == _homeKeysId || group.id == _repositoryId) continue;
+        if (group.id?.startsWith(panelOnly) ?? false) continue;
         if (narrow &&
             !(group.chords.first.toString() == 'escape' ||
                 group.chords.first.toString() == '?')) {
@@ -213,7 +221,11 @@ class _HelpRow extends StatelessWidget {
           )
           ..add(TextSpan(' ${group.description}', style: theme.dim));
       }
-      return Text.rich(TextSpan('', children: spans), softWrap: false);
+      return Text.rich(
+        TextSpan('', children: spans),
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+      );
     },
   );
 }

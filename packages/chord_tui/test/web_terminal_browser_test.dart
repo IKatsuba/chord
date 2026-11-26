@@ -56,9 +56,6 @@ void main() {
           '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     );
     final origin = 'http://127.0.0.1:${served.port}';
-    await chrome.defaultBrowserContext.overridePermissions(origin, [
-      PermissionType.clipboardReadWrite,
-    ]);
     page = await chrome.newPage();
     page.onConsole.listen((message) {
       final text = message.text ?? '';
@@ -67,6 +64,12 @@ void main() {
     page.onError.listen((error) => errors.add('$error'));
     await page.goto(origin);
     await _until(page, "testWrites().includes('size 40x5')");
+    // Before any copy: the page's clipboard is the stand-in, never the
+    // person's own; no permission to it is granted either.
+    expect(
+      await page.evaluate<bool>('() => navigator.clipboard.standIn === true'),
+      isTrue,
+    );
   });
   tearDownAll(() async {
     await browser?.close();
@@ -94,13 +97,11 @@ void main() {
     await _seen(console, 'did kitty');
   });
 
-  test('a copy goes to the browser clipboard', () async {
+  test('a copy goes to the page'
+      's clipboard, a stand-in here', () async {
     await page.evaluate<void>("() => testType('c')");
     await _seen(console, 'did copied');
-    await _until(
-      page,
-      "navigator.clipboard.readText().then((t) => t === 'from key')",
-    );
+    await _until(page, "testCopied().at(-1) === 'from key'");
   });
 
   test('a link opens without an opener', () async {
@@ -145,6 +146,11 @@ void main() {
     // A doubled page callback would handle the key twice.
     await Future<void>.delayed(const Duration(milliseconds: 200));
     expect(console.where((line) => line == 'did copied').length, copies + 1);
+    expect(
+      await page.evaluate<int>('() => testCopied().length'),
+      copies + 1,
+      reason: 'one write to the stand-in a copy',
+    );
     await page.evaluate<void>(r"() => testType('\x03')");
     await _seen(console, 'runApp returned 2');
     expect(console.where((line) => line.startsWith('runApp')).toList(), [

@@ -18,6 +18,18 @@
   globalThis.testType = (text) => data(text);
   globalThis.testResize = (cols, rows) => resize(cols, rows);
   globalThis.testOpened = [];
+  // A stand-in clipboard from the start: the test never reaches the
+  // person's own, and reads what the app wrote from here.
+  const copied = [];
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      writeText: async (text) => { copied.push(text); },
+      readText: async () => copied.at(-1) ?? '',
+      standIn: true,
+    },
+  });
+  globalThis.testCopied = () => copied;
   // Recorded, not followed: the test has no network.
   window.open = (...args) => { testOpened.push(args); return null; };
   const { compileStreaming } = await import('./web_terminal.mjs');

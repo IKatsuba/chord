@@ -198,7 +198,7 @@ void main() {
         'it loads, draws home, and says how long it took to start',
         () async {
           await open('/');
-          await until('❯ 1. chord');
+          await until('A TERMINAL WINDOW');
           final start = await page.evaluate<num>('() => chordStart');
           printOnFailure('start: $start ms');
           expect(start, lessThan(5000));
@@ -209,42 +209,41 @@ void main() {
         },
       );
 
-      test('enter on item 3 opens the gallery; Back comes home', () async {
+      test('3 opens the gallery; Back comes home', () async {
         await open('/');
-        await until('❯ 1. chord');
-        await page.keyboard.press(Key.arrowDown);
-        await page.keyboard.press(Key.arrowDown);
-        await page.keyboard.press(Key.enter);
-        await until('chord › chord_tui › gallery');
+        await until('A TERMINAL WINDOW');
+        await page.keyboard.press(Key.digit3);
+        await until('03 / THE GALLERY');
         expect(await pathname(), '${base}chord_tui/gallery');
         expect(
           await page.evaluate<String>('() => document.title'),
           'gallery · chord_tui',
         );
         await page.goBack();
-        await until('❯ 1. chord');
+        await until('A TERMINAL WINDOW');
         expect(await pathname(), base);
       });
 
       test('a deep link opens its page; Esc goes to its parent; Back '
           'returns', () async {
         await open('/chord_tui/markdown');
-        await until('example/markdown.dart');
+        await until('EXAMPLE/MARKDOWN.DART');
         expect(
           await page.evaluate<String>('() => document.title'),
           'markdown · chord_tui',
         );
         await page.keyboard.press(Key.escape);
-        await until('chord › chord_tui › gallery');
+        await until('03 / THE GALLERY');
         expect(await pathname(), '${base}chord_tui/gallery');
         await page.goBack();
-        await until('example/markdown.dart');
+        await until('EXAMPLE/MARKDOWN.DART');
         expect(await pathname(), '${base}chord_tui/markdown');
       });
 
       test('an unknown path draws not found, and keeps the path', () async {
         await open('/chord_tui/markdwon');
-        await until('Nothing here: /chord_tui/markdwon');
+        await until('PAGE NOT FOUND.');
+        await until('/chord_tui/markdwon');
         expect(
           await page.evaluate<String>('() => document.title'),
           'not found · chord',
@@ -253,27 +252,31 @@ void main() {
       });
 
       test(
-        'a click on a menu row opens it: SGR mouse reaches the app',
+        'a click on a home column opens it: SGR mouse reaches the app',
         () async {
-          await open('/');
-          await until('2. chord_tui');
+          await open('/', size: 'cols=120&rows=80');
+          await until('THE FRAMEWORK');
           final row = await page.evaluate<Map<dynamic, dynamic>>('''() => {
           const rows = [...document.querySelectorAll("#terminal .term-row")];
-          const row = rows.find((r) => r.innerText.includes("2. chord_tui"));
+          const row = rows.find((r) => r.innerText.includes("THE FRAMEWORK"));
           const box = row.getBoundingClientRect();
-          return {x: box.left + 60, y: box.top + box.height / 2};
+          const column = row.innerText.indexOf("THE FRAMEWORK");
+          return {x: box.left + (column + 2) * box.width / chordTerminal.cols,
+            y: box.top + box.height / 2};
         }''');
           await page.mouse.click(
             Point((row['x'] as num).toDouble(), (row['y'] as num).toDouble()),
           );
-          await until('chord › chord_tui');
+          await until('02 / FRAMEWORK');
           expect(await pathname(), '${base}chord_tui');
         },
       );
 
-      test('shift+enter reaches a text area as a kitty key', () async {
+      test('shift+enter reaches an entered text area as a kitty key', () async {
         await open('/chord_tui/text_area');
-        await until('Text area');
+        await until('TAB TO ENTER');
+        await page.keyboard.press(Key.tab);
+        await until('ESC LEAVES');
         await page.keyboard.type('first');
         await page.keyboard.down(Key.shift);
         await page.keyboard.press(Key.enter);
@@ -287,7 +290,9 @@ void main() {
       });
 
       test('a recording page fetches and plays its recording', () async {
-        await open('/chord/permission', size: 'cols=80&rows=24');
+        // 120x36 in its frame: the page has 42 rows under the nav.
+        await open('/chord/permission', size: 'cols=122&rows=47');
+        await until('01 / THE APP / PERMISSION');
         await until('Do you want to proceed?');
         expect(await screen(), contains('▶'));
       });

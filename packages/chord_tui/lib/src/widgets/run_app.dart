@@ -6,6 +6,8 @@ import '../input/parser.dart';
 import '../input/wheel.dart';
 import '../terminal/background.dart';
 import '../terminal/buffer.dart';
+import '../terminal/process_io.dart'
+    if (dart.library.js_interop) '../terminal/process_web.dart';
 import '../terminal/renderer.dart';
 import '../terminal/terminal.dart';
 import 'framework.dart';
@@ -80,7 +82,7 @@ Future<void> runApp(
   KeyLayoutFallback? layoutFallback,
 }) async {
   final term = terminal ?? StdioTerminal();
-  final env = environment ?? Platform.environment;
+  final env = environment ?? hostEnvironment;
   final noColor = (env['NO_COLOR'] ?? '').isNotEmpty;
   final answered = Completer<Brightness?>();
   final keyboardReady = Completer<void>();
@@ -208,7 +210,7 @@ Future<void> runApp(
   await runZonedGuarded(
     () async {
       try {
-        if (handleSignals && !Platform.isWindows) {
+        if (handleSignals && hostHasProcess && !Platform.isWindows) {
           for (final signal in [
             ProcessSignal.sighup,
             ProcessSignal.sigint,
@@ -353,6 +355,12 @@ Future<void> runApp(
   // unmount or to restore the terminal still reaches beforeExit; what
   // failed is said once the terminal is restored, where it stays readable.
   final failures = [?failure, ?failureStack];
+  // Where there is no process to exit by status, the first failure is what
+  // the returned future completes with.
+  var first = switch (failure) {
+    final error? => (error, failureStack ?? StackTrace.empty),
+    null => null,
+  };
   for (final step in <FutureOr<void> Function()>[
     for (final subscription in subs) subscription.cancel,
     () => maybeHost?.dispose(),
@@ -364,6 +372,7 @@ Future<void> runApp(
       await step();
     } catch (error, stack) {
       failures.addAll([error, stack]);
+      first ??= (error, stack);
     }
   }
   // A hung-up terminal is followed by its SIGHUP, which must decide how the
@@ -373,27 +382,15 @@ Future<void> runApp(
   if (hungUp && signalSubs.isNotEmpty) {
     terminatingSignal ??= ProcessSignal.sighup;
   }
-  // A terminal that has gone away fails these writes, later and on stderr's
-  // done future: that failure has nowhere to be said, and must not take the
-  // place of the signal or the exit code the app leaves by.
-  stderr.done.ignore();
-  void say(Object? line) {
-    try {
-      stderr.writeln(line);
-    } catch (_) {
-      // stderr closed by an earlier failure.
-    }
-  }
-
-  failures.forEach(say);
-  var failed = failures.isNotEmpty;
+  settleFailureReports();
+  failures.forEach(reportFailure);
   if (beforeExit != null) {
     try {
       await beforeExit();
     } catch (error, stack) {
-      say(error);
-      say(stack);
-      failed = true;
+      reportFailure(error);
+      reportFailure(stack);
+      first ??= (error, stack);
     }
   }
   // Keep repeated termination signals held until caller-owned cleanup ends.
@@ -401,11 +398,12 @@ Future<void> runApp(
     try {
       await subscription.cancel();
     } catch (error, stack) {
-      say(error);
-      say(stack);
-      failed = true;
+      reportFailure(error);
+      reportFailure(stack);
+      first ??= (error, stack);
     }
   }
+  final failed = first != null;
   final signal = terminatingSignal;
   if (signal != null) {
     Process.killPid(pid, signal);
@@ -414,11 +412,17 @@ Future<void> runApp(
     // does. An ignored signal or another owner's handler that does not end
     // the process must still not become success.
     await Future<void>.delayed(_signalGrace);
-    exit(128 + signal.signalNumber);
+    exitWith(128 + signal.signalNumber);
+  }
+  if (!hostHasProcess) {
+    if (first case (final error, final stack)) {
+      Error.throwWithStackTrace(error, stack);
+    }
+    return;
   }
   if (exitProcess) {
     if (hungUp) await Future<void>.delayed(_hangUpGrace);
-    exit(failed ? 1 : 0);
+    exitWith(failed ? 1 : 0);
   }
 }
 

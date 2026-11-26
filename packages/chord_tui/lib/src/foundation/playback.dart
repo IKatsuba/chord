@@ -140,6 +140,7 @@ class PlaybackState {
 
 /// What can happen to a playback.
 sealed class PlaybackAction {
+  /// For the actions below.
   const PlaybackAction();
 }
 

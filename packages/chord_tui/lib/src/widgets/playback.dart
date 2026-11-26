@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:characters/characters.dart';
+import 'package:clock/clock.dart';
 
 import '../foundation/geometry.dart';
 import '../foundation/notifier.dart';
@@ -66,8 +67,8 @@ class PlaybackValue {
   bool get isEnded => state.isEnded;
 }
 
-/// Plays a [TerminalRecording]: the state [reducePlayback] keeps, and the timer that
-/// advances it while playing.
+/// Plays a [TerminalRecording]: the state [reducePlayback] keeps, and the
+/// timer that advances it while playing by the time that really passed.
 class PlaybackController extends ChangeNotifier {
   /// A paused controller at the start of [recording]; [looping] plays it
   /// again from the beginning instead of ending.
@@ -81,9 +82,20 @@ class PlaybackController extends ChangeNotifier {
 
   var _state = const PlaybackState();
   Timer? _timer;
+  // Time since the state last took in what passed: every command and tick
+  // takes it in first, so pausing between frames keeps the time played.
+  final Stopwatch _sinceSettled = clock.stopwatch()..start();
 
-  /// Where the playback is, with its step.
-  PlaybackValue get value => PlaybackValue(recording, _state);
+  /// Where the playback is now, with its step.
+  PlaybackValue get value => PlaybackValue(
+    recording,
+    reducePlayback(
+      recording,
+      _state,
+      PlaybackTick(_sinceSettled.elapsed),
+      looping: looping,
+    ),
+  );
 
   /// Starts time; from the end, plays from the beginning.
   void play() => _dispatch(const PlaybackPlay());
@@ -103,9 +115,19 @@ class PlaybackController extends ChangeNotifier {
   /// Plays from the beginning.
   void restart() => _dispatch(const PlaybackRestart());
 
-  void _dispatch(PlaybackAction action) {
+  void _dispatch([PlaybackAction? action]) {
     checkNotDisposed();
-    final next = reducePlayback(recording, _state, action, looping: looping);
+    final passed = _sinceSettled.elapsed;
+    _sinceSettled.reset();
+    var next = reducePlayback(
+      recording,
+      _state,
+      PlaybackTick(passed),
+      looping: looping,
+    );
+    if (action != null) {
+      next = reducePlayback(recording, next, action, looping: looping);
+    }
     _schedule(next);
     if (next == _state) return;
     _state = next;
@@ -129,7 +151,7 @@ class PlaybackController extends ChangeNotifier {
     );
     if (toSecond < wait) wait = toSecond;
     if (wait < Duration.zero) wait = Duration.zero;
-    _timer = Timer(wait, () => _dispatch(PlaybackTick(wait)));
+    _timer = Timer(wait, _dispatch);
   }
 
   @override

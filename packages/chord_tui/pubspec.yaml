@@ -21,6 +21,7 @@ environment:
   sdk: ^3.11.0
 dependencies:
   characters: ^1.4.1
+  clock: ^1.1.3
   dartdiff: ^1.0.0
   ffi: ^2.2.0
   highlighting: '>=0.9.0+11.8.0 <0.9.1'

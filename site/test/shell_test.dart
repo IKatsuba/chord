@@ -248,6 +248,25 @@ void main() {
       expect(bare(t.screen.lines.first), '${' ' * 17}section 0');
     });
 
+    for (final size in const [Size(120, 40), Size(80, 24)]) {
+      testWidgets('the wheel scrolls it, a row a step, at $size', (t) async {
+        await t.pumpWidget(page(200), size: size);
+        Future<void> wheel(int rows) => t.mouse(
+          MouseEvent(
+            MouseEventKind.wheel,
+            position: const Offset(10, 3),
+            scrollDelta: Offset(0, rows),
+          ),
+        );
+        await wheel(3);
+        await t.pump();
+        expect(bare(t.screen.lines.first).trim(), 'section 3');
+        await wheel(-1);
+        await t.pump();
+        expect(bare(t.screen.lines.first).trim(), 'section 2');
+      });
+    }
+
     testWidgets('↓, PgDn, End and Home scroll it', (t) async {
       await t.pumpWidget(page(200), size: const Size(80, 24));
       await t.press('down');

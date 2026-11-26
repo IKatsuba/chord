@@ -98,6 +98,7 @@ class _SitePageState extends State<SitePage> {
               controller: _scroll,
               child: ListView.builder(
                 controller: _scroll,
+                scrollsOnWheel: true,
                 itemCount: sections.length,
                 itemBuilder: (context, i) => Padding(
                   // Padding both sides: a list's items are as wide as the

@@ -1,0 +1,56 @@
+
+  CHORD / CHORD_TUI                                                                                                    01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+    04 / INSTALL
+
+    ██████████  ██      ██    ████████  ██████████    ██████    ██          ██
+        ██      ██      ██  ██              ██      ██      ██  ██          ██
+        ██      ████    ██  ██              ██      ██      ██  ██          ██
+        ██      ██  ██  ██    ██████        ██      ██████████  ██          ██
+        ██      ██    ████          ██      ██      ██      ██  ██          ██
+        ██      ██      ██          ██      ██      ██      ██  ██          ██          ████
+    ██████████  ██      ██  ████████        ██      ██      ██  ██████████  ██████████  ████
+
+    chord is one native binary for macOS and Linux, arm64 and x64. Pick a way; c copies its
+    command.
+
+    ▄▄▀▀▀▀▀▀▄▄    ▄▄██                                             ▄▄▀▀▀▀▀▀▄▄  ▄▄▀▀▀▀▀▀▄▄                                         ▄▄▀▀▀▀▀▀▄▄  ▀▀▀▀▀▀▀▀▄▄
+    ██      ██      ██                                             ██      ██        ▄▄▀▀                                         ██      ██    ▄▄▄▄▄▄▀▀
+    ██      ██      ██                                             ██      ██    ▄▄▀▀                                             ██      ██          ██
+      ▀▀▀▀▀▀      ▀▀▀▀▀▀                                             ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀                                           ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀
+
+    HOMEBREW                                           COPY c      NPM                                                            FROM SOURCE
+    ─────────────────────────────────────────────────────────      ─────────────────────────────────────────────────────────      ─────────────────────────────────────────────────────────
+    $ brew install ikatsuba/tap/chord                              $ npm i -g @chorded/chord                                      $ dart compile exe bin/chord.dart
+
+    macOS and Linux. brew upgrade keeps it current.                Any machine with Node; the right binary is picked for          Dart 3.12 or later, from a checkout of the repository.
+                                                                   you.
+
+
+    THEN / OPEN A SESSION
+
+      shell
+
+      // open a session in your project
+      chord claude -C ~/projects/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ left/right/up/down move  c copy  escape up  ? keys

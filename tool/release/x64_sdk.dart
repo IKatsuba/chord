@@ -108,9 +108,12 @@ String otherVersion(String dart, String? said, String version) =>
 /// refused, as a download would fail the same way; one that says another
 /// version was damaged, and is downloaded again. A download goes through
 /// [fetch], is checked against its published sha256, unzipped by `ditto`
-/// into a sibling folder and renamed into place only once its `dart`
-/// passes [x64VersionOf] at [version]. What it downloads, and where to, is
-/// said through [out].
+/// into a folder of this call's own beside the cache folder, and renamed
+/// into place only once its `dart` passes [x64VersionOf] at [version].
+/// Releases in other checkouts share the cache: no call touches a folder
+/// it did not make, and when another has kept the SDK first, that one is
+/// checked and taken. What it downloads, and where to, is said through
+/// [out].
 Future<String> provideX64Sdk({
   required ReleaseRunner runner,
   required String version,
@@ -120,7 +123,8 @@ Future<String> provideX64Sdk({
 }) async {
   final folder = sdkFolder(cache, version);
   final keptFolder = Directory(folder);
-  if (keptFolder.existsSync()) {
+  final damaged = keptFolder.existsSync();
+  if (damaged) {
     final dart = sdkDart(folder);
     final kept = await x64VersionOf(runner, dart);
     if (kept == version) return dart;
@@ -130,11 +134,11 @@ Future<String> provideX64Sdk({
     );
   }
   final zipUrl = sdkZipUrl(version);
-  // A fixed name, so what an interrupted run left is found and redone.
-  final partial = Directory('$folder.partial');
-  if (partial.existsSync()) partial.deleteSync(recursive: true);
+  // A name of its own: what an interrupted or concurrent run is staging is
+  // never reused, and never removed by this one.
+  final parent = Directory(p.dirname(folder))..createSync(recursive: true);
+  final partial = parent.createTempSync('${p.basename(folder)}.partial-');
   try {
-    partial.createSync(recursive: true);
     out('Downloading the x64 Dart SDK $version from $zipUrl into $folder');
     final sum = checksumOf(
       utf8.decode(
@@ -164,8 +168,22 @@ Future<String> provideX64Sdk({
     final sdk = p.join(partial.path, 'dart-sdk');
     final fresh = await x64VersionOf(runner, sdkDart(sdk));
     if (fresh != version) die(otherVersion(sdkDart(sdk), fresh, version));
-    if (keptFolder.existsSync()) keptFolder.deleteSync(recursive: true);
-    Directory(sdk).renameSync(folder);
+    if (damaged && keptFolder.existsSync()) {
+      keptFolder.deleteSync(recursive: true);
+    }
+    if (!keptFolder.existsSync()) {
+      try {
+        Directory(sdk).renameSync(folder);
+        return sdkDart(folder);
+      } on FileSystemException catch (error) {
+        if (!keptFolder.existsSync()) {
+          die('cannot move the x64 Dart SDK into $folder: ${error.message}');
+        }
+      }
+    }
+    out('Another run kept the x64 Dart SDK in $folder first; taking it.');
+    final theirs = await x64VersionOf(runner, sdkDart(folder));
+    if (theirs != version) die(otherVersion(sdkDart(folder), theirs, version));
     return sdkDart(folder);
   } finally {
     if (partial.existsSync()) partial.deleteSync(recursive: true);

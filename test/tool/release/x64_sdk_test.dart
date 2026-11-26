@@ -158,45 +158,63 @@ void main() {
 
   group('the x64 SDK is provided', () {
     const version = '3.13.5';
+    const staged = 'staged';
     final zip = utf8.encode('the zip');
     final sum = '${sha256.convert(zip)} *dartsdk-macos-x64-release.zip\n';
     late String cache;
     late String folder;
-    late String partial;
     late List<String> said;
     late List<Uri> fetched;
     late Map<String, String> versions;
     late Set<String> broken;
+    late List<String> stagings;
+    void Function()? beforeFreshCheck;
 
     setUp(() {
       final temp = Directory.systemTemp.createTempSync('x64_sdk_test');
       addTearDown(() => temp.deleteSync(recursive: true));
       cache = temp.path;
       folder = sdkFolder(cache, version);
-      partial = '$folder.partial';
       said = [];
       fetched = [];
       versions = {};
       broken = {};
+      stagings = [];
+      beforeFreshCheck = null;
     });
 
-    /// Unzips into ditto's target a dart-sdk with its bin/dart; each dart
-    /// says [versions]' version for it, or [version], and one in [broken]
-    /// does not run.
+    /// The folders beside the cache folder, as a run leaves them.
+    List<String> beside() {
+      final parent = Directory(p.dirname(folder));
+      if (!parent.existsSync()) return [];
+      return [
+        for (final entry in parent.listSync())
+          if (entry.path != folder) p.basename(entry.path),
+      ];
+    }
+
+    /// Unzips into ditto's target a dart-sdk with its bin/dart, noting the
+    /// target in [stagings]. Each dart says [versions]' version for it, or
+    /// [version]; one in [broken] does not run. A staged dart is keyed as
+    /// [staged], its folder's name being the run's own.
     RecordingRunner machine({Ran? ditto}) => RecordingRunner((argv) {
       if (argv case ['ditto', '-x', '-k', final zipPath, final into]) {
+        stagings.add(into);
+        expect(p.dirname(zipPath), into);
         expect(File(zipPath).readAsBytesSync(), zip);
         if (ditto != null) return ditto;
         File(sdkDart(p.join(into, 'dart-sdk'))).createSync(recursive: true);
         return const Ran(0);
       }
       if (argv case ['arch', '-x86_64', final dart, '--version']) {
-        if (!File(dart).existsSync() || broken.contains(dart)) {
+        final key = stagings.any((s) => p.isWithin(s, dart)) ? staged : dart;
+        if (key == staged) beforeFreshCheck?.call();
+        if (!File(dart).existsSync() || broken.contains(key)) {
           return const Ran(1, stderr: 'No such file or directory\n');
         }
         return Ran(
           0,
-          stdout: 'Dart SDK version: ${versions[dart] ?? version} (stable)\n',
+          stdout: 'Dart SDK version: ${versions[key] ?? version} (stable)\n',
         );
       }
       return null;
@@ -235,20 +253,23 @@ void main() {
       expect(said, isEmpty);
     });
 
-    test('by a download, checked, unzipped beside the cache folder and '
-        'renamed into place', () async {
+    test('by a download, checked, unzipped into a folder of its own beside '
+        'the cache folder and renamed into place', () async {
       final runner = machine();
       expect(await provide(runner), sdkDart(folder));
       expect(fetched, [
         Uri.parse(sdkChecksumUrl(version)),
         Uri.parse(sdkZipUrl(version)),
       ]);
+      final [staging] = stagings;
+      expect(p.dirname(staging), p.dirname(folder));
+      expect(p.basename(staging), startsWith('macos-x64.partial-'));
       expect(runner.argvs, [
-        ['ditto', '-x', '-k', p.join(partial, sdkZipName), partial],
-        ['arch', '-x86_64', sdkDart(p.join(partial, 'dart-sdk')), '--version'],
+        ['ditto', '-x', '-k', p.join(staging, sdkZipName), staging],
+        ['arch', '-x86_64', sdkDart(p.join(staging, 'dart-sdk')), '--version'],
       ]);
       expect(File(sdkDart(folder)).existsSync(), isTrue);
-      expect(Directory(partial).existsSync(), isFalse);
+      expect(beside(), isEmpty);
       expect(said, [
         'Downloading the x64 Dart SDK 3.13.5 from '
             '${sdkZipUrl(version)} into $folder',
@@ -273,7 +294,7 @@ void main() {
       );
       expect(runner.calls, isEmpty);
       expect(Directory(folder).existsSync(), isFalse);
-      expect(Directory(partial).existsSync(), isFalse);
+      expect(beside(), isEmpty);
     });
 
     test('a kept SDK of another version is downloaded again and '
@@ -285,6 +306,7 @@ void main() {
       expect(fetched, hasLength(2));
       expect(File(p.join(folder, 'old')).existsSync(), isFalse);
       expect(File(sdkDart(folder)).existsSync(), isTrue);
+      expect(beside(), isEmpty);
       expect(said.first, contains('The kept x64 Dart SDK is damaged'));
       expect(said.first, contains('is Dart 3.12.0, not 3.13.5'));
       expect(said.last, startsWith('Downloading the x64 Dart SDK 3.13.5'));
@@ -308,14 +330,62 @@ void main() {
       expect(File(sdkDart(folder)).existsSync(), isTrue);
     });
 
-    test('what an interrupted run left beside the cache folder is removed '
-        'and redone', () async {
-      File(p.join(partial, 'dart-sdk', 'half')).createSync(recursive: true);
+    test('what other runs are staging beside the cache folder is neither '
+        'taken nor touched', () async {
+      // macos-x64.partial is the name every run once shared.
+      const foreign = ['macos-x64.partial', 'macos-x64.partial-other'];
+      for (final name in foreign) {
+        File(sdkDart(p.join(p.dirname(folder), name, 'dart-sdk')))
+          ..createSync(recursive: true)
+          ..writeAsStringSync(name);
+      }
       final runner = machine();
       expect(await provide(runner), sdkDart(folder));
-      expect(File(p.join(folder, 'half')).existsSync(), isFalse);
-      expect(Directory(partial).existsSync(), isFalse);
       expect(fetched, hasLength(2));
+      expect(beside()..sort(), foreign);
+      for (final name in foreign) {
+        expect(stagings.single, isNot(p.join(p.dirname(folder), name)));
+        expect(
+          File(
+            sdkDart(p.join(p.dirname(folder), name, 'dart-sdk')),
+          ).readAsStringSync(),
+          name,
+        );
+      }
+    });
+
+    test('when another run keeps the SDK first, this one drops its own '
+        'and takes that one once it passes', () async {
+      beforeFreshCheck = () => keep(marker: 'theirs');
+      final runner = machine();
+      expect(await provide(runner), sdkDart(folder));
+      expect(File(p.join(folder, 'theirs')).existsSync(), isTrue);
+      expect(beside(), isEmpty);
+      expect(runner.argvs.last, [
+        'arch',
+        '-x86_64',
+        sdkDart(folder),
+        '--version',
+      ]);
+      expect(
+        said.last,
+        'Another run kept the x64 Dart SDK in $folder first; '
+        'taking it.',
+      );
+    });
+
+    test('an SDK another run kept first is refused when it says another '
+        'version', () async {
+      beforeFreshCheck = () {
+        keep(marker: 'theirs');
+        versions[sdkDart(folder)] = '3.12.0';
+      };
+      await expectLater(
+        provide(machine()),
+        dies('${sdkDart(folder)} is Dart 3.12.0, not 3.13.5'),
+      );
+      expect(File(p.join(folder, 'theirs')).existsSync(), isTrue);
+      expect(beside(), isEmpty);
     });
 
     test('a failed download stops the release with its words, with nothing '
@@ -337,39 +407,41 @@ void main() {
       );
       expect(runner.calls, isEmpty);
       expect(Directory(folder).existsSync(), isFalse);
-      expect(Directory(partial).existsSync(), isFalse);
+      expect(beside(), isEmpty);
     });
 
     test('a failed unzip stops the release, with nothing kept', () async {
       final runner = machine(ditto: const Ran(9, stderr: 'bad zip\n'));
-      await expectLater(
-        provide(runner),
-        dies('ditto -x -k ${p.join(partial, sdkZipName)} failed: bad zip'),
-      );
+      await expectLater(provide(runner), dies('failed: bad zip'));
+      expect(runner.argvs.single, [
+        'ditto',
+        '-x',
+        '-k',
+        p.join(stagings.single, sdkZipName),
+        stagings.single,
+      ]);
       expect(Directory(folder).existsSync(), isFalse);
-      expect(Directory(partial).existsSync(), isFalse);
+      expect(beside(), isEmpty);
     });
 
     test('a downloaded SDK of another version is refused, with nothing '
         'kept', () async {
-      versions[sdkDart(p.join(partial, 'dart-sdk'))] = '3.12.0';
+      versions[staged] = '3.12.0';
       await expectLater(provide(machine()), dies('is Dart 3.12.0, not 3.13.5'));
       expect(Directory(folder).existsSync(), isFalse);
-      expect(Directory(partial).existsSync(), isFalse);
+      expect(beside(), isEmpty);
     });
 
     test('a downloaded SDK that does not run is refused, with nothing '
         'kept', () async {
-      broken.add(sdkDart(p.join(partial, 'dart-sdk')));
+      broken.add(staged);
+      await expectLater(provide(machine()), dies('macos-x64.partial-'));
       await expectLater(
         provide(machine()),
-        dies(
-          'arch -x86_64 ${sdkDart(p.join(partial, 'dart-sdk'))} --version '
-          'failed',
-        ),
+        dies('/dart-sdk/bin/dart --version failed: No such file'),
       );
       expect(Directory(folder).existsSync(), isFalse);
-      expect(Directory(partial).existsSync(), isFalse);
+      expect(beside(), isEmpty);
     });
 
     test('a version of no channel is refused before anything is '

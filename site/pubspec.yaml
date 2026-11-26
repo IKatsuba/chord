@@ -7,6 +7,9 @@ publish_to: none
 environment:
   sdk: ^3.12.0
 dependencies:
+  # chord's own art (lib/ui/header/) for the hero and the 404 page.
+  chord:
+    path: ..
   chord_tui:
     path: ../packages/chord_tui
 dev_dependencies:

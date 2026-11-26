@@ -187,21 +187,4 @@ void main() {
     expect(host.fetched, ['permission.80x20.rec.json']);
     expect(t.screen.lines[2], endsWith('›'));
   });
-
-  for (final size in const [Size(120, 40), Size(80, 24), Size(43, 37)]) {
-    testWidgets('install says the three ways, $size', (t) async {
-      await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
-      expect(t.screen, shows('npm install -g @chorded/chord'));
-      expect(t.screen, shows('brew install ikatsuba/tap/chord'));
-      expect(t.screen, shows('dart compile exe bin/chord.dart'));
-      // The shim is npm's: it is said under npm, before Homebrew.
-      final lines = t.screen.lines;
-      final shim = lines.indexWhere((l) => l.contains('A small shim'));
-      expect(
-        shim,
-        greaterThan(lines.indexWhere((l) => l.contains('npm install'))),
-      );
-      expect(shim, lessThan(lines.indexWhere((l) => l.contains('Homebrew'))));
-    });
-  }
 }

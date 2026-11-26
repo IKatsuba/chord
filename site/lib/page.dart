@@ -8,6 +8,12 @@ const narrowMeasure = 124;
 /// The measure of chord and the gallery, in columns.
 const wideMeasure = 136;
 
+/// The columns a [SitePage] in a window [width] columns wide gives its
+/// sections: the window less the scrollbar and a gutter each side (4, or 2
+/// on a phone), at most [measure].
+int pageContentWidth(int width, {int measure = narrowMeasure}) =>
+    (width - 1 - 2 * (width < narrowWidth ? 2 : 4)).clamp(1, measure);
+
 /// A page of sections in one scrolling list beside a [Scrollbar], centred
 /// in at most [measure] columns with a gutter each side (4, or 2 on a
 /// phone); below the measure it runs edge to edge. ↑↓, PgUp/PgDn,
@@ -48,8 +54,10 @@ class _SitePageState extends State<SitePage> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final width = constraints.maxWidth - 1; // the scrollbar's column
-      final gutter = constraints.maxWidth < narrowWidth ? 2 : 4;
-      final content = (width - 2 * gutter).clamp(1, widget.measure);
+      final content = pageContentWidth(
+        constraints.maxWidth,
+        measure: widget.measure,
+      );
       final left = (width - content) ~/ 2;
       final sections = widget.sections;
       return Actions(

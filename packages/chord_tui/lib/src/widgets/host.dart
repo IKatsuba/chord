@@ -5,6 +5,7 @@ import '../rendering/listener.dart';
 import '../terminal/buffer.dart';
 import '../terminal/terminal.dart';
 import 'focus_manager.dart';
+import 'exit_scope.dart';
 import 'framework.dart';
 
 /// Owns a widget tree and turns it into frames; knows nothing of terminals.
@@ -294,8 +295,13 @@ class AppHost {
   }
 }
 
-/// Asks the app that [context] belongs to to quit.
-void exitApp(BuildContext context) => context.owner.requestExit();
+/// Asks the app that [context] belongs to to quit, or the nearest
+/// [ExitScope] above [context] to take the exit instead.
+void exitApp(BuildContext context) {
+  final scope = context.getInheritedWidgetOfExactType<ExitScope>();
+  if (scope != null) return scope.onExit();
+  context.owner.requestExit();
+}
 
 // Reentrant geometry queries share the remaining work of their input operation.
 // A real nested input supersedes the old operation and has its own epoch.

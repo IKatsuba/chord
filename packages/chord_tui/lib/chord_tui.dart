@@ -65,6 +65,7 @@ export 'src/widgets/focus.dart'
     hide NoFocusRequests, actionDeclared, focusElementFor;
 export 'src/widgets/focus_manager.dart';
 export 'src/widgets/framework.dart';
+export 'src/widgets/exit_scope.dart';
 export 'src/widgets/host.dart';
 export 'src/widgets/key_help.dart' hide listedBindings;
 export 'src/widgets/keymap.dart';

@@ -6,6 +6,8 @@ import 'gallery.dart';
 import 'host.dart';
 import 'key_row.dart';
 import 'keys_panel.dart';
+import 'nav.dart';
+import 'palette.dart';
 import 'pages/chord.dart';
 import 'pages/chord_tui.dart';
 import 'pages/gallery.dart';
@@ -32,6 +34,7 @@ const siteKeys = 'site:';
 
 const _homeKeysId = '${siteKeys}home';
 const _repositoryId = '${panelOnly}repository';
+const _menuId = '${siteKeys}menu';
 
 /// The whole site: a header, the page the route names, and its keys.
 ///
@@ -111,6 +114,51 @@ class _SiteState extends State<Site> {
 
   bool get _embedding => _route is ExampleRoute || _route is ChordTuiRoute;
 
+  // The phone's menu: the four sections and GitHub, over the page.
+  var _menuOpen = false;
+  var _menuSelected = 0;
+
+  void _openMenu() => setState(() {
+    _menuOpen = true;
+    _menuSelected = 0;
+  });
+
+  void _menuChoose(int row) {
+    setState(() => _menuOpen = false);
+    if (row < sections.length) {
+      _open(sections[row].route);
+    } else {
+      widget.host.openUrl(repositoryUrl);
+    }
+  }
+
+  static final _menuKeys = {
+    for (final key in ['esc', 'm', 'up', 'down', 'enter', 'g'])
+      KeyCombo.parse(key): key,
+    for (var n = 1; n <= 4; n++) KeyCombo.parse('$n'): '$n',
+  };
+
+  // While the menu is open it takes every key, as the keys panel does.
+  bool _captureMenu(KeyCombo key) {
+    final rows = sections.length + 1;
+    switch (_menuKeys[key]) {
+      case 'esc' || 'm':
+        setState(() => _menuOpen = false);
+      case 'up':
+        setState(() => _menuSelected = (_menuSelected - 1).clamp(0, rows - 1));
+      case 'down':
+        setState(() => _menuSelected = (_menuSelected + 1).clamp(0, rows - 1));
+      case 'enter':
+        _menuChoose(_menuSelected);
+      case 'g':
+        _menuChoose(sections.length);
+      case final String digit:
+        _menuChoose(int.parse(digit) - 1);
+      case null:
+    }
+    return true;
+  }
+
   static final _f1 = KeyCombo.parse('f1');
   static final _esc = KeyCombo.parse('esc');
   static final _question = KeyCombo.parse('?');
@@ -138,6 +186,7 @@ class _SiteState extends State<Site> {
   // panel anywhere, and the open panel decides every key.
   bool _capture(KeyEvent event) {
     final key = event.combo;
+    if (_menuOpen) return _captureMenu(key);
     if (!_keysOpen) {
       if (key != _f1) return false;
       setState(() {
@@ -172,11 +221,15 @@ class _SiteState extends State<Site> {
     builder: (context, constraints) {
       final width = constraints.maxWidth;
       final narrow = width < narrowWidth;
-      // The page's rows: the window less the header (two rows, three where
-      // the link folds under the name), the key row and the help row.
-      final headerRows = _linkFolds(width) ? 3 : 2;
+      // A phone the window has grown out of has no menu.
+      if (!narrow && _menuOpen) _menuOpen = false;
+      // The page's rows: the window less the nav, the key row and the help
+      // row.
       final pageRows =
-          constraints.maxHeight - headerRows - (narrow ? 1 : 0) - 1;
+          constraints.maxHeight -
+          navRows(narrow: narrow) -
+          (narrow ? 1 : 0) -
+          1;
       _pageRows = pageRows;
       final home = _route is HomeRoute;
       return Actions(
@@ -212,71 +265,144 @@ class _SiteState extends State<Site> {
             () => widget.host.openUrl(repositoryUrl),
             id: _repositoryId,
           ),
+          // Inside a running example digits and m are its typed text.
+          for (final (i, s) in sections.indexed)
+            Binding(
+              '${i + 1}',
+              'section',
+              () => _open(s.route),
+              enabled: !_embedding,
+              // The nav shows the digits; the help row leaves them to the panel.
+              id: '${panelOnly}sections',
+            ),
+          Binding(
+            'm',
+            'menu',
+            _openMenu,
+            enabled: narrow && !_embedding,
+            id: _menuId,
+          ),
         ],
         child: Focus(
           canRequestFocus: false,
           onKeyCapture: _capture,
           // A paste while the panel is open goes nowhere, like its keys.
-          onPasteCapture: (_) => _keysOpen,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          onPasteCapture: (_) => _keysOpen || _menuOpen,
+          // The page comes before the nav in the tree: with nothing focused,
+          // keys go to the first focusable place, which must be the page's,
+          // not the nav's GitHub link.
+          child: Stack(
             children: [
-              // One child whatever the width, so the page after it keeps its
-              // place, and its state, across a resize.
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: _header(context, width),
-              ),
-              Expanded(
-                // The window's width, not the page's: the panel over it
-                // spans the window.
-                child: SizedBox(
-                  width: width,
-                  child: Stack(
-                    children: [
-                      _page(width, pageRows),
-                      // The open panel sits at the bottom of the page, and stops
-                      // clicks and the wheel short of it.
-                      if (_keysOpen)
-                        Positioned(
-                          left: 0,
-                          top: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Listener(
-                            behavior: HitTestBehavior.opaque,
-                            absorbPointerSignal: true,
-                            onPointerDown: (_) {},
-                            onPointerSignal: (_) {},
-                            child: Column(
-                              children: [
-                                const Spacer(),
-                                _KeysPanel(
-                                  width: width,
-                                  rows: pageRows,
-                                  offset: _panelOffset,
-                                  drawn: (entries) => _panelEntries = entries,
+                children: [
+                  // The nav's rows; it is drawn over them, after the page.
+                  SizedBox(height: navRows(narrow: narrow)),
+                  Expanded(
+                    // The window's width, not the page's: the panel over it
+                    // spans the window.
+                    child: SizedBox(
+                      width: width,
+                      child: Stack(
+                        children: [
+                          _page(width, pageRows),
+                          // The open panel sits at the bottom of the page, and stops
+                          // clicks and the wheel short of it.
+                          if (_menuOpen)
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: Listener(
+                                behavior: HitTestBehavior.opaque,
+                                absorbPointerSignal: true,
+                                onPointerDown: (_) {},
+                                onPointerSignal: (_) {},
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    NavMenu(
+                                      width: width,
+                                      route: _route,
+                                      selected: _menuSelected,
+                                      choose: _menuChoose,
+                                      githubAction: _repositoryId,
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                    ],
+                          if (_keysOpen)
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: Listener(
+                                behavior: HitTestBehavior.opaque,
+                                absorbPointerSignal: true,
+                                onPointerDown: (_) {},
+                                onPointerSignal: (_) {},
+                                child: Column(
+                                  children: [
+                                    const Spacer(),
+                                    _KeysPanel(
+                                      width: width,
+                                      rows: pageRows,
+                                      offset: _panelOffset,
+                                      drawn: (entries) =>
+                                          _panelEntries = entries,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  if (narrow)
+                    KeyRow(
+                      panArrows:
+                          _route is RecordingRoute &&
+                          recordingClipped(width, pageRows),
+                    ),
+                  // On the surface colour on a desktop; a phone's sits under its
+                  // key row.
+                  Box(
+                    background: narrow
+                        ? null
+                        : (Theme.of(context).extension<SitePalette>() ??
+                                  const SitePalette())
+                              .surface,
+                    width: width,
+                    child: _HelpRow(
+                      narrow: narrow,
+                      embedding: _embedding,
+                      panelOpen: _keysOpen,
+                      menuOpen: _menuOpen,
+                      pageRows: pageRows,
+                    ),
+                  ),
+                ],
               ),
-              if (narrow)
-                KeyRow(
-                  panArrows:
-                      _route is RecordingRoute &&
-                      recordingClipped(width, pageRows),
+              Positioned(
+                left: 0,
+                top: 0,
+                right: 0,
+                child: SiteNav(
+                  route: _route,
+                  width: width,
+                  narrow: narrow,
+                  wide: width >= wideWidth,
+                  // Only a real version number reads with a v in front.
+                  version: chordVersion == 'dev' ? 'dev' : 'v$chordVersion',
+                  open: _open,
+                  menu: _openMenu,
+                  githubAction: _repositoryId,
+                  menuAction: _menuId,
                 ),
-              _HelpRow(
-                narrow: narrow,
-                embedding: _embedding,
-                panelOpen: _keysOpen,
-                pageRows: pageRows,
               ),
             ],
           ),
@@ -284,45 +410,6 @@ class _SiteState extends State<Site> {
       );
     },
   );
-
-  List<Widget> _header(BuildContext context, int width) {
-    final theme = Theme.of(context);
-    final link = Listener(
-      behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) => widget.host.openUrl(repositoryUrl),
-      child: Text(
-        repositoryUrl.replaceFirst('https://', ''),
-        style: theme.link,
-      ),
-    );
-    // Only a real version number reads with a v in front.
-    final version = Text(
-      chordVersion == 'dev' ? 'dev ' : 'v$chordVersion ',
-      style: theme.dim,
-    );
-    final name = Text(
-      ' ${_crumbs(_route)}',
-      style: theme.text.merge(Style.bold),
-      softWrap: false,
-    );
-    return [
-      Row(
-        children: [
-          Expanded(child: name),
-          if (width >= wideWidth) ...[link, Text('   ')],
-          version,
-        ],
-      ),
-      if (_linkFolds(width)) Row(children: [Text(' '), link]),
-      Text('─' * width, style: theme.dim),
-    ];
-  }
-
-  // Under the name below 100 columns; a recording page keeps its header to
-  // two rows instead, so an 80x20 recording fits an 80x24 window, and leaves
-  // the link to the keys panel's g.
-  bool _linkFolds(int width) =>
-      width >= narrowWidth && width < wideWidth && _route is! RecordingRoute;
 
   Widget _page(int width, int rows) => switch (_route) {
     HomeRoute() => HomePage(_open),
@@ -348,13 +435,6 @@ class _SiteState extends State<Site> {
   };
 }
 
-/// The header's name for [route]: chord, then the route's segments.
-String _crumbs(SiteRoute route) {
-  if (route is HomeRoute || route is NotFoundRoute) return 'chord';
-  final segments = route.path.substring(1).split('/');
-  return [if (segments.first != 'chord') 'chord', ...segments].join(' › ');
-}
-
 /// The keys in scope on one row, `…` where they overflow: on a phone only
 /// Esc and `?`; never the [panelOnly] ones. On a page [embedding] an
 /// example, only the site's own, Ctrl+Q home among them: the example's are
@@ -364,12 +444,14 @@ class _HelpRow extends StatelessWidget {
     required this.narrow,
     required this.embedding,
     required this.panelOpen,
+    required this.menuOpen,
     required this.pageRows,
   });
 
   final bool narrow;
   final bool embedding;
   final bool panelOpen;
+  final bool menuOpen;
   final int pageRows;
 
   // What the open panel lets through, which its capture decides; a phone
@@ -392,6 +474,10 @@ class _HelpRow extends StatelessWidget {
           ..add(TextSpan(' $description', style: theme.dim));
       }
 
+      if (menuOpen) {
+        entry('esc', 'close');
+        return Text.rich(TextSpan('', children: spans), softWrap: false);
+      }
       if (panelOpen) {
         for (final (keys, description)
             in narrow ? _whileOpen.take(1) : _whileOpen) {

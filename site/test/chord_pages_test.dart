@@ -65,7 +65,11 @@ void main() {
       expect(host.pushed, ['/chord/permission']);
       expect(host.titles.last, 'permission · chord');
     });
+  }
 
+  // Windows each recording fits under the nav: 36 rows and the bar under
+  // four nav rows and the help row, and 20 and the bar.
+  for (final size in const [Size(120, 42), Size(80, 26)]) {
     testWidgets('a recording page plays the size that fits, $size', (t) async {
       final host = FakeHost('/chord/permission', _files);
       await t.pumpWidget(
@@ -78,10 +82,10 @@ void main() {
       expect(host.fetched, [
         big ? 'permission.120x36.rec.json' : 'permission.80x20.rec.json',
       ]);
-      // Two header rows at every width: the recording right under them.
-      expect(t.screen.lines[1], startsWith('──'));
+      // The nav's three rows and rule, then the recording.
+      expect(t.screen.lines[3], startsWith('──'));
       expect(
-        t.screen.lines[2],
+        t.screen.lines[4],
         big ? 'recorded at 120x36' : 'recorded at 80x20',
       );
       // The bar sits one cell in, in line with the help row under it.
@@ -93,7 +97,7 @@ void main() {
         'escape up  ? keys',
       );
       await t.press('right');
-      expect(t.screen.lines[2], startsWith('typed at'));
+      expect(t.screen.lines[4], startsWith('typed at'));
       expect(t.screen, shows('step 1 of 1 · typed the prompt'));
       await t.press('esc');
       expect(host.pushed, ['/chord']);
@@ -147,7 +151,7 @@ void main() {
     });
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 40),
+      size: const Size(120, 42),
     );
     await t.pump();
     expect(t.screen, shows(RegExp(r'▶ 0:00 / 0:01')));

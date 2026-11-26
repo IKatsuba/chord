@@ -85,7 +85,7 @@ void main() {
       for (var i = 0; i < t.screen.lines.length; i++)
         if (t.screen.lines[i].startsWith('────')) i,
     ];
-    expect(rules, [2]);
+    expect(rules, [3]);
     await t.press('down');
     expect(t.screen, shows('↑ +1 more'));
     await t.press('end');

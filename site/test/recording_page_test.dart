@@ -45,7 +45,7 @@ void main() {
     final host = _SlowHost();
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 40),
+      size: const Size(120, 42),
     );
     host.pending.single.$2.complete(_big);
     await t.pump();
@@ -68,7 +68,7 @@ void main() {
     host.pending.single.$2.complete(null);
     await t.pump();
     expect(t.screen, shows("couldn't load permission"));
-    await t.resize(const Size(120, 40));
+    await t.resize(const Size(120, 42));
     expect(t.screen, shows('loading permission…'));
     host.pending.last.$2.complete(_big);
     await t.pump();
@@ -79,10 +79,10 @@ void main() {
     final host = _SlowHost();
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 40),
+      size: const Size(120, 42),
     );
     await t.resize(const Size(80, 24));
-    await t.resize(const Size(120, 40));
+    await t.resize(const Size(120, 42));
     final [a, b, c] = host.pending;
     expect(
       [a.$1, b.$1, c.$1],
@@ -109,7 +109,7 @@ void main() {
     final host = _SlowHost();
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 40),
+      size: const Size(120, 42),
     );
     host.popped.add('/chord');
     await t.pump();

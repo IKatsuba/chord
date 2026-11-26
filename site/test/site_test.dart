@@ -1,3 +1,4 @@
+import 'package:chord_site/palette.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_tui/chord_tui.dart';
 import 'package:chord_tui/testing.dart';
@@ -7,14 +8,24 @@ import 'fake_host.dart';
 
 const _sizes = [Size(120, 40), Size(80, 24), Size(43, 37)];
 
+/// The nav's current section, as the dark theme draws it.
+final current = ThemeData.dark().accent.merge(
+  Style(bold: true, underline: true, bg: SiteColors.surface),
+);
+
 void main() {
-  testWidgets('home at 120x40: header, menu, the try-it box, keys', (t) async {
+  testWidgets('home at 120x40: nav, menu, the try-it box, keys', (t) async {
     final host = FakeHost();
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));
     final lines = t.screen.lines;
-    expect(lines[0], startsWith(' chord'));
-    expect(lines[0], endsWith('github.com/IKatsuba/chord   dev'));
-    expect(lines[1], '─' * 120);
+    expect(lines[0], '');
+    expect(
+      lines[1],
+      startsWith('  ◆ chord    1 chord   2 chord_tui   3 Gallery   4 Install'),
+    );
+    expect(lines[1], endsWith('GitHub ↗ g   dev'));
+    expect(lines[2], '');
+    expect(lines[3], '─' * 120);
     expect(t.screen, shows('❯ 1. chord'));
     expect(t.screen, shows('4. Install'));
     expect(t.screen, shows('Try it'));
@@ -22,25 +33,29 @@ void main() {
     expect(host.titles, ['chord and chord_tui']);
   });
 
-  testWidgets('home at 80x24: the link folds under the name', (t) async {
+  testWidgets('home at 80x24: no GitHub link under 100 columns', (t) async {
     await t.pumpWidget(Site(host: FakeHost()), size: const Size(80, 24));
     final lines = t.screen.lines;
-    expect(lines[0], matches(RegExp(r'^ chord +dev$')));
-    expect(lines[1], ' github.com/IKatsuba/chord');
-    expect(lines[2], '─' * 80);
+    expect(
+      lines[1],
+      matches(RegExp(r'^  ◆ chord    1 chord .* 4 Install +dev$')),
+    );
+    expect(lines[1], isNot(contains('GitHub')));
+    expect(lines[3], '─' * 80);
     expect(t.screen, isNot(shows('Try it')));
     expect(t.screen, shows('2. chord_tui'));
   });
 
-  testWidgets('a phone: no link, a key row, only esc and ? help', (t) async {
+  testWidgets('a phone: the mark and the menu, a key row, only esc and ? '
+      'help', (t) async {
     await t.pumpWidget(
       Site(host: FakeHost('/install')),
       size: const Size(43, 37),
     );
     final lines = t.screen.lines;
-    expect(lines[0], matches(RegExp(r'^ chord › install +dev$')));
-    expect(lines[0], isNot(contains('github.com')));
-    expect(lines[1], startsWith('──'));
+    expect(lines[0], matches(RegExp(r'^ ◆ chord +☰ menu m$')));
+    expect(lines[0], isNot(contains('GitHub')));
+    expect(lines[1], '─' * 43);
     expect(lines[35], startsWith('  esc   tab   ←   ↑   ↓   →   enter'));
     expect(lines.last, ' escape up  ? keys');
   });
@@ -52,7 +67,7 @@ void main() {
     await t.press('down');
     await t.press('enter');
     expect(host.pushed, ['/chord_tui/gallery']);
-    expect(t.screen.lines[0], startsWith(' chord › chord_tui › gallery'));
+    expect(t.screen.styleAt(t.screen.lines[1].indexOf('Gallery'), 1), current);
     expect(host.titles.last, 'gallery · chord_tui');
     await t.press('esc');
     expect(host.pushed.last, '/chord_tui');
@@ -84,7 +99,10 @@ void main() {
   testWidgets('a deep link opens its page at once', (t) async {
     final host = FakeHost('/chord_tui');
     await t.pumpWidget(Site(host: host), size: const Size(80, 24));
-    expect(t.screen.lines[0], startsWith(' chord › chord_tui '));
+    expect(
+      t.screen.styleAt(t.screen.lines[1].indexOf('chord_tui'), 1),
+      current,
+    );
     expect(host.titles, ['chord_tui']);
   });
 
@@ -181,8 +199,9 @@ void main() {
     final host = FakeHost();
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));
     await t.press('g');
-    final column = t.screen.lines[0].indexOf('github.com');
-    await t.mouse(_tapAt(column, 0));
+    final column = t.screen.lines[1].indexOf('GitHub');
+    await t.mouse(_tapAt(column, 1));
+    await t.mouse(_releaseAt(column, 1));
     expect(host.opened, [
       'https://github.com/IKatsuba/chord',
       'https://github.com/IKatsuba/chord',
@@ -226,6 +245,12 @@ void main() {
     expect(host.pushed.last, '/');
   });
 }
+
+MouseEvent _releaseAt(int x, int y) => MouseEvent(
+  MouseEventKind.release,
+  position: Offset(x, y),
+  button: MouseButton.primary,
+);
 
 MouseEvent _tapAt(int x, int y) => MouseEvent(
   MouseEventKind.press,

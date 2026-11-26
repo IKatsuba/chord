@@ -110,6 +110,66 @@ void main() {
     expect(_row(t, 'outside:'), 'ctrl+x …  ctrl+x z Outer');
   });
 
+  testWidgets('a builder inside gets nothing while an outer chord waits', (
+    t,
+  ) async {
+    final heard = <String>[];
+    await t.pumpWidget(
+      Actions(
+        bindings: [Binding('ctrl+x z', 'Outer', () {})],
+        child: KeyHelpBoundary(
+          child: Actions(
+            bindings: [Binding('ctrl+o', 'Toggle', () {})],
+            child: Focus(
+              autofocus: true,
+              child: KeyHelp.builder(
+                builder: (_, bindings, pending) {
+                  heard.add(
+                    '${[for (final b in bindings) b.description]} '
+                    '${[for (final k in pending) k.toString()]}',
+                  );
+                  return const SizedBox();
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+      size: const Size(120, 40),
+    );
+    expect(heard.last, '[Toggle] []');
+    await t.press('ctrl+x');
+    expect(heard.last, '[] []');
+  });
+
+  testWidgets('a builder gets nothing while a taken chord waits', (t) async {
+    final heard = <List<String>>[];
+    await t.pumpWidget(
+      KeyHelpBoundary(
+        taken: {KeyCombo.parse('ctrl+x')},
+        child: Actions(
+          bindings: [
+            Binding('ctrl+x a', 'Anchor', () {}),
+            Binding('ctrl+o', 'Toggle', () {}),
+          ],
+          child: Focus(
+            autofocus: true,
+            child: KeyHelp.builder(
+              builder: (_, bindings, pending) {
+                heard.add([for (final b in bindings) b.description]);
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      ),
+      size: const Size(120, 40),
+    );
+    expect(heard.last, ['Toggle']);
+    await t.press('ctrl+x');
+    expect(heard.last, isEmpty);
+  });
+
   testWidgets('a chord only taken keys finish is shown nowhere', (t) async {
     await t.pumpWidget(
       _host(

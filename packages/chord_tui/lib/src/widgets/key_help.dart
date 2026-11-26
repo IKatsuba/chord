@@ -56,13 +56,17 @@ class KeyHelp extends StatelessWidget {
     return ListenableBuilder(
       listenable: fm,
       builder: (context) {
-        final listed = listedBindings(fm, boundary);
         // A pending chord is this row's to show only where a listed binding
-        // finishes it: one only outer or taken keys finish is not.
+        // finishes it. While one only outer or taken keys finish waits,
+        // this row has nothing to offer: no bindings, no chord.
         final waiting = fm.pendingChord;
-        final pending = listed.any((b) => b.chord.startsWith(waiting))
-            ? waiting
-            : const <KeyCombo>[];
+        var listed = listedBindings(fm, boundary);
+        var pending = waiting;
+        if (waiting.isNotEmpty &&
+            !listed.any((b) => b.chord.startsWith(waiting))) {
+          listed = const [];
+          pending = const [];
+        }
         final builder = _builder;
         if (builder != null) {
           return builder(
@@ -82,9 +86,7 @@ class KeyHelp extends StatelessWidget {
           spans.add(TextSpan(chords.join('/'), style: keyStyle));
           spans.add(TextSpan(' ${group.description}', style: descriptionStyle));
         }
-        if (waiting.isNotEmpty && pending.isEmpty) {
-          return const SizedBox();
-        }
+        if (waiting.isNotEmpty && pending.isEmpty) return const SizedBox();
         if (pending.isNotEmpty) {
           spans.insert(
             0,

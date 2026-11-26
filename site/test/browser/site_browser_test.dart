@@ -37,13 +37,27 @@ class _Server {
       '--base=$base',
     ]);
     expect(build.exitCode, 0, reason: '${build.stdout}${build.stderr}');
-    final process = await Process.start(Platform.resolvedExecutable, [
+    return launch(Platform.resolvedExecutable, [
       'run',
       'tool/build.dart',
       'serve',
       '--base=$base',
       '--port=0',
     ]);
+  }
+
+  /// Runs [executable] as a server and waits up to [ready] for it to say
+  /// its port. A server that ends first, or is not ready in time, is
+  /// stopped and awaited before the failure is thrown: nothing outlives a
+  /// failed start. [started] is told of the process, for tests of that.
+  static Future<_Server> launch(
+    String executable,
+    List<String> arguments, {
+    Duration ready = const Duration(minutes: 1),
+    void Function(Process process)? started,
+  }) async {
+    final process = await Process.start(executable, arguments);
+    started?.call(process);
     final errors = StringBuffer();
     process.stderr.transform(utf8.decoder).listen(errors.write);
     final address = Completer<int>();
@@ -56,24 +70,31 @@ class _Server {
             address.complete(int.parse(match[1]!));
           }
         });
-    final port = await Future.any([
-      address.future,
-      process.exitCode.then<int>(
-        (code) => throw StateError('serve ended with $code:\n$errors'),
-      ),
-    ]).timeout(const Duration(minutes: 1));
-    return _Server._(process, port, errors);
+    try {
+      final port = await Future.any([
+        address.future,
+        process.exitCode.then<int>(
+          (code) => throw StateError('serve ended with $code:\n$errors'),
+        ),
+      ]).timeout(ready);
+      return _Server._(process, port, errors);
+    } catch (_) {
+      await _stopProcess(process);
+      rethrow;
+    }
   }
 
   /// Stops it and waits for it to be gone, killing it if it lingers.
-  Future<void> stop() async {
-    _process.kill();
-    final ended = await _process.exitCode
+  Future<void> stop() => _stopProcess(_process);
+
+  static Future<void> _stopProcess(Process process) async {
+    process.kill();
+    final ended = await process.exitCode
         .then<bool>((_) => true)
         .timeout(const Duration(seconds: 5), onTimeout: () => false);
     if (!ended) {
-      _process.kill(ProcessSignal.sigkill);
-      await _process.exitCode;
+      process.kill(ProcessSignal.sigkill);
+      await process.exitCode;
     }
   }
 
@@ -93,15 +114,43 @@ void main() {
   });
   tearDownAll(() async => browser?.close());
 
+  test('a server that is never ready is stopped before start fails', () async {
+    Process? started;
+    await expectLater(
+      _Server.launch(
+        '/bin/sleep',
+        ['30'],
+        ready: const Duration(milliseconds: 300),
+        started: (process) => started = process,
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+    // Already gone: start awaited its end before it threw.
+    final code = await started!.exitCode.timeout(Duration.zero);
+    expect(code, isNot(0));
+  });
+
+  test('a server that ends before it is ready fails at once', () async {
+    final watch = Stopwatch()..start();
+    await expectLater(
+      _Server.launch('/bin/sh', ['-c', 'echo broken >&2; exit 3']),
+      throwsA(
+        isA<StateError>().having((e) => e.message, 'message', contains('3')),
+      ),
+    );
+    expect(watch.elapsed, lessThan(const Duration(seconds: 10)));
+  });
+
   for (final base in ['/', '/chord/']) {
     group('under $base', () {
       _Server? server;
       late Page page;
+      Page? opened;
       final errors = <String>[];
 
       setUpAll(() async {
         server = await _Server.start(base);
-        page = await browser!.newPage();
+        page = opened = await browser!.newPage();
         await page.setViewport(const DeviceViewport(width: 1200, height: 800));
         page.onConsole.listen((message) {
           if (message.type == ConsoleMessageType.error) {
@@ -110,9 +159,13 @@ void main() {
         });
         page.onError.listen((error) => errors.add('$error'));
       });
+      // The server is stopped whatever happened to the page, or to start.
       tearDownAll(() async {
-        await page.close();
-        await server?.stop();
+        try {
+          await opened?.close();
+        } finally {
+          await server?.stop();
+        }
       });
 
       String url(String path) =>

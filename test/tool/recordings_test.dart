@@ -38,12 +38,51 @@ void main() {
   test('frames the same as the one before are dropped', () {
     final writer = RecordingWriter(10, 2)
       ..add(Duration.zero, 'a\n')
-      ..add(_ms * 100, 'a\n')
-      ..add(_ms * 200, 'b\n')
-      ..add(_ms * 300, 'b\n')
-      ..add(_ms * 400, 'a\n');
+      ..add(_ms * 300, 'a\n')
+      ..add(_ms * 600, 'b\n')
+      ..add(_ms * 900, 'b\n')
+      ..add(_ms * 1200, 'a\n');
     final frames = (jsonDecode(writer.toJson()) as Map)['frames'] as List;
-    expect([for (final f in frames) (f as Map)['at']], [0, 200, 400]);
+    expect([for (final f in frames) (f as Map)['at']], [0, 600, 1200]);
+  });
+
+  test('unlabelled frames come at most every 250 ms, the last one kept', () {
+    final writer = RecordingWriter(10, 1);
+    for (var i = 0; i <= 10; i++) {
+      writer.add(_ms * (i * 100), 'frame $i\n');
+    }
+    final frames = (jsonDecode(writer.toJson()) as Map)['frames'] as List;
+    final kept = [for (final f in frames) (f as Map)['at']];
+    expect(kept, [0, 300, 600, 900, 1000]);
+    for (var i = 1; i < kept.length - 1; i++) {
+      expect(
+        (kept[i] as int) - (kept[i - 1] as int),
+        greaterThanOrEqualTo(250),
+      );
+    }
+    expect(((frames.last as Map)['rows'] as List).first, 'frame 10');
+  });
+
+  test('a labelled frame is kept however soon it comes', () {
+    final writer = RecordingWriter(10, 1)
+      ..add(Duration.zero, 'a\n')
+      ..step('enter')
+      ..add(_ms * 50, 'b\n')
+      ..add(_ms * 100, 'c\n');
+    final frames = (jsonDecode(writer.toJson()) as Map)['frames'] as List;
+    expect(
+      [for (final f in frames) ((f as Map)['at'], f['label'])],
+      [(0, null), (50, 'enter'), (100, null)],
+    );
+  });
+
+  test('a held frame the screen returns from is dropped', () {
+    final writer = RecordingWriter(10, 1)
+      ..add(Duration.zero, 'a\n')
+      ..add(_ms * 100, 'flash\n')
+      ..add(_ms * 200, 'a\n');
+    final frames = (jsonDecode(writer.toJson()) as Map)['frames'] as List;
+    expect(frames, hasLength(1));
   });
 
   test('a step labels the next frame that differs', () {
@@ -52,10 +91,10 @@ void main() {
       ..step('typed hello')
       ..add(_ms * 100, 'a\n')
       ..add(_ms * 200, 'a hello\n')
-      ..add(_ms * 300, 'a hello!\n')
+      ..add(_ms * 500, 'a hello!\n')
       ..step('C-o')
       ..step('Enter')
-      ..add(_ms * 400, 'done\n');
+      ..add(_ms * 600, 'done\n');
     final frames = (jsonDecode(writer.toJson()) as Map)['frames'] as List;
     expect(
       [for (final f in frames) (f as Map)['label']],

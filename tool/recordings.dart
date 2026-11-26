@@ -23,8 +23,14 @@ List<String> paneRows(String pane, int rows) {
   return [for (var i = 0; i < rows; i++) i < lines.length ? lines[i] : ''];
 }
 
+/// The least time between two unlabelled frames: a streamed reply changes
+/// the screen every sample, and a frame per 100 ms of it weighs megabytes.
+const minFrameGap = Duration(milliseconds: 250);
+
 /// A recording being made: frames that differ from the one before, each at
-/// its time, the first after a step labelled with it.
+/// its time, the first after a step labelled with it. Unlabelled frames
+/// come at most every [minFrameGap]; one that comes sooner waits, and the
+/// latest waiting one is kept when the gap is up or the recording ends.
 class RecordingWriter {
   /// A recording of a [cols] by [rows] pane.
   RecordingWriter(this.cols, this.rows);
@@ -38,6 +44,8 @@ class RecordingWriter {
   final _frames = <Map<String, Object?>>[];
   final _pending = <String>[];
   List<String>? _last;
+  Duration? _lastAt;
+  (Duration, List<String>)? _held;
 
   /// How many frames are kept.
   int get length => _frames.length;
@@ -49,8 +57,23 @@ class RecordingWriter {
   void add(Duration at, String pane) {
     final next = paneRows(pane, rows);
     final last = _last;
-    if (last != null && _same(last, next)) return;
+    if (last != null && _same(last, next)) {
+      // Back to the screen kept last: nothing in between is worth a frame.
+      _held = null;
+      return;
+    }
+    final lastAt = _lastAt;
+    if (_pending.isEmpty && lastAt != null && at - lastAt < minFrameGap) {
+      _held = (at, next);
+      return;
+    }
+    _keep(at, next);
+  }
+
+  void _keep(Duration at, List<String> next) {
+    _held = null;
     _last = next;
+    _lastAt = at;
     _frames.add({
       'at': at.inMilliseconds,
       'rows': next,
@@ -59,9 +82,16 @@ class RecordingWriter {
     _pending.clear();
   }
 
-  /// The recording as JSON.
-  String toJson() =>
-      jsonEncode({'version': 1, 'cols': cols, 'rows': rows, 'frames': _frames});
+  /// The recording as JSON, the frame still waiting its gap kept.
+  String toJson() {
+    if (_held case (final at, final rows)) _keep(at, rows);
+    return jsonEncode({
+      'version': 1,
+      'cols': cols,
+      'rows': rows,
+      'frames': _frames,
+    });
+  }
 }
 
 bool _same(List<String> a, List<String> b) {

@@ -34,7 +34,9 @@ class LiveStart extends StatefulWidget {
 }
 
 class _LiveStartState extends State<LiveStart> {
+  // The answer line's words, once the page is answered.
   String? _picked;
+  static const _canceled = 'Canceled';
   var _round = 0;
 
   @override
@@ -52,16 +54,22 @@ class _LiveStartState extends State<LiveStart> {
             }),
           ),
         ],
-        child: Focus(autofocus: true, child: AnswerLine('Picked $picked')),
+        child: Focus(autofocus: true, child: AnswerLine(picked)),
       );
     }
-    return StartPage(
-      // A fresh page each round, its selection back at the start.
-      key: ValueKey(_round),
-      version: widget.version,
-      directory: '/workspace/demo',
-      agents: liveAgents,
-      onPicked: (name) => setState(() => _picked = name),
+    // chord's start page quits once it is answered; here the exit is the
+    // fixture's, which shows the answer instead of ending the site.
+    return ExitScope(
+      onExit: () => setState(() => _picked ??= _canceled),
+      child: StartPage(
+        // A fresh page each round, its selection back at the start.
+        key: ValueKey(_round),
+        version: widget.version,
+        directory: '/workspace/demo',
+        agents: liveAgents,
+        onPicked: (name) => _picked = 'Picked $name',
+        onCanceled: () => _picked = _canceled,
+      ),
     );
   }
 }

@@ -59,10 +59,24 @@ void main() {
         expect(t.screen, shows('not on PATH'));
         await t.press('1');
         expect(t.screen.lines.first, 'Picked claude  ·  r ask again');
+        expect(t.exitRequested, isFalse, reason: 'the site keeps running');
         await t.press('r');
         await t.pump();
         expect(t.screen, shows('Select agent'));
       });
+    });
+  }
+
+  for (final key in ['esc', 'ctrl+c']) {
+    testWidgets('$key cancels the start page into its answer line, never '
+        'quitting the site', (t) async {
+      await t.pumpWidget(room(const LiveStart()), size: const Size(80, 19));
+      await t.press(key);
+      expect(t.exitRequested, isFalse);
+      expect(t.screen.lines.first, 'Canceled  ·  r ask again');
+      await t.press('r');
+      await t.pump();
+      expect(t.screen, shows('Select agent'));
     });
   }
 

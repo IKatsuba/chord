@@ -4,19 +4,16 @@ import 'package:chord_tui/chord_tui.dart';
 
 import 'answer.dart';
 
-/// The agents the start page offers: two found, one not on PATH.
+/// The agents the start page offers, all of them found: a showcase lists
+/// none as missing.
 final liveAgents = [
-  for (final (name, found) in [
-    ('claude', true),
-    ('codex', true),
-    ('pi', false),
-  ])
+  for (final name in ['claude', 'codex', 'gemini'])
     ListedAgent(
       name: name,
       title: name,
       start: 'unused',
       from: AgentRunner.cli,
-      found: found,
+      found: true,
     ),
 ];
 

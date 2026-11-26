@@ -202,4 +202,21 @@ void main() {
     await t.pump();
     expect(height(), one + 4, reason: '4 more rows, then no more');
   });
+
+  for (final size in const [Size(205, 56), Size(55, 52)]) {
+    testWidgets('the permission plate holds the fixture whole: the diff, '
+        'the question and Esc to reject, at $size', (t) async {
+      await _chord(t, size);
+      final top = await _seek(t, 'FIG. 02');
+      // Down until the plate's last line shows, its caption still in sight.
+      await _seek(t, 'Esc to reject');
+      final fig = _row(t, 'FIG. 02');
+      final end = _row(t, 'Esc to reject');
+      expect(top, greaterThan(0));
+      expect(end, greaterThan(fig));
+      final plate = t.screen.lines.sublist(fig, end + 1).join('\n');
+      expect(plate, isNot(contains('lines below')));
+      expect(plate, contains('Do you want to proceed?'));
+    });
+  }
 }

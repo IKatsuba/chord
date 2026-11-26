@@ -61,7 +61,9 @@ const chordSections = <ChordSection>[
     text:
         'Asked first, every time: the diff or the command in front of you. '
         'Allow once, always, or deny.',
-    rows: 12,
+    // The fixture whole: its title, the 13-line diff, the question and
+    // Esc to reject.
+    rows: 28,
     ownsEscape: true,
   ),
   (

@@ -56,7 +56,9 @@ void main() {
           'asks again', (t) async {
         await t.pumpWidget(room(const LiveStart()), size: Size(width, 19));
         expect(t.screen, shows('Select agent'));
-        expect(t.screen, shows('not on PATH'));
+        // Three agents, all available: none reads as missing.
+        expect(t.screen, shows('gemini'));
+        expect(t.screen, isNot(shows('not on PATH')));
         await t.press('1');
         expect(t.screen.lines.first, 'Picked claude  ·  r ask again');
         expect(t.exitRequested, isFalse, reason: 'the site keeps running');

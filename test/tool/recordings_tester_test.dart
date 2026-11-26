@@ -11,6 +11,51 @@ import '../../tool/screenshots.dart'
 
 void main() {
   group('tester: recording writer boundary data', () {
+    test(
+      'the 250 ms boundary keeps the current sample, not a held transient',
+      () {
+        final writer = RecordingWriter(80, 1)
+          ..add(Duration.zero, 'start\n')
+          ..add(const Duration(microseconds: 249999), 'transient\n')
+          ..add(const Duration(milliseconds: 250), 'edge\n');
+        final decoded = TerminalRecording.fromJson(jsonDecode(writer.toJson()));
+        expect(decoded.frames.map((frame) => frame.at), [
+          Duration.zero,
+          const Duration(milliseconds: 250),
+        ]);
+        expect(decoded.frames.last.rows, ['edge']);
+      },
+    );
+
+    test('serializing a final held frame is stable and preserves its time', () {
+      final writer = RecordingWriter(80, 1)
+        ..add(Duration.zero, 'start\n')
+        ..add(const Duration(milliseconds: 100), '\x1b[1m界🙂e\u0301\x1b[0m\n');
+      final first = writer.toJson();
+      expect(writer.toJson(), first);
+      final decoded = TerminalRecording.fromJson(jsonDecode(first));
+      expect(decoded.frames, hasLength(2));
+      expect(decoded.frames.last.at, const Duration(milliseconds: 100));
+      expect(decoded.frames.last.rows, ['\x1b[1m界🙂e\u0301\x1b[0m']);
+    });
+
+    test(
+      'discarding a held transient leaves queued labels for the next change',
+      () {
+        final writer = RecordingWriter(80, 1)
+          ..add(Duration.zero, 'start\n')
+          ..add(const Duration(milliseconds: 100), 'transient\n')
+          ..step('enter')
+          ..add(const Duration(milliseconds: 150), 'start\n')
+          ..add(const Duration(milliseconds: 200), 'next\n');
+        final decoded = TerminalRecording.fromJson(jsonDecode(writer.toJson()));
+        expect(decoded.frames, hasLength(2));
+        expect(decoded.frames.last.at, const Duration(milliseconds: 200));
+        expect(decoded.frames.last.label, 'enter');
+        expect(decoded.frames.last.rows, ['next']);
+      },
+    );
+
     for (final size in recordingSizes) {
       test('version 1 preserves ANSI and graphemes at $size', () {
         const first = '\x1b[1m界🙂e\u0301\x1b[0m';

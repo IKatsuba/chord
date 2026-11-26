@@ -149,6 +149,32 @@ void main() {
     expect(thumbRows(t, 79), isEmpty);
   });
 
+  for (final kind in [MouseEventKind.release, MouseEventKind.cancel]) {
+    testWidgets('a thumb held past 600 ms hides on its ${kind.name}, with no '
+        'scroll after', (t) async {
+      final c = ScrollController();
+      await t.pumpWidget(
+        page(c, 400, thumbVisibility: false),
+        size: const Size(80, 24),
+      );
+      c.lineDown();
+      await t.pump();
+      final top = thumbRows(t, 79).first;
+      await t.mouse(press(79, top));
+      await t.pump(const Duration(milliseconds: 700));
+      expect(thumbRows(t, 79), isNotEmpty, reason: 'held, it stays');
+      t.host.handleMouse(
+        MouseEvent(
+          kind,
+          position: Offset(79, top),
+          button: MouseButton.primary,
+        ),
+      );
+      await t.pump();
+      expect(thumbRows(t, 79), isEmpty);
+    });
+  }
+
   testWidgets('it takes the theme\'s border style for the thumb', (t) async {
     final c = ScrollController();
     await t.pumpWidget(page(c, 400), size: const Size(80, 24));

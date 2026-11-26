@@ -115,7 +115,7 @@ class _ScrollbarState extends State<Scrollbar> {
       widget.controller.pageDown();
     } else {
       _capture.capture();
-      if (_capture.isCaptured) _grab = row - thumb.top;
+      if (_capture.isCaptured) setState(() => _grab = row - thumb.top);
     }
   }
 
@@ -133,7 +133,11 @@ class _ScrollbarState extends State<Scrollbar> {
     );
   }
 
-  void _end(MouseEvent _) => _grab = null;
+  // A thumb held past its fade hides on the release, not on the next move.
+  void _end(MouseEvent _) {
+    if (_grab == null || !mounted) return;
+    setState(() => _grab = null);
+  }
 
   @override
   Widget build(BuildContext context) {

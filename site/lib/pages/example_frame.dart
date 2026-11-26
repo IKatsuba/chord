@@ -3,9 +3,9 @@ import 'package:chord_tui/chord_tui.dart';
 /// A framework example running in a frame under a one-line [caption].
 ///
 /// Ctrl+Q and Ctrl+C are taken before the example sees them and go [home]:
-/// every example quits by them, and the site never quits. A
-/// [KeyHelpBoundary] keeps the example's own help to its own keys, less
-/// those two.
+/// every example quits by them, and the site never quits. F1, the site's
+/// keys panel, is taken above the frame. A [KeyHelpBoundary] keeps the
+/// example's own help to its own keys, less those three.
 class ExampleFrame extends StatelessWidget {
   /// [child] framed under [caption], titled [title].
   const ExampleFrame({
@@ -30,6 +30,9 @@ class ExampleFrame extends StatelessWidget {
 
   static final _quits = {KeyCombo.parse('ctrl+q'), KeyCombo.parse('ctrl+c')};
 
+  /// The keys the site takes before the example: its quits, and F1.
+  static final taken = {..._quits, KeyCombo.parse('f1')};
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(left: 1, right: 1),
@@ -41,7 +44,7 @@ class ExampleFrame extends StatelessWidget {
           child: Box(
             title: title,
             child: KeyHelpBoundary(
-              taken: _quits,
+              taken: taken,
               child: Focus(
                 onKeyCapture: (event) {
                   if (!_quits.contains(event.combo)) return false;

@@ -129,6 +129,27 @@ void main() {
     expect(t.screen, isNot(shows(' Keys')));
   });
 
+  testWidgets('? and f1 both open the panel outside examples', (t) async {
+    final host = FakeHost();
+    await t.pumpWidget(Site(host: host), size: const Size(120, 40));
+    expect(t.screen.lines.last, endsWith('  ? keys'));
+    await t.press('f1');
+    expect(t.screen, shows(' Keys'));
+    expect(t.screen.lines, contains(matches(RegExp(r'^ +\?/f1 +keys$'))));
+    expect(t.screen.lines.last, ' escape close  f1 close  ctrl+q home');
+    // The open panel takes the menu's keys too.
+    await t.press('down');
+    await t.press('enter');
+    expect(host.pushed, isEmpty);
+    await t.press('?');
+    expect(t.screen, isNot(shows(' Keys')));
+    await t.press('?');
+    await t.press('f1');
+    expect(t.screen, isNot(shows(' Keys')));
+    await t.press('enter');
+    expect(host.pushed, ['/chord']);
+  });
+
   testWidgets('g and a tap on the link open the repository', (t) async {
     final host = FakeHost();
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));

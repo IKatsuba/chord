@@ -33,8 +33,11 @@ const _repositoryId = '${panelOnly}repository';
 /// The whole site: a header, the page the route names, and its keys.
 ///
 /// Opening a page pushes its path through [host]; Back and Forward come
-/// back as paths. Esc goes up a level, `?` lists every key, and Ctrl+Q or
-/// Ctrl+C go home: the site never ends.
+/// back as paths. Esc goes up a level, F1 (and `?` outside example pages,
+/// where it is typed text) lists every key, and Ctrl+Q or Ctrl+C go home:
+/// the site never ends. While the keys panel is open it takes every key
+/// and pointer report: Esc and F1 close it, Ctrl+Q and Ctrl+C close it and
+/// go home, and nothing else reaches the page.
 class Site extends StatefulWidget {
   /// The site on [host], running [gallery]'s examples and showing
   /// [recordings] by name.
@@ -98,6 +101,31 @@ class _SiteState extends State<Site> {
     });
   }
 
+  bool get _embedding => _route is ExampleRoute || _route is ChordTuiRoute;
+
+  static final _f1 = KeyCombo.parse('f1');
+  static final _esc = KeyCombo.parse('esc');
+  static final _question = KeyCombo.parse('?');
+  static final _quits = {KeyCombo.parse('ctrl+q'), KeyCombo.parse('ctrl+c')};
+
+  // Above every page and before any example's own handlers: F1 opens the
+  // panel anywhere, and the open panel decides every key.
+  bool _capture(KeyEvent event) {
+    final key = event.combo;
+    if (!_keysOpen) {
+      if (key != _f1) return false;
+      setState(() => _keysOpen = true);
+      return true;
+    }
+    if (key == _esc || key == _f1 || (!_embedding && key == _question)) {
+      setState(() => _keysOpen = false);
+    } else if (_quits.contains(key)) {
+      setState(() => _keysOpen = false);
+      _open(const HomeRoute());
+    }
+    return true;
+  }
+
   void _escape() {
     if (_keysOpen) {
       setState(() => _keysOpen = false);
@@ -111,6 +139,11 @@ class _SiteState extends State<Site> {
     builder: (context, constraints) {
       final width = constraints.maxWidth;
       final narrow = width < narrowWidth;
+      // The page's rows: the window less the header (two rows, three where
+      // the link folds under the name), the key row and the help row.
+      final headerRows = width >= narrowWidth && width < wideWidth ? 3 : 2;
+      final pageRows =
+          constraints.maxHeight - headerRows - (narrow ? 1 : 0) - 1;
       final home = _route is HomeRoute;
       return Actions(
         bindings: [
@@ -130,12 +163,15 @@ class _SiteState extends State<Site> {
               () => _open(const HomeRoute()),
               id: _homeKeysId,
             ),
-          Binding(
-            '?',
-            'keys',
-            () => setState(() => _keysOpen = !_keysOpen),
-            id: '${siteKeys}keys',
-          ),
+          // On a page that runs an example, ? is text the example may take.
+          for (final key in ['?', 'f1'])
+            Binding(
+              key,
+              'keys',
+              () => setState(() => _keysOpen = !_keysOpen),
+              enabled: key == 'f1' || !_embedding,
+              id: '${siteKeys}keys',
+            ),
           Binding(
             'g',
             'open GitHub',
@@ -143,24 +179,55 @@ class _SiteState extends State<Site> {
             id: _repositoryId,
           ),
         ],
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // One child whatever the width, so the page after it keeps its
-            // place, and its state, across a resize.
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: _header(context, width),
-            ),
-            Expanded(child: _page()),
-            if (_keysOpen) _KeysPanel(width: width),
-            if (narrow) const KeyRow(),
-            _HelpRow(
-              narrow: narrow,
-              embedding: _route is ExampleRoute || _route is ChordTuiRoute,
-            ),
-          ],
+        child: Focus(
+          canRequestFocus: false,
+          onKeyCapture: _capture,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // One child whatever the width, so the page after it keeps its
+              // place, and its state, across a resize.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: _header(context, width),
+              ),
+              Expanded(
+                child: Stack(
+                  children: [
+                    _page(),
+                    // The open panel sits at the bottom of the page, and stops
+                    // clicks and the wheel short of it.
+                    if (_keysOpen)
+                      Positioned(
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Listener(
+                          behavior: HitTestBehavior.opaque,
+                          absorbPointerSignal: true,
+                          onPointerDown: (_) {},
+                          onPointerSignal: (_) {},
+                          child: Column(
+                            children: [
+                              const Spacer(),
+                              _KeysPanel(width: width, rows: pageRows),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (narrow) const KeyRow(),
+              _HelpRow(
+                narrow: narrow,
+                embedding: _embedding,
+                panelOpen: _keysOpen,
+              ),
+            ],
+          ),
         ),
       );
     },
@@ -230,16 +297,47 @@ String _crumbs(SiteRoute route) {
 /// example, only the site's own, Ctrl+Q home among them: the example's are
 /// in its frame. Elsewhere home is left to the `?` panel.
 class _HelpRow extends StatelessWidget {
-  const _HelpRow({required this.narrow, required this.embedding});
+  const _HelpRow({
+    required this.narrow,
+    required this.embedding,
+    required this.panelOpen,
+  });
 
   final bool narrow;
   final bool embedding;
+  final bool panelOpen;
+
+  // What the open panel lets through, which its capture decides; a phone
+  // has no F1 or Ctrl to show.
+  static const _whileOpen = [
+    ('escape', 'close'),
+    ('f1', 'close'),
+    ('ctrl+q', 'home'),
+  ];
 
   @override
   Widget build(BuildContext context) => KeyHelp.builder(
     builder: (context, bindings, pending) {
       final theme = Theme.of(context);
       final spans = <TextSpan>[TextSpan(' ')];
+      void entry(String keys, String description) {
+        if (spans.length > 1) spans.add(TextSpan('  '));
+        spans
+          ..add(TextSpan(keys, style: theme.text.merge(Style.bold)))
+          ..add(TextSpan(' $description', style: theme.dim));
+      }
+
+      if (panelOpen) {
+        for (final (keys, description)
+            in narrow ? _whileOpen.take(1) : _whileOpen) {
+          entry(keys, description);
+        }
+        return Text.rich(
+          TextSpan('', children: spans),
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
+        );
+      }
       for (final group in groupBindings(bindings)) {
         final id = group.id ?? '';
         if (id.startsWith(panelOnly)) continue;
@@ -251,16 +349,12 @@ class _HelpRow extends StatelessWidget {
                 group.chords.first.toString() == '?')) {
           continue;
         }
-        if (spans.length > 1) spans.add(TextSpan('  '));
-        // Ctrl+C is home too, but the row names the one key to learn.
-        final chords = id == _homeKeysId
+        // Ctrl+C is home too, and F1 keys where ? is: the row names the one
+        // key to learn.
+        final chords = id == _homeKeysId || id == '${siteKeys}keys'
             ? [group.chords.first.toString()]
             : [for (final chord in group.chords) chord.toString()];
-        spans
-          ..add(
-            TextSpan(keysLabel(chords), style: theme.text.merge(Style.bold)),
-          )
-          ..add(TextSpan(' ${group.description}', style: theme.dim));
+        entry(keysLabel(chords), group.description);
       }
       return Text.rich(
         TextSpan('', children: spans),
@@ -271,42 +365,65 @@ class _HelpRow extends StatelessWidget {
   );
 }
 
-/// Every key in scope, one action a row, under the page.
+/// Every key in scope, one action a row, the site's first, in at most
+/// [rows] rows: what does not fit is counted on the last.
 class _KeysPanel extends StatelessWidget {
-  const _KeysPanel({required this.width});
+  const _KeysPanel({required this.width, required this.rows});
 
   final int width;
+  final int rows;
 
   @override
   Widget build(BuildContext context) => KeyHelp.builder(
     builder: (context, bindings, pending) {
       final theme = Theme.of(context);
-      final groups = groupBindings(bindings);
+      // The site's own keys first, so a page with more keys than rows never
+      // hides the way out of the panel.
+      bool own(BindingGroup g) =>
+          (g.id ?? '').startsWith(siteKeys) ||
+          (g.id ?? '').startsWith(panelOnly);
+      final grouped = groupBindings(bindings);
+      final all = [...grouped.where(own), ...grouped.where((g) => !own(g))];
+      // The rule and the title take two rows; a count of the rest one more.
+      final room = rows - 2;
+      final groups = all.length <= room
+          ? all
+          : all.take(room < 1 ? 0 : room - 1).toList();
       final keyWidth = groups.fold(
         0,
         (w, g) => g.chords.join('/').length > w ? g.chords.join('/').length : w,
       );
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('─' * width, style: theme.dim),
-          Text(' Keys', style: theme.text.merge(Style.bold)),
-          for (final group in groups)
-            Text.rich(
-              TextSpan(
-                '',
-                children: [
-                  TextSpan(
-                    '   ${group.chords.join('/').padRight(keyWidth)}  ',
-                    style: theme.text.merge(Style.bold),
-                  ),
-                  TextSpan(group.description, style: theme.dim),
-                ],
+      // Filled, so nothing of the page under it shows through.
+      return Box(
+        background: Style.plain,
+        width: width,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('─' * width, style: theme.dim),
+            Text(' Keys', style: theme.text.merge(Style.bold)),
+            for (final group in groups)
+              Text.rich(
+                TextSpan(
+                  '',
+                  children: [
+                    TextSpan(
+                      '   ${group.chords.join('/').padRight(keyWidth)}  ',
+                      style: theme.text.merge(Style.bold),
+                    ),
+                    TextSpan(group.description, style: theme.dim),
+                  ],
+                ),
+                softWrap: false,
               ),
-              softWrap: false,
-            ),
-        ],
+            if (groups.length < all.length && room >= 1)
+              Text(
+                '   … +${all.length - groups.length} more',
+                style: theme.dim,
+              ),
+          ],
+        ),
       );
     },
   );

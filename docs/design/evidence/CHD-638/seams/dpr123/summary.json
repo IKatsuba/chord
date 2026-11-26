@@ -1,0 +1,37 @@
+{
+  "wterm-webgl": {
+    "replies": [
+      "\"\\u001b]11;rgb:0c0c/0c0c/0c0c\\u0007\"",
+      "\"\\u001b[?0u\""
+    ],
+    "grid": "192x56",
+    "loadToStartMs": 1635,
+    "wasmStartMs": 34.700000047683716
+  },
+  "wterm-webgl-ls+0.5": {
+    "replies": [
+      "\"\\u001b]11;rgb:0c0c/0c0c/0c0c\\u0007\"",
+      "\"\\u001b[?0u\""
+    ],
+    "grid": "180x56",
+    "loadToStartMs": 1643,
+    "wasmStartMs": 47
+  },
+  "wterm-webgl-ls-0.5": {
+    "replies": [
+      "\"\\u001b]11;rgb:0c0c/0c0c/0c0c\\u0007\"",
+      "\"\\u001b[?0u\""
+    ],
+    "grid": "205x56",
+    "loadToStartMs": 1662,
+    "wasmStartMs": 51.200000047683716
+  },
+  "xterm-dom": {
+    "replies": [
+      "\"\\u001b]11;rgb:0c0c/0c0c/0c0c\\u001b\\\\\""
+    ],
+    "grid": "192x41",
+    "loadToStartMs": 1586,
+    "wasmStartMs": 44.09999990463257
+  }
+}

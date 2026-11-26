@@ -4663,17 +4663,12 @@ none, is damaged; it is replaced by a fresh download, and the release says
 so. A fresh download that fails either check is refused and nothing of it
 is kept.
 
-## CHD-638: the site's first load is budgeted in gzip, not brotli
+## CHD-638: the site has no size budget
 
-The site's first load (the page, the app's Wasm and loader, wterm and the
-font) was to be held to 1.5 MB brotli in its build (question 9). No
-maintained Dart brotli encoder fits under `dart run`: package:brotli
-decodes only, and es_compression's brotli needs a native library loaded
-through FFI. The owner set the budget in gzip instead ("gzip is fine
-too"): `site/tool/build.dart` measures each first-load file at gzip
-level 9 through dart:io and fails the build above 1.5 MB. Gzip comes out
-larger than brotli for the same files, so the limit is stricter than the
-one first asked for. The measurement is one function, `firstLoadSize`, so
-a later choice changes only that. Shelling out to a `brotli` CLI was the
-other option; it was not taken because it adds a tool to install in CI and
-on each machine for one number.
+The design held the site's first load (the page, the app's Wasm and
+loader, wterm and the font) to 1.5 MB brotli, checked in its build
+(question 9). No maintained Dart brotli encoder fits under `dart run`:
+package:brotli decodes only, and es_compression's brotli needs a native
+library through FFI. Asked about that, the owner dropped the budget: the
+site has no size budget, and `site/tool/build.dart` and CI measure,
+print and check no sizes.

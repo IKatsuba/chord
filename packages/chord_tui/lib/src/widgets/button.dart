@@ -223,7 +223,11 @@ class _ButtonState extends State<_Button> {
       background: style,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        child: DefaultTextStyle(style: style, child: widget.child),
+        // Focus underlines the label too, so it shows without colour.
+        child: DefaultTextStyle(
+          style: focused ? style.merge(Style.underline) : style,
+          child: widget.child,
+        ),
       ),
     );
   }
@@ -245,7 +249,10 @@ class _ButtonState extends State<_Button> {
       border: Border.rounded.withStyle(frame),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3),
-        child: DefaultTextStyle(style: label, child: widget.child),
+        child: DefaultTextStyle(
+          style: focused ? label.merge(Style.underline) : label,
+          child: widget.child,
+        ),
       ),
     );
   }

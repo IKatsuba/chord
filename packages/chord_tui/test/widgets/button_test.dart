@@ -180,6 +180,43 @@ void main() {
         expect(t.screen.styleAt(0, 3), dark.focus);
       });
 
+      testWidgets('focus also underlines the label, so it shows without '
+          'colour', (t) async {
+        await t.pumpWidget(
+          Theme(
+            data: ThemeData.plain(),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FilledButton(
+                    autofocus: true,
+                    onPressed: () {},
+                    child: Text('Save'),
+                  ),
+                  OutlinedButton(onPressed: () {}, child: Text('Back')),
+                ],
+              ),
+            ),
+          ),
+          size: size,
+        );
+        final plain = ThemeData.plain();
+        // Filled label at (4, 1), outlined label at (4, 4).
+        expect(t.screen.styleAt(4, 1).isUnderline, isTrue);
+        expect(t.screen.styleAt(0, 1).isUnderline, isFalse, reason: 'padding');
+        expect(t.screen.styleAt(4, 4).isUnderline, isFalse);
+        await t.press('tab');
+        await t.pump();
+        expect(t.screen.styleAt(4, 1).isUnderline, isFalse);
+        expect(
+          t.screen.styleAt(4, 4),
+          plain.text.merge(const Style(bold: true, underline: true)),
+        );
+      });
+
       testWidgets('a press and release inside presses it; a release outside '
           'does not', (t) async {
         var pressed = 0;

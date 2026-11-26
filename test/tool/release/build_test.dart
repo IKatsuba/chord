@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 
 import '../../../tool/release/build.dart';
 import '../../../tool/release/runner.dart';
+import '../../../tool/release/x64_sdk.dart';
 import '../../../tool/targets.dart';
 import 'fixtures/recording_runner.dart';
 
@@ -353,11 +354,27 @@ esac
   });
 
   group('tester: build failure boundaries', () {
+    late Sdks kept;
+    late String x64Dart;
+    setUp(() {
+      kept = Sdks(
+        dart: sdks.dart,
+        version: sdks.version,
+        cache: p.join(root.path, 'cache'),
+        fetch: (url) => throw StateError('fetched $url'),
+      );
+      x64Dart = sdkDart(sdkFolder(kept.cache, kept.version));
+      File(x64Dart).createSync(recursive: true);
+    });
+
     test(
       'a failed SDK preflight starts no compile and creates no output',
       () async {
         final runner = RecordingRunner((_) => const Ran(3, stderr: 'refused'));
-        await expectLater(compile(runner, sdks, root.path), dies('refused'));
+        await expectLater(
+          compile(runner, kept, root.path, (_) {}),
+          dies('refused'),
+        );
         expect(runner.calls, hasLength(1));
         expect(Directory(p.join(root.path, 'build')).existsSync(), isFalse);
       },
@@ -367,14 +384,14 @@ esac
       test(
         'a signalled ${target.name} compile stops before the next command',
         () async {
-          final command = compileArgv(target, sdks);
+          final command = compileArgv(target, kept, x64Dart: x64Dart);
           final runner = RecordingRunner(
             (argv) => argv.join('\u0000') == command.join('\u0000')
                 ? const Ran(null)
                 : goodBuild(argv),
           );
           await expectLater(
-            compile(runner, sdks, root.path),
+            compile(runner, kept, root.path, (_) {}),
             dies('compile of $target failed'),
           );
           expect(runner.argvs.last, command);
@@ -401,10 +418,11 @@ esac
       const sdk = Sdks(
         dart: '/sdk with spaces/dart',
         version: '3.13.5',
-        x64Dart: '/x64 with spaces/dart',
+        cache: '/cache',
       );
+      const spaced = '/x64 with spaces/dart';
       expect(compileArgv(named('darwin-arm64'), sdk).first, sdk.dart);
-      expect(compileArgv(named('darwin-x64'), sdk)[2], sdk.x64Dart);
+      expect(compileArgv(named('darwin-x64'), sdk, x64Dart: spaced)[2], spaced);
     });
   });
 }

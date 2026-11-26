@@ -426,7 +426,7 @@ class _SiteState extends State<Site> {
   );
 
   Widget _page(int width, int rows) => switch (_route) {
-    HomeRoute() => HomePage(_open),
+    HomeRoute() => HomePage(host: widget.host, open: _open),
     ChordRoute() => ChordPage(widget.recordings, _open),
     RecordingRoute(:final name) => RecordingPage(
       key: ValueKey(name),

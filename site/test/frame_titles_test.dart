@@ -1,5 +1,4 @@
 import 'package:chord_site/pages/example_frame.dart';
-import 'package:chord_site/pages/home.dart';
 import 'package:chord_site/palette.dart';
 import 'package:chord_tui/chord_tui.dart';
 import 'package:chord_tui/testing.dart';
@@ -16,19 +15,6 @@ import 'package:test/test.dart';
 
 void main() {
   final theme = siteTheme();
-  for (final size in const [Size(171, 50), Size(120, 40)]) {
-    testWidgets('home\'s "Try it" title is muted, not the line colour, at '
-        '$size', (t) async {
-      await t.pumpWidget(
-        Theme(data: theme, child: HomePage((_) {})),
-        size: size,
-      );
-      final (x, y) = find(t, 'Try it');
-      expect(t.screen.styleAt(x, y), theme.dim);
-      expect(t.screen.styleAt(x - 2, y), theme.border, reason: 'the line');
-    });
-  }
-
   for (final size in const [Size(120, 40), Size(80, 24), Size(54, 56)]) {
     testWidgets('an example frame\'s title is muted at $size', (t) async {
       await t.pumpWidget(

@@ -3,6 +3,7 @@ import 'package:chord_tui/chord_tui.dart';
 import 'package:chord_tui/testing.dart';
 import 'package:test/test.dart';
 
+import '../web/gallery.dart';
 import 'fake_host.dart';
 
 const _sizes = [Size(120, 40), Size(80, 24), Size(43, 37)];
@@ -12,7 +13,7 @@ bool current(WidgetTester t, String label) =>
     t.screen.styleAt(t.screen.lines[1].indexOf(label), 1).isInverse;
 
 void main() {
-  testWidgets('home at 120x40: nav, menu, the try-it box, keys', (t) async {
+  testWidgets('home at 120x40: the nav, CHORD. and the home keys', (t) async {
     final host = FakeHost();
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));
     final lines = t.screen.lines;
@@ -25,10 +26,8 @@ void main() {
     expect(lines[1], endsWith('GITHUB ↗ g    DEV'));
     expect(lines[2], '');
     expect(lines[3], '─' * 120);
-    expect(t.screen, shows('❯ 1. chord'));
-    expect(t.screen, shows('4. Install'));
-    expect(t.screen, shows('Try it'));
-    expect(lines.last, ' up/down move  enter open  1–4 jump  ? keys');
+    expect(t.screen, shows('A TERMINAL WINDOW'));
+    expect(lines.last, ' i install  w watch  1–4 go  up/down scroll  ? keys');
     expect(host.titles, ['chord and chord_tui']);
   });
 
@@ -38,8 +37,7 @@ void main() {
     expect(lines[1], matches(RegExp(r'^  CHORD / CHORD_TUI +MENU m$')));
     expect(lines[1], isNot(contains('GITHUB')));
     expect(lines[3], '─' * 80);
-    expect(t.screen, isNot(shows('Try it')));
-    expect(t.screen, shows('2. chord_tui'));
+    expect(lines.last, endsWith('? keys  m menu'));
   });
 
   testWidgets('a phone: the mark and the menu, a key row, only esc and ? '
@@ -58,12 +56,10 @@ void main() {
     expect(lines.last, ' escape up  ? keys');
   });
 
-  testWidgets('enter and digits open pages; esc goes up', (t) async {
+  testWidgets('digits open pages; esc goes up', (t) async {
     final host = FakeHost();
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));
-    await t.press('down');
-    await t.press('down');
-    await t.press('enter');
+    await t.press('3');
     expect(host.pushed, ['/chord_tui/gallery']);
     expect(current(t, 'GALLERY'), isTrue);
     expect(host.titles.last, 'gallery · chord_tui');
@@ -74,14 +70,6 @@ void main() {
     await t.press('4');
     expect(host.pushed.last, '/install');
     expect(t.screen, shows('brew install ikatsuba/tap/chord'));
-  });
-
-  testWidgets('a tap opens the row tapped', (t) async {
-    final host = FakeHost();
-    await t.pumpWidget(Site(host: host), size: const Size(120, 40));
-    final row = t.screen.lines.indexWhere((l) => l.contains('2. chord_tui'));
-    await t.mouse(_tapAt(5, row));
-    expect(host.pushed, ['/chord_tui']);
   });
 
   testWidgets('back and forward show the page without pushing', (t) async {
@@ -153,16 +141,16 @@ void main() {
     expect(t.screen, shows(' Keys'));
     expect(t.screen.lines, contains(matches(RegExp(r'^ +\?/f1 +keys$'))));
     expect(t.screen.lines.last, ' escape close  f1 close  ctrl+q home');
-    // The open panel takes the menu's keys too.
-    await t.press('down');
-    await t.press('enter');
+    // The open panel takes the page's keys too.
+    await t.press('1');
+    await t.press('i');
     expect(host.pushed, isEmpty);
     await t.press('?');
     expect(t.screen, isNot(shows(' Keys')));
     await t.press('?');
     await t.press('f1');
     expect(t.screen, isNot(shows(' Keys')));
-    await t.press('enter');
+    await t.press('1');
     expect(host.pushed, ['/chord']);
   });
 
@@ -177,7 +165,7 @@ void main() {
         if (l.startsWith('─')) l,
     ];
     expect(rules, ['─' * 80, '─' * 80]);
-    expect(lines, contains(matches(RegExp(r'^ +1–4 +jump$'))));
+    expect(lines, contains(matches(RegExp(r'^ +1–4 +go$'))));
     expect(lines.last, ' escape close  f1 close  ctrl+q home');
   });
 
@@ -231,15 +219,19 @@ void main() {
   });
 
   testWidgets('the key row taps send keys to the page', (t) async {
-    final host = FakeHost();
-    await t.pumpWidget(Site(host: host), size: const Size(43, 37));
+    final host = FakeHost('/chord_tui/gallery');
+    await t.pumpWidget(
+      Site(host: host, gallery: siteGallery),
+      size: const Size(43, 37),
+    );
     final row = t.screen.lines[35];
     Future<void> tap(String label) => t.mouse(_tapAt(row.indexOf(label), 35));
+    // Down from Demo, one cell to a row, is Markdown.
     await tap('↓');
     await tap('enter');
-    expect(host.pushed, ['/chord_tui']);
+    expect(host.pushed, ['/chord_tui/markdown']);
     await tap('esc');
-    expect(host.pushed.last, '/');
+    expect(host.pushed.last, '/chord_tui/gallery');
   });
 }
 

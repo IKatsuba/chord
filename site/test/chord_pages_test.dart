@@ -42,6 +42,7 @@ final _files = {
 const _names = ['permission', 'start'];
 
 void main() {
+  _phoneBar();
   _shortPages();
   test('the largest recording that fits with its frame, caption and bar '
       'is chosen; else 48x32 bare; else 48x32 clipped', () {
@@ -269,4 +270,39 @@ void _shortPages() {
       expect(t.screen.lines[pageEnd].trim(), startsWith('▶'));
     });
   }
+}
+
+void _phoneBar() {
+  testWidgets('on a phone the bar keeps inside the margins and shortens its '
+      'label', (t) async {
+    final host = FakeHost('/chord/permission', {
+      'permission.48x32.rec.json': jsonEncode({
+        'version': 1,
+        'cols': 48,
+        'rows': 32,
+        'frames': [
+          {
+            'at': 0,
+            'rows': ['first'],
+            'label': 'typed write the release notes into notes.txt, then more',
+          },
+          {
+            'at': 3000,
+            'rows': ['last'],
+            'label': null,
+          },
+        ],
+      }),
+    });
+    await t.pumpWidget(
+      Site(host: host, recordings: _names),
+      size: const Size(55, 52),
+    );
+    await t.pump();
+    final y = t.screen.lines.indexWhere((l) => l.contains('0:00 /'));
+    final line = t.screen.lines[y];
+    expect(line.indexOf('▶'), greaterThanOrEqualTo(3), reason: line);
+    expect(line.trimRight().length, lessThanOrEqualTo(55 - 2), reason: line);
+    expect(line.trimRight(), endsWith('…'));
+  });
 }

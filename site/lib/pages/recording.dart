@@ -200,11 +200,15 @@ class _RecordingPageState extends State<RecordingPage> {
         ] else
           Align(alignment: Alignment.topCenter, child: room),
         Text(''),
-        Align(
-          alignment: Alignment.topCenter,
-          child: ListenableBuilder(
-            listenable: controller,
-            builder: (_) => recordingBar(theme, controller.value),
+        // Inside the margins, its label shortened with … where it runs out.
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: margin),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ListenableBuilder(
+              listenable: controller,
+              builder: (_) => recordingBar(theme, controller.value),
+            ),
           ),
         ),
       ],
@@ -243,5 +247,6 @@ Widget recordingBar(ThemeData theme, PlaybackValue value) {
       ],
     ),
     softWrap: false,
+    overflow: TextOverflow.ellipsis,
   );
 }

@@ -4,6 +4,11 @@
 /// published beside it, kept in the user cache by version.
 library;
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import 'runner.dart';
@@ -62,4 +67,117 @@ String checksumOf(String sum) {
     die('the SDK checksum is of ${match.group(2)}, not $sdkZipName');
   }
   return match.group(1)!.toLowerCase();
+}
+
+/// Reads [url]'s body whole; throws, or dies, when it cannot.
+typedef Fetch = Future<List<int>> Function(Uri url);
+
+/// The release's [Fetch]: an HTTPS GET that dies unless it answers 200.
+Future<List<int>> httpFetch(Uri url) async {
+  final client = http.Client();
+  try {
+    final response = await client.get(url);
+    if (response.statusCode != 200) {
+      die('$url answered ${response.statusCode}');
+    }
+    return response.bodyBytes;
+  } finally {
+    client.close();
+  }
+}
+
+final _sdkVersion = RegExp(r'Dart SDK version: (\S+)');
+
+/// The version [dart] says under Rosetta, or null when it says none; dies
+/// when it does not run there, which no download mends.
+Future<String?> x64VersionOf(ReleaseRunner runner, String dart) async {
+  final ran = await runner.run('arch', ['-x86_64', dart, '--version']);
+  if (ran.status != 0) {
+    die('arch -x86_64 $dart --version failed: ${said(ran.stderr)}');
+  }
+  return _sdkVersion.firstMatch('${ran.stdout}${ran.stderr}')?.group(1);
+}
+
+/// Why [dart], which says [said], is not the x64 SDK of [version].
+String otherVersion(String dart, String? said, String version) =>
+    '$dart is Dart ${said ?? 'of no version it says'}, not $version: '
+    'darwin-x64 is built by the same SDK as the rest';
+
+/// The x64 SDK's `dart` at [version], kept under [cache]. A kept SDK passed
+/// both checks when it was kept: one that no longer runs under Rosetta is
+/// refused, as a download would fail the same way; one that says another
+/// version was damaged, and is downloaded again. A download goes through
+/// [fetch], is checked against its published sha256, unzipped by `ditto`
+/// into a sibling folder and renamed into place only once its `dart`
+/// passes [x64VersionOf] at [version]. What it downloads, and where to, is
+/// said through [out].
+Future<String> provideX64Sdk({
+  required ReleaseRunner runner,
+  required String version,
+  required String cache,
+  required Fetch fetch,
+  required void Function(String line) out,
+}) async {
+  final folder = sdkFolder(cache, version);
+  final keptFolder = Directory(folder);
+  if (keptFolder.existsSync()) {
+    final dart = sdkDart(folder);
+    final kept = await x64VersionOf(runner, dart);
+    if (kept == version) return dart;
+    out(
+      'The kept x64 Dart SDK is damaged (${otherVersion(dart, kept, version)}); '
+      'downloading it again.',
+    );
+  }
+  final zipUrl = sdkZipUrl(version);
+  // A fixed name, so what an interrupted run left is found and redone.
+  final partial = Directory('$folder.partial');
+  if (partial.existsSync()) partial.deleteSync(recursive: true);
+  try {
+    partial.createSync(recursive: true);
+    out('Downloading the x64 Dart SDK $version from $zipUrl into $folder');
+    final sum = checksumOf(
+      utf8.decode(
+        await _fetched(fetch, sdkChecksumUrl(version)),
+        allowMalformed: true,
+      ),
+    );
+    final zip = await _fetched(fetch, zipUrl);
+    final got = sha256.convert(zip).toString();
+    if (got != sum) {
+      die(
+        '$sdkZipName of $version has sha256 $got, not the published $sum: '
+        'nothing is kept',
+      );
+    }
+    final zipFile = File(p.join(partial.path, sdkZipName))
+      ..writeAsBytesSync(zip);
+    final unzipped = await runner.run('ditto', [
+      '-x',
+      '-k',
+      zipFile.path,
+      partial.path,
+    ]);
+    if (unzipped.status != 0) {
+      die('ditto -x -k ${zipFile.path} failed: ${said(unzipped.stderr)}');
+    }
+    final sdk = p.join(partial.path, 'dart-sdk');
+    final fresh = await x64VersionOf(runner, sdkDart(sdk));
+    if (fresh != version) die(otherVersion(sdkDart(sdk), fresh, version));
+    if (keptFolder.existsSync()) keptFolder.deleteSync(recursive: true);
+    Directory(sdk).renameSync(folder);
+    return sdkDart(folder);
+  } finally {
+    if (partial.existsSync()) partial.deleteSync(recursive: true);
+  }
+}
+
+Future<List<int>> _fetched(Fetch fetch, String url) async {
+  try {
+    return await fetch(Uri.parse(url));
+  } on ReleaseError catch (error) {
+    die('download of $url failed: ${error.message}');
+  } on Object catch (error) {
+    die('download of $url failed: $error');
+  }
 }

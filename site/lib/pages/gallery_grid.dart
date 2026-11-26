@@ -125,16 +125,18 @@ class _GalleryPageState extends State<GalleryPage> {
           for (final row in rows) ...[
             LayoutBuilder(
               builder: (context, c) {
-                final width = (c.maxWidth - 2 * (_columns - 1)) ~/ _columns;
+                // The columns left over go one each to the first cards, so a
+                // row ends at the measure's right edge, as the text does.
+                final room = c.maxWidth - 2 * (_columns - 1);
                 return Row(
                   spacing: 2,
                   children: [
-                    for (final i in row)
+                    for (final (j, i) in row.indexed)
                       _Card(
                         number: i + 1,
                         entry: entries[i],
                         selected: i == _selected,
-                        width: width,
+                        width: room ~/ _columns + (j < room % _columns ? 1 : 0),
                         onTap: () => _run(i),
                       ),
                   ],

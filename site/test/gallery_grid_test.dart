@@ -131,6 +131,25 @@ void main() {
     });
   }
 
+  for (final size in const [Size(171, 50), Size(120, 40), Size(80, 24)]) {
+    testWidgets('a row of cards ends where the header text may, at $size', (
+      t,
+    ) async {
+      await gallery(t, size);
+      final (x, y) = find(t, '1  Demo');
+      final top = t.screen.lines[y - 2];
+      // The measure's right edge: the content's left edge plus its width.
+      final left = x - 3;
+      final content = ((size.width - 1 - 8).clamp(1, 136));
+      expect(top.lastIndexOf('╮'), left + content - 1);
+      final lede = t.screen.lines.firstWhere((l) => l.contains('Nine of'));
+      expect(
+        lede.replaceAll('┃', '').trimRight().length,
+        lessThanOrEqualTo(left + content),
+      );
+    });
+  }
+
   testWidgets('a card is 13 rows: frame, padding, name, preview, '
       'description', (t) async {
     await gallery(t, const Size(171, 50));
@@ -141,7 +160,7 @@ void main() {
     expect(t.screen.lines[y + 2].substring(x), startsWith(' ┌ left ─┐'));
     expect(
       t.screen.lines[y + 7],
-      contains('The framework tour: layout, focus and keys.'),
+      contains('The framework tour: layout, focus and'),
     );
   });
 

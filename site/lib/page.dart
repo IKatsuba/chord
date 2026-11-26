@@ -78,8 +78,13 @@ class _SitePageState extends State<SitePage> {
                 controller: _scroll,
                 itemCount: sections.length,
                 itemBuilder: (context, i) => Padding(
-                  padding: EdgeInsets.only(left: left),
-                  child: SizedBox(width: content, child: sections[i]),
+                  // Padding both sides: a list's items are as wide as the
+                  // list, so a SizedBox alone would not hold the measure.
+                  padding: EdgeInsets.only(
+                    left: left,
+                    right: width - left - content,
+                  ),
+                  child: sections[i],
                 ),
               ),
             ),

@@ -30,6 +30,9 @@
        which it keeps in calt, off too: one glyph per cell. */
     font-feature-settings: "calt" 0, "liga" 0;
   }
+  /* A fixed grid, for captures: the element is the grid's size, so nothing
+     of the page shows around it. */
+  #terminal.fixed { right: auto; bottom: auto; width: max-content; height: max-content; }
   noscript { display: block; padding: 1em; color: #e4e4e4; font: 16px system-ui; }
 </style>
 <script type="importmap">
@@ -54,6 +57,7 @@
   ]);
   const listeners = { data: [], resize: [] };
   const element = document.getElementById("terminal");
+  if (fixed) element.classList.add("fixed");
   const term = new WTerm(element, {
     renderer: "webgl",
     autoResize: !fixed,

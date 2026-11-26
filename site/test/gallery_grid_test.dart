@@ -109,6 +109,28 @@ void main() {
     expect(t.screen, shows('12  + store = Records();'));
   });
 
+  for (final size in const [Size(171, 50), Size(80, 60), Size(54, 56)]) {
+    testWidgets('every preview strip fills its card'
+        's inner width at $size', (t) async {
+      await gallery(t, size);
+      final (x, y) = find(t, '1  Demo');
+      final strip = y + 2; // the preview's first row
+      // From the padding's end to the right padding: raised all along.
+      var right = x;
+      while (t.screen.charAt(right, y - 2) != '╮') {
+        right++;
+      }
+      for (var cx = x; cx <= right - 3; cx++) {
+        expect(
+          t.screen.styleAt(cx, strip).bg,
+          SiteColors.raised,
+          reason: '$cx',
+        );
+      }
+      expect(t.screen.styleAt(right - 2, strip).bg, isNot(SiteColors.raised));
+    });
+  }
+
   testWidgets('a card is 13 rows: frame, padding, name, preview, '
       'description', (t) async {
     await gallery(t, const Size(171, 50));

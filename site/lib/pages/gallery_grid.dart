@@ -202,6 +202,8 @@ class _Card extends StatelessWidget {
             Text(''),
             Box(
               background: raised,
+              // The card's whole inner width, so a row's strips line up.
+              width: width - 6,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

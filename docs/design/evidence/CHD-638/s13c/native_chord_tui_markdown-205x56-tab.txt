@@ -1,0 +1,56 @@
+
+  CHORD / CHORD_TUI                                                                                                                 01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                                                                                                                            ┃
+                                                                                                                                                                                                            ┃
+    02 / FRAMEWORK                02 / FRAMEWORK / GALLERY                                                      ON THIS PAGE                                                                                ┃
+                                                                                                                                                                                                            ┃
+    00  OVERVIEW                  MARKDOWN                                                                      01 THE EXAMPLE                                                                              ┃
+    01  DEMO                      ━━━━━━━━                                                                      02 KEYS                                                                                     ┃
+    02  MARKDOWN                                                                                                03 SOURCE                                                                                   ┃
+    03  PICKER                    A reply with every block Markdown draws, streamed in chunk by chunk:                                                                                                      ┃
+    04  FORM                      headings, lists, quotes, code, tables and links, wrapped to the width         { } SECTIONS                                                                                ┃
+    05  TEXT AREA                 they get.                                                                                                                                                                 ┃
+    06  DIFF                                                                                                                                                                                                ┃
+    07  DIALOG
+    08  LAYERS                    01  THE EXAMPLE
+    09  MOUSE                     ────────────────────────────────────────────────────────────────────────
+
+    [ ] PREVIOUS, NEXT
+                                    FIG. 1 EXAMPLE/MARKDOWN.DART ·  ESC LEAVES
+
+                                     Markdown  dark, 100%
+                                    Terminal cells
+
+                                    A paragraph with emphasis, strong, struck, inline code, a link (
+                                    https://example.com), https://auto.example and 日本語 that wraps in
+                                    the width it receives, then continues at the same left edge. After a
+                                    hard break.
+
+                                    Lists
+
+                                    - A first item
+                                    - A second item that is long enough to wrap, so its text hangs under
+                                      its own first word and not under the marker
+                                      - A nested item
+                                    [x] A done task
+                                    [ ] An open task
+
+                                    3. three
+                                    4. four
+
+                                    - loose one
+
+                                    - loose two
+                                    ctrl+s Stream again  ctrl+t Theme  pageup Scroll up a page  pagedow…
+
+
+
+                                  02  KEYS
+                                  ────────────────────────────────────────────────────────────────────────
+
+                                  tab               enter the example
+                                  esc               leave it
+                                  ctrl+s            stream again
+ escape leave  ctrl+q home  f1 keys

@@ -69,6 +69,7 @@ export 'src/widgets/key_help.dart' hide listedBindings;
 export 'src/widgets/keymap.dart';
 export 'src/widgets/layout_builder.dart';
 export 'src/widgets/list_view.dart';
+export 'src/widgets/link.dart';
 export 'src/widgets/listener.dart';
 export 'src/widgets/list_viewport.dart';
 export 'src/widgets/markdown.dart';
@@ -83,6 +84,7 @@ export 'src/widgets/spinner.dart';
 export 'src/widgets/table.dart';
 export 'src/widgets/text_area.dart';
 export 'src/widgets/text_input.dart';
+export 'src/widgets/terminal_scope.dart';
 export 'src/widgets/theme.dart' hide TerminalEnvironment;
 export 'src/widgets/theme_data.dart';
 

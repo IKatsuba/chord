@@ -3,6 +3,7 @@ import '../input/keys.dart';
 import '../rendering/box.dart';
 import '../rendering/listener.dart';
 import '../terminal/buffer.dart';
+import '../terminal/terminal.dart';
 import 'focus_manager.dart';
 import 'framework.dart';
 
@@ -11,19 +12,22 @@ import 'framework.dart';
 /// [runApp] drives one with a real terminal, the tester with a fake one.
 class AppHost {
   /// An app host whose pending chord wait is [chordTimeout], reading a
-  /// press that does nothing through [layoutFallback].
+  /// press that does nothing through [layoutFallback], in [terminal],
+  /// which `TerminalScope.of` gives its widgets.
   AppHost(
     Widget app, {
     void Function()? onNeedsFrame,
     void Function()? onExit,
     Duration chordTimeout = defaultChordTimeout,
     KeyLayoutFallback? layoutFallback,
+    Terminal? terminal,
   }) : owner = BuildOwner(
          onNeedsFrame: onNeedsFrame,
          onExit: onExit,
          chordTimeout: chordTimeout,
          layoutFallback: layoutFallback,
        ) {
+    owner.terminal = terminal;
     owner.synchronizeInputGeometry = (maxPasses) =>
         _ensureCurrentGeometry(maxPasses: maxPasses);
     owner.inputRenderRoot = () =>

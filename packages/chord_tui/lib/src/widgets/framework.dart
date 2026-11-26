@@ -5,6 +5,7 @@ import '../rendering/box.dart';
 import '../rendering/listener.dart';
 import '../terminal/buffer.dart';
 import '../terminal/style.dart';
+import '../terminal/terminal.dart';
 import 'focus_manager.dart';
 
 part 'error_boundary.dart';
@@ -191,6 +192,10 @@ class BuildOwner {
 
   /// Called when something changed and a frame should be drawn.
   void Function()? onNeedsFrame;
+
+  /// The terminal the app runs in, as its host was given it; widgets read
+  /// it through `TerminalScope.of`.
+  Terminal? terminal;
 
   /// Called when the app asks to quit.
   void Function()? onExit;

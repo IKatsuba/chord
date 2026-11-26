@@ -310,6 +310,7 @@ Future<void> runApp(
           ),
           onNeedsFrame: scheduleFrame,
           onExit: quit,
+          terminal: term,
           chordTimeout: chordTimeout,
           layoutFallback: layoutFallback,
         );

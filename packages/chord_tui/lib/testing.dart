@@ -40,6 +40,46 @@ class Screen {
   String toString() => text;
 }
 
+/// The tester's terminal: draws nothing, and records the services the app
+/// asks of it, for a test to check.
+class TestTerminal extends Terminal {
+  /// A terminal of [size] with no input.
+  TestTerminal([this.size = const Size(80, 24)]);
+
+  @override
+  Size size;
+
+  /// Every URL [openUrl] was asked to open, in order.
+  final openedUrls = <String>[];
+
+  /// Every text [copyToClipboard] was given, in order.
+  final copied = <String>[];
+
+  @override
+  Stream<String> get input => const Stream.empty();
+
+  @override
+  Stream<Size> get resizes => const Stream.empty();
+
+  @override
+  void write(String data) {}
+
+  @override
+  void enter() {}
+
+  @override
+  Future<void> leave() async {}
+
+  @override
+  Future<String?> openUrl(String url) async {
+    openedUrls.add(url);
+    return null;
+  }
+
+  @override
+  void copyToClipboard(String text) => copied.add(text);
+}
+
 /// Drives a widget tree with a fake terminal.
 class WidgetTester {
   /// A tester with nothing pumped yet.
@@ -51,6 +91,10 @@ class WidgetTester {
 
   /// Whether the app asked to exit since the last [pumpWidget].
   bool exitRequested = false;
+
+  /// The app's terminal, as [TerminalScope] gives it, recording what it is
+  /// asked.
+  final terminal = TestTerminal();
 
   /// The app being tested; throws before [pumpWidget].
   AppHost get host => _host ?? (throw StateError('Call pumpWidget first.'));
@@ -73,10 +117,12 @@ class WidgetTester {
     _host?.dispose();
     exitRequested = false;
     _size = size;
+    terminal.size = size;
     _host = AppHost(
       widget,
       onExit: () => exitRequested = true,
       layoutFallback: layoutFallback,
+      terminal: terminal,
     );
     await pump();
   }
@@ -131,6 +177,7 @@ class WidgetTester {
   /// Draws the next frames at [size].
   Future<void> resize(Size size) async {
     _size = size;
+    terminal.size = size;
     await pump();
   }
 

@@ -3951,10 +3951,11 @@ class _TranscriptWindowState extends State<TranscriptWindow> {
 
   void _wheeled(MouseEvent event) {
     if (!mounted || _exiting || widget.connection.app.value.closing) return;
-    if (event.scrollDelta.y < 0) {
-      _dispatch(const WheeledAction.up());
-    } else if (event.scrollDelta.y > 0) {
-      _dispatch(const WheeledAction.down());
+    final rows = event.scrollDelta.y;
+    if (rows < 0) {
+      _dispatch(WheeledAction.up(-rows));
+    } else if (rows > 0) {
+      _dispatch(WheeledAction.down(rows));
     }
   }
 

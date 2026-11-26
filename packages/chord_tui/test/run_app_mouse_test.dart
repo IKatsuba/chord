@@ -79,4 +79,54 @@ void main() {
       expect(pastes, ['\x1b[<64;2;2M']);
     },
   );
+
+  test(
+    'runApp merges a wheel run from one read into one report and layout',
+    () async {
+      final terminal = _MouseTerminal();
+      final mouse = <MouseEvent>[];
+      final rows = ValueNotifier(0);
+      var builds = 0;
+      final delivered = Completer<void>();
+      final running = runApp(
+        Listener(
+          behavior: HitTestBehavior.opaque,
+          onPointerSignal: (event) {
+            mouse.add(event);
+            // As a scrolling view does: each step dirties the tree.
+            rows.value += event.scrollDelta.y;
+            if (mouse.length == 5) delivered.complete();
+          },
+          child: ListenableBuilder(
+            listenable: rows,
+            builder: (_) {
+              builds++;
+              return Text('rows ${rows.value}');
+            },
+          ),
+        ),
+        terminal: terminal,
+        exitProcess: false,
+        environment: const {},
+      );
+      await terminal.frame.future.timeout(const Duration(seconds: 3));
+      final before = builds;
+      terminal.source.add(
+        '${'\x1b[<65;5;5M' * 5}\x1b[<64;5;5Mx\x1b[<65;5;5M\x1b[<65;6;5M',
+      );
+      await delivered.future.timeout(const Duration(seconds: 3));
+      await terminal.source.close();
+      await running;
+      // The first is the terminal's early report, held until mounted.
+      expect(mouse.map((e) => (e.position, e.scrollDelta)), [
+        (const Offset(2, 3), const Offset(0, -1)),
+        (const Offset(4, 4), const Offset(0, 5)),
+        (const Offset(4, 4), const Offset(0, -1)),
+        (const Offset(4, 4), const Offset(0, 1)),
+        (const Offset(5, 4), const Offset(0, 1)),
+      ]);
+      // One rebuild before each report after the first, none per merged step.
+      expect(builds - before, lessThanOrEqualTo(4));
+    },
+  );
 }

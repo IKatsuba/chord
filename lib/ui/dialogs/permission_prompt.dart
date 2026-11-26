@@ -307,11 +307,12 @@ class PermissionPrompt extends StatelessWidget {
                         if ((isClosing?.call() ?? false) || total <= room) {
                           return;
                         }
-                        if (event.scrollDelta.y < 0) {
-                          scroll.step(ScrollStep.lineUp);
-                        }
-                        if (event.scrollDelta.y > 0) {
-                          scroll.step(ScrollStep.lineDown);
+                        for (var i = 0; i < event.scrollDelta.y.abs(); i++) {
+                          scroll.step(
+                            event.scrollDelta.y < 0
+                                ? ScrollStep.lineUp
+                                : ScrollStep.lineDown,
+                          );
                         }
                       },
                       child: SizedBox(

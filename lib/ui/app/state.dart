@@ -1014,8 +1014,8 @@ AppState reduceWindow(AppState state, AppAction action) => switch (action) {
   ScrollChangedAction(:final scroll) =>
     state.scroll == scroll ? state : state._with(scroll: scroll),
   TranscriptScrolledAction(:final step) => _transcriptScrolled(state, step),
-  WheeledAction(:final step) =>
-    state.closing ? state : _transcriptScrolled(state, step),
+  WheeledAction(:final step, :final rows) =>
+    state.closing ? state : _wheeled(state, step, rows),
   QuitDisarmedAction() =>
     state.quitArmed ? state._with(quitArmed: false) : state,
   AgentsFocusedAction(:final focused) => state._with(
@@ -1297,16 +1297,28 @@ final class TranscriptScrolledAction extends AppAction {
   final ScrollStep step;
 }
 
-/// One original wheel report, restricted to vertical line steps.
+/// One wheel report, restricted to vertical line steps; a report merged
+/// from a batch carries several.
 final class WheeledAction extends AppAction {
-  /// Scrolls one transcript row upward.
-  const WheeledAction.up() : step = ScrollStep.lineUp;
+  /// Scrolls [rows] transcript rows upward.
+  const WheeledAction.up([this.rows = 1]) : step = ScrollStep.lineUp;
 
-  /// Scrolls one transcript row downward.
-  const WheeledAction.down() : step = ScrollStep.lineDown;
+  /// Scrolls [rows] transcript rows downward.
+  const WheeledAction.down([this.rows = 1]) : step = ScrollStep.lineDown;
 
   /// The existing line-scroll behavior used by this report.
   final ScrollStep step;
+
+  /// How many times [step] applies.
+  final int rows;
+}
+
+AppState _wheeled(AppState state, ScrollStep step, int rows) {
+  var next = state;
+  for (var i = 0; i < rows; i++) {
+    next = _transcriptScrolled(next, step);
+  }
+  return next;
 }
 
 AppState _transcriptScrolled(AppState state, ScrollStep step) {

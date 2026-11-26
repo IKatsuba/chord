@@ -103,6 +103,9 @@ final class MouseEvent extends InputEvent {
   final MouseButton button;
 
   /// Whole-cell wheel steps, with negative y upward and negative x leftward.
+  ///
+  /// runApp merges adjacent wheel reports from one terminal read into one
+  /// report, so a step may be more than one cell; scroll by its size.
   final Offset scrollDelta;
 
   /// Whether Shift was held.

@@ -4621,3 +4621,20 @@ reads EPERM: on macOS it is a group left only with unreaped processes,
 and on Linux a group whose members are all another user's, such as a
 root process an agent started through sudo, so EPERM cannot be read as
 gone on either; it decides only how long a stop waits.
+
+## CHD-633: runApp merges a read's wheel reports into one
+
+Routing a mouse report needs current geometry, so `AppHost.handleMouse`
+builds and lays out first whenever the tree is dirty, and every wheel step
+dirties it. A fast wheel or trackpad flick arrives as many reports in one
+terminal read, so each paid a full build and layout: 60 reports in one
+read took 177 ms in the real window on the fake, about 3 ms each, while
+one report spaced from the next cost 0.05 ms. `runApp` now merges each run
+of adjacent wheel reports from one read that share a cell, the modifiers
+and a direction into one report with the summed `scrollDelta`; the same
+60 reports took 0.2 ms and one frame. A report's delta can therefore be
+more than one cell, and every wheel consumer scrolls by its size. Reports
+that differ, or that a key, paste or button separates, stay apart in
+order. Routing wheel reports on the last laid-out geometry without a
+rebuild was the other option; it was not taken because it gives up the
+host's rule that a report is hit-tested against current geometry.

@@ -92,11 +92,12 @@ class _ShortcutsPanelState extends State<ShortcutsPanel> {
                               !overflows) {
                             return;
                           }
-                          if (event.scrollDelta.y < 0) {
-                            widget.scroll.step(ScrollStep.lineUp);
-                          }
-                          if (event.scrollDelta.y > 0) {
-                            widget.scroll.step(ScrollStep.lineDown);
+                          for (var i = 0; i < event.scrollDelta.y.abs(); i++) {
+                            widget.scroll.step(
+                              event.scrollDelta.y < 0
+                                  ? ScrollStep.lineUp
+                                  : ScrollStep.lineDown,
+                            );
                           }
                         },
                         child: SizedBox(

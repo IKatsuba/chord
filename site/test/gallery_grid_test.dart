@@ -150,6 +150,32 @@ void main() {
     });
   }
 
+  for (final (from, to) in const [
+    (Size(171, 50), Size(54, 56)),
+    (Size(171, 50), Size(80, 24)),
+    (Size(54, 56), Size(171, 50)),
+    (Size(80, 24), Size(171, 50)),
+  ]) {
+    testWidgets('the selected card stays in sight from $from to $to, and '
+        'Enter runs it', (t) async {
+      final host = await gallery(t, from);
+      // Select Mouse, the last card, with the arrows.
+      for (var n = 0; n < 8; n++) {
+        await t.press('right');
+        await t.press('down');
+      }
+      expect(t.screen.lines[find(t, '⏎ run').$2], contains('9  Mouse'));
+      await t.resize(to);
+      await t.pump();
+      expect(t.screen, shows('⏎ run'));
+      expect(t.screen.lines[find(t, '⏎ run').$2], contains('9  Mouse'));
+      await t.press('down');
+      expect(t.screen.lines[find(t, '⏎ run').$2], contains('9  Mouse'));
+      await t.press('enter');
+      expect(host.pushed, ['/chord_tui/mouse']);
+    });
+  }
+
   testWidgets('a card is 13 rows: frame, padding, name, preview, '
       'description', (t) async {
     await gallery(t, const Size(171, 50));

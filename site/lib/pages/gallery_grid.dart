@@ -43,16 +43,24 @@ class _GalleryPageState extends State<GalleryPage> {
       columns: _columns,
       step: step,
     );
-    if (to == _selected) return;
-    setState(() => _selected = to);
-    // Each row of cards is an item, then a blank one: keep the row in sight.
-    final item = _headerItems + 2 * (to ~/ _columns);
+    if (to != _selected) setState(() => _selected = to);
+    // Even a step that stays put brings its card back into sight.
+    _reveal(fromAbove: step != GridStep.up);
+  }
+
+  // Each row of cards is an item, then a blank one: keep the selected row in
+  // sight, from the row before it when coming down onto it.
+  void _reveal({bool fromAbove = true}) {
+    if (!mounted) return;
+    final item = _headerItems + 2 * (_selected ~/ _columns);
     if (item < _scroll.firstVisible || item >= _scroll.lastVisible) {
-      _scroll.jumpToAnchor(
-        ListAnchor(step == GridStep.up ? item : item - 1, 0),
-      );
+      _scroll.jumpToAnchor(ListAnchor(fromAbove ? item - 1 : item, 0));
     }
   }
+
+  // The columns the last layout had: a change moves the selected card's
+  // row, which is brought back into sight once the new layout is done.
+  var _laidColumns = 0;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -63,6 +71,10 @@ class _GalleryPageState extends State<GalleryPage> {
           : constraints.maxWidth < 120
           ? 2
           : 3;
+      if (_columns != _laidColumns) {
+        if (_laidColumns != 0) context.owner.afterLayout(_reveal);
+        _laidColumns = _columns;
+      }
       final theme = Theme.of(context);
       final entries = _entries;
       final rows = [

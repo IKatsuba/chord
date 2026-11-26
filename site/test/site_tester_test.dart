@@ -1,3 +1,4 @@
+import 'package:chord_site/gallery.dart';
 import 'package:chord_site/key_row.dart';
 import 'package:chord_site/router.dart';
 import 'package:chord_site/site.dart';
@@ -7,7 +8,9 @@ import 'package:test/test.dart';
 
 import 'fake_host.dart';
 
-const _router = SiteRouter(recordings: ['permission'], examples: ['markdown']);
+final _gallery = Gallery([
+  GalleryEntry('markdown', 'md', (_) => Text('md')),
+], () => Text('readme'));
 
 void main() {
   group('tester: shell route and lifecycle boundaries', () {
@@ -20,7 +23,11 @@ void main() {
           );
           addTearDown(host.popped.close);
           await t.pumpWidget(
-            Site(host: host, router: _router),
+            Site(
+              host: host,
+              gallery: _gallery,
+              recordings: const ['permission'],
+            ),
             size: size,
           );
           expect(host.titles, ['markdown · chord_tui']);
@@ -29,7 +36,7 @@ void main() {
           expect(host.pushed.last, '/chord_tui/gallery');
           await t.press('esc');
           expect(host.pushed.last, '/chord_tui');
-          await t.press('?');
+          await t.press('f1');
           await t.press('ctrl+q');
           expect(host.pushed.last, '/');
           expect(t.screen, isNot(shows(' Keys')));
@@ -48,7 +55,9 @@ void main() {
     ) async {
       final host = FakeHost();
       addTearDown(host.popped.close);
-      await t.pumpWidget(Site(host: host, router: _router));
+      await t.pumpWidget(
+        Site(host: host, gallery: _gallery, recordings: const ['permission']),
+      );
       expect(host.popped.hasListener, isTrue);
       await t.press('?');
       host.popped.add('/chord/permission');
@@ -142,6 +151,7 @@ void main() {
         'down',
         'right',
         'enter',
+        'f1',
       ]);
     });
   });

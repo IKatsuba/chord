@@ -9,6 +9,7 @@ import 'package:puppeteer/puppeteer.dart';
 import 'package:test/test.dart';
 
 import '../../tool/serving.dart';
+import 'site_browser_test.dart' show clipboardStandIn;
 
 void main() {
   group('CHD-638 tester: fixed terminal metrics across resize', () {
@@ -69,6 +70,7 @@ void main() {
       () async {
         final page = await browser.newPage();
         addTearDown(page.close);
+        await page.evaluateOnNewDocument(clipboardStandIn);
         final errors = <String>[];
         page.onError.listen((error) => errors.add('$error'));
         page.onConsole.listen((message) {
@@ -104,6 +106,12 @@ void main() {
           await page.goto(
             'http://127.0.0.1:${server.port}/chord_tui/gallery',
             wait: Until.load,
+          );
+          expect(
+            await page.evaluate<bool>(
+              '() => navigator.clipboard.standIn === true',
+            ),
+            isTrue,
           );
           await grid(205, 56);
           await size(390, 844, ratio);

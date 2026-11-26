@@ -333,18 +333,17 @@ void main() {
       });
 
       group('tester: viewport and emulated touch', () {
-        test('auto-resize keeps the selected home action', () async {
+        test('auto-resize retains home navigation keys', () async {
           try {
             await page.setViewport(
               const DeviceViewport(width: 1200, height: 800),
             );
             await open('/', size: '');
-            await until('❯ 1. chord');
+            await until('A TERMINAL WINDOW');
             final before = await page.evaluate<Map<dynamic, dynamic>>(
               '() => ({cols: chordTerminal.cols, rows: chordTerminal.rows})',
             );
             await page.keyboard.press(Key.arrowDown);
-            await until('❯ 2. chord_tui');
             await page.setViewport(
               const DeviceViewport(width: 700, height: 500),
             );
@@ -352,10 +351,10 @@ void main() {
               '() => chordTerminal.cols < ${before['cols']} && '
               'chordTerminal.rows < ${before['rows']}',
             );
-            await until('❯ 2. chord_tui');
+            await until('A TERMINAL WINDOW');
             expect(await pathname(), base);
-            await page.keyboard.press(Key.enter);
-            await until('chord › chord_tui');
+            await page.keyboard.type('2');
+            await until('WHAT IT IS');
             expect(await pathname(), '${base}chord_tui');
           } finally {
             await page.setViewport(
@@ -375,13 +374,15 @@ void main() {
                 hasTouch: true,
               ),
             );
-            await open('/', size: 'cols=43&rows=37');
-            await until('2. chord_tui');
+            await open('/', size: 'cols=55&rows=52');
+            await until('MENU');
             final menu = await page.evaluate<Map<dynamic, dynamic>>('''() => {
               const row = [...document.querySelectorAll("#terminal .term-row")]
-                .find((r) => r.innerText.includes("2. chord_tui"));
+                .find((r) => r.innerText.includes("MENU"));
               const box = row.getBoundingClientRect();
-              return {x: box.left + 60, y: box.top + box.height / 2};
+              const column = row.innerText.indexOf("MENU");
+              return {x: box.left + (column + 1.5) * box.width / chordTerminal.cols,
+                y: box.top + box.height / 2};
             }''');
             await page.touchscreen.tap(
               Point(
@@ -389,7 +390,24 @@ void main() {
                 (menu['y'] as num).toDouble(),
               ),
             );
-            await until('chord › chord_tui');
+            await until('02 FRAMEWORK');
+            final section = await page.evaluate<Map<dynamic, dynamic>>(
+              '''() => {
+              const row = [...document.querySelectorAll("#terminal .term-row")]
+                .find((r) => r.innerText.includes("02 FRAMEWORK"));
+              const box = row.getBoundingClientRect();
+              const column = row.innerText.indexOf("02 FRAMEWORK");
+              return {x: box.left + (column + 5) * box.width / chordTerminal.cols,
+                y: box.top + box.height / 2};
+            }''',
+            );
+            await page.touchscreen.tap(
+              Point(
+                (section['x'] as num).toDouble(),
+                (section['y'] as num).toDouble(),
+              ),
+            );
+            await until('WHAT IT IS');
             expect(await pathname(), '${base}chord_tui');
 
             Future<void> tapF1() async {

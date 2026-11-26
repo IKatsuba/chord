@@ -1,0 +1,40 @@
+  Paragraph 1 of the page above the note.                                                                              ┃
+  Paragraph 2 of the page above the note.                                                                              ┃
+  Paragraph 3 of the page above the note.                                                                              ┃
+  Paragraph 4 of the page above the note.                                                                              ┃
+  Paragraph 5 of the page above the note.                                                                              ┃
+  Paragraph 6 of the page above the note.                                                                              ┃
+  Paragraph 7 of the page above the note.                                                                              ┃
+  Paragraph 8 of the page above the note.                                                                              ┃
+  Paragraph 9 of the page above the note.                                                                              ┃
+  Paragraph 10 of the page above the note.                                                                             ┃
+  Paragraph 11 of the page above the note.                                                                             ┃
+  Paragraph 12 of the page above the note.                                                                             ┃
+  Paragraph 13 of the page above the note.                                                                             ┃
+  Paragraph 14 of the page above the note.                                                                             ┃
+  Paragraph 15 of the page above the note.                                                                             ┃
+  Paragraph 16 of the page above the note.                                                                             ┃
+  Paragraph 17 of the page above the note.                                                                             ┃
+  Paragraph 18 of the page above the note.                                                                             ┃
+  Paragraph 19 of the page above the note.                                                                             ┃
+  Paragraph 20 of the page above the note.                                                                             ┃
+  Paragraph 21 of the page above the note.                                                                             ┃
+  Paragraph 22 of the page above the note.                                                                             ┃
+  Paragraph 23 of the page above the note.                                                                             ┃
+  Paragraph 24 of the page above the note.
+  Paragraph 25 of the page above the note.
+  Paragraph 26 of the page above the note.
+  Paragraph 27 of the page above the note.
+  Paragraph 28 of the page above the note.
+  Paragraph 29 of the page above the note.
+  Paragraph 30 of the page above the note.
+
+  ┌ Note ───────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │                                                                                                                 │
+  └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Paragraph 31 of the page below the note.
+  Paragraph 32 of the page below the note.
+  Paragraph 33 of the page below the note.
+  Paragraph 34 of the page below the note.
+enter Submit  shift+enter/alt+enter/ctrl+enter/ctrl+j Insert newline  left/ctrl+b Move cursor left  right/ctrl+f Move c…

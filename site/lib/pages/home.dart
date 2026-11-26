@@ -71,7 +71,10 @@ class _HomePageState extends State<HomePage> {
   var _failed = false;
   var _generation = 0;
 
-  // w pressed before the recording came: it plays once it does.
+  // Whether the current file is still on its way; w then waits for it.
+  var _loading = false;
+
+  // w pressed before the current file came: it plays once it does.
   var _watchPending = false;
 
   static const _installId = 'home:install';
@@ -93,6 +96,11 @@ class _HomePageState extends State<HomePage> {
     if (file == _file) return;
     _file = file;
     final generation = ++_generation;
+    // A new request: what the last one ended in, and a w meant for it, no
+    // longer stand.
+    _loading = true;
+    _failed = false;
+    _watchPending = false;
     widget.host.recording(file).then((text) {
       if (!mounted || generation != _generation) return;
       TerminalRecording? recording;
@@ -103,6 +111,7 @@ class _HomePageState extends State<HomePage> {
       } on FormatException {
         recording = null;
       }
+      _loading = false;
       setState(() {
         _playback?.dispose();
         _playback = null;
@@ -124,11 +133,13 @@ class _HomePageState extends State<HomePage> {
   void _watch() {
     if (!mounted) return;
     final playback = _playback;
-    if (playback != null) {
+    if (_loading) {
+      // The plate is changing size: the coming recording plays, not the
+      // one it replaces.
+      _watchPending = true;
+    } else if (playback != null) {
       _playbackFocus.requestFocus();
       playback.restart();
-    } else if (!_failed) {
-      _watchPending = true;
     }
     // The scroll view brings a newly focused Playback into sight after
     // this frame's layout, and one taller than the view to its own top,

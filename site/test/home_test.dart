@@ -63,6 +63,23 @@ class _SlowHost extends FakeHost {
   }
 }
 
+/// A host that answers each file when told to, with its recording or with
+/// nothing.
+class _HeldHost extends FakeHost {
+  _HeldHost() : super('/', files);
+
+  final _held = <String, Completer<String?>>{};
+
+  void answer(String file, {bool found = true}) =>
+      _held[file]!.complete(found ? files[file] : null);
+
+  @override
+  Future<String?> recording(String file) {
+    fetched.add(file);
+    return (_held[file] = Completer<String?>()).future;
+  }
+}
+
 Future<FakeHost> _home(WidgetTester t, Size size) async {
   final host = FakeHost("/", files);
   await t.pumpWidget(Site(host: host), size: size);
@@ -245,6 +262,39 @@ void main() {
       expect(t.screen, shows(RegExp(r'▶ EDIT · \d:\d\d · W PLAYS')));
     });
   }
+
+  for (final found in [false, true]) {
+    testWidgets('w while a resized plate loads plays the new recording, after '
+        'the old one ${found ? 'came' : 'failed'}', (t) async {
+      final host = _HeldHost();
+      await t.pumpWidget(Site(host: host), size: const Size(120, 60));
+      host.answer('edit.80x20.rec.json', found: found);
+      await t.pump();
+      await t.resize(const Size(52, 60));
+      expect(host.fetched.last, 'edit.48x32.rec.json');
+      await t.press('w');
+      host.answer('edit.48x32.rec.json');
+      await t.pump();
+      await t.pump();
+      expect(t.screen, shows('SPACE PAUSES'));
+      expect(t.screen, shows('first at 48x32'));
+    });
+  }
+
+  testWidgets('a w meant for a load that fails does not carry to the next '
+      'one', (t) async {
+    final host = _HeldHost();
+    await t.pumpWidget(Site(host: host), size: const Size(120, 60));
+    await t.press('w');
+    host.answer('edit.80x20.rec.json', found: false);
+    await t.pump();
+    await t.resize(const Size(52, 60));
+    host.answer('edit.48x32.rec.json');
+    await t.pump();
+    await t.pump();
+    await _seek(t, 'last at 48x32');
+    expect(t.screen, shows('W PLAYS'));
+  });
 
   testWidgets('w pressed before a recording that fails plays nothing later', (
     t,

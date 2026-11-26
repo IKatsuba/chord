@@ -335,6 +335,7 @@ dart compile exe benchmark/record_scan.dart -o build/record_scan
   dart analyze
   dart format --output=none --set-exit-if-changed .
   dart test                          # routes, pages, recordings and build logic
+  dart run tool/sources.dart          # refresh lib/sources.g.dart
   dart run tool/build.dart build      # static output in site/build/
   dart run tool/build.dart serve      # loopback preview with SPA fallback
   # Use the same --base on build and serve for a subpath (default /):
@@ -487,6 +488,7 @@ site/web/main.dart         Wasm entrypoint and page-lifetime WebTerminal
 site/web/gallery.dart      nine imported framework examples
 site/web/index.html        full-window wterm host and Wasm loader
 site/tool/build.dart       static build, pinned assets and preview server
+site/tool/sources.dart     shown example code copied into lib/sources.g.dart
 site/tool/serving.dart     base paths, SPA fallback and content types
 site/tool/terminal.dart    native site shell fixture
 site/test/                router, responsive pages, gallery and recordings

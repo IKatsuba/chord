@@ -24,6 +24,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 
 import 'serving.dart';
+import 'sources.dart';
 
 /// A file fetched for the build, pinned by its digest.
 class Pinned {
@@ -172,6 +173,8 @@ Future<void> _build(String base, String siteDir) async {
     File(p.join(root, 'pubspec.yaml')).readAsStringSync(),
   );
 
+  // The code the pages show, from the files themselves.
+  writeSources(siteDir);
   stdout.writeln('build: compiling web/main.dart to Wasm');
   final compile = await Process.run(Platform.resolvedExecutable, [
     'compile',

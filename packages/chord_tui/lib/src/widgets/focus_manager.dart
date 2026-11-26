@@ -554,6 +554,14 @@ class FocusManager extends ChangeNotifier {
     _setPrimary(target);
   }
 
+  /// The nearest scope above [node], not [node] itself, that is off.
+  FocusScopeNode? _offAbove(FocusNode node) {
+    for (FocusNode? p = node._parent; p != null; p = p._parent) {
+      if (p is FocusScopeNode && !p._active) return p;
+    }
+    return null;
+  }
+
   // A node in an inactive scope waits for the scope to be shown.
   void _request(FocusNode n) {
     for (FocusNode? p = n._parent; p != null; p = p._parent) {
@@ -575,6 +583,12 @@ class FocusManager extends ChangeNotifier {
   /// [takeFocus], it remembers the focused node and takes focus: to the
   /// node under it that last had it or asked for it, else to itself. With
   /// [autofocus] only, a node under it that asked for focus gets it.
+  ///
+  /// Under a scope that is off, neither moves the focus: the node that
+  /// would have taken it (the one that asked, else [scope] for
+  /// [takeFocus]) becomes that scope's request instead, as a request made
+  /// there would, replacing an earlier one. It takes the focus when that
+  /// scope is turned on with [takeFocus] or [autofocus].
   void setScopeActive(
     FocusScopeNode scope,
     bool active, {
@@ -589,6 +603,11 @@ class FocusManager extends ChangeNotifier {
     }
     final asked = scope._autofocus;
     scope._autofocus = null;
+    if (_offAbove(scope) case final off?) {
+      final wanted = takeFocus ? (asked ?? scope) : asked;
+      if (wanted != null) off._autofocus = wanted;
+      return;
+    }
     if (takeFocus) {
       if (!_within(_primary, scope)) scope._saved = _primary;
       FocusNode? last;

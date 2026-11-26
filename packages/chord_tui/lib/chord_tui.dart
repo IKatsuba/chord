@@ -7,6 +7,7 @@ export 'src/foundation/notifier.dart';
 export 'src/foundation/picker_state.dart';
 export 'src/foundation/playback.dart' hide frameAt, stepOf;
 export 'src/foundation/scroll_state.dart';
+export 'src/foundation/scrollbar.dart';
 export 'src/foundation/selection_controller.dart' show SelectionController;
 export 'src/foundation/selection_delegate.dart';
 export 'src/foundation/selection.dart'
@@ -76,6 +77,7 @@ export 'src/widgets/overlay.dart';
 export 'src/widgets/run_app.dart';
 export 'src/widgets/scroll_bindings.dart';
 export 'src/widgets/scroll_controller.dart';
+export 'src/widgets/scrollbar.dart';
 export 'src/widgets/spinner.dart';
 export 'src/widgets/table.dart';
 export 'src/widgets/text_area.dart';

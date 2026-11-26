@@ -1,0 +1,52 @@
+
+  CHORD / CHORD_TUI                            MENU m
+
+───────────────────────────────────────────────────────
+
+
+
+  04  START
+  ────────────────────────────────────────
+  Every ACP agent in one list. Pick one with the
+  arrows, a digit or Enter, and chord installs and
+  starts it. Here nothing starts: the pick shows as
+  one line, and r asks again.
+
+  → TRY IT  S
+
+
+    FIG. 04 LIVE · PRESS S
+
+
+
+               ▀▄
+               ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+               ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+               ▀▀
+                vdev · /workspace/demo
+
+      Select agent
+
+        1. claude                                     ┃
+        2. codex                                      ┃
+        3. pi · not on PATH                           ┃
+                                                      ┃
+      ↑↓ or j/k to move · Enter or 1–9 to select      ┃
+      · Esc to cancel                                 ┃
+                                                      ┃
+                                                      ┃
+                                                      ┃
+                                                      ┃
+                                                      ┃
+                                                      ┃
+  05 / WHOLE FLOWS, RECORDED                          ┃
+
+  ──────────────────────────────────────────────────
+  01  START
+      the title page above the agent picker
+  ──────────────────────────────────────────────────
+  02  TEAM
+      an issue handed to a team: lead, coder,
+      tester, reviewer
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ escape up  ? keys

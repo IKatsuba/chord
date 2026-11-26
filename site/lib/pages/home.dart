@@ -78,6 +78,7 @@ class HomePage extends StatelessWidget {
               Text(''),
               Box(
                 title: 'Try it',
+                titleStyle: theme.dim,
                 padding: const EdgeInsets.symmetric(horizontal: 1),
                 width: constraints.maxWidth - 4,
                 child: Text(

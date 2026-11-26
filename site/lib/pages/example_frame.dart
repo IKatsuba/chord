@@ -43,6 +43,8 @@ class ExampleFrame extends StatelessWidget {
         Expanded(
           child: Box(
             title: title,
+            // The border colour is for lines; a title needs text's contrast.
+            titleStyle: Theme.of(context).dim,
             child: KeyHelpBoundary(
               taken: taken,
               child: Focus(

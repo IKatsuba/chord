@@ -287,6 +287,7 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
     super.key,
     this.border,
     this.title,
+    this.titleStyle,
     this.background,
     super.child,
   });
@@ -296,6 +297,9 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
 
   /// The text set into the top border.
   final String? title;
+
+  /// The title's style; bold in the border's style when null.
+  final Style? titleStyle;
 
   /// The style that fills the box.
   final Style? background;
@@ -312,6 +316,7 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
       RenderDecoratedBox(
         border: _border(context),
         title: title,
+        titleStyle: titleStyle,
         background: background,
       );
 
@@ -320,6 +325,7 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
     r
       ..border = _border(context)
       ..title = title
+      ..titleStyle = titleStyle
       ..background = background;
   }
 }
@@ -332,6 +338,7 @@ class Box extends StatelessWidget {
     this.child,
     this.border,
     this.title,
+    this.titleStyle,
     this.background,
     this.padding,
     this.width,
@@ -347,6 +354,9 @@ class Box extends StatelessWidget {
 
   /// The text set into the top border.
   final String? title;
+
+  /// The title's style; bold in the border's style when null.
+  final Style? titleStyle;
 
   /// The style that fills the box.
   final Style? background;
@@ -382,6 +392,7 @@ class Box extends StatelessWidget {
       current = DecoratedBox(
         border: border ?? (title != null ? Border.single : null),
         title: title,
+        titleStyle: titleStyle,
         background: background,
         child: current,
       );

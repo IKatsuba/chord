@@ -1,0 +1,24 @@
+ chord                                                                      dev
+ github.com/IKatsuba/chord
+────────────────────────────────────────────────────────────────────────────────
+
+  Nothing here: /chord_tui/markdwon
+
+  ❯ home
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ enter open  escape home  ? keys

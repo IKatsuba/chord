@@ -1,0 +1,37 @@
+ chord                                 dev
+───────────────────────────────────────────
+
+  A terminal window for coding agents, and
+  the framework it is built on.
+
+  ❯ 1. chord        the app
+    2. chord_tui    the framework
+    3. Gallery      examples, running here
+    4. Install      Homebrew, npm, source
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  esc   tab   ←   ↑   ↓   →   enter
+ ? keys

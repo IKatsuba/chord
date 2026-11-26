@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:chord_site/pages/home.dart';
@@ -45,6 +46,21 @@ Future<int> _seek(WidgetTester t, Pattern text) async {
     await t.press('down');
   }
   return _row(t, text);
+}
+
+/// A host whose recordings come only when [release] is called.
+class _SlowHost extends FakeHost {
+  _SlowHost() : super('/', files);
+
+  final _gate = Completer<void>();
+
+  void release() => _gate.complete();
+
+  @override
+  Future<String?> recording(String file) async {
+    await _gate.future;
+    return super.recording(file);
+  }
 }
 
 Future<FakeHost> _home(WidgetTester t, Size size) async {
@@ -207,6 +223,61 @@ void main() {
         t.screen.styleAt(t.screen.lines[caption].indexOf('EDIT'), caption),
         ThemeData.dark().text.merge(const Style(bold: true, inverse: true)),
       );
+    });
+  }
+
+  for (final size in const [Size(120, 40), Size(80, 24)]) {
+    testWidgets('w pressed while the recording loads plays it once it comes, '
+        'at $size', (t) async {
+      final host = _SlowHost();
+      await t.pumpWidget(Site(host: host), size: size);
+      await t.press('w');
+      host.release();
+      await t.pump();
+      await t.pump();
+      expect(t.screen, shows('SPACE PAUSES'));
+      expect(t.screen, shows('first at'));
+      // Space reaches the focused Playback and pauses it.
+      await t.press('space');
+      // The caption may sit above a Playback taller than the view.
+      await t.press('home');
+      await _seek(t, '▶ EDIT');
+      expect(t.screen, shows(RegExp(r'▶ EDIT · \d:\d\d · W PLAYS')));
+    });
+  }
+
+  testWidgets('w pressed before a recording that fails plays nothing later', (
+    t,
+  ) async {
+    await t.pumpWidget(Site(host: FakeHost()), size: const Size(120, 120));
+    await t.press('w');
+    await t.pump();
+    expect(t.screen, shows("▶ EDIT · COULDN'T LOAD"));
+  });
+
+  for (final (size, left, right) in const [
+    // 120 columns: 80x20 and its frame fit in the margins.
+    (Size(120, 60), 4, 114),
+    // 52: 48x32 needs 50, the margins leave 47; edge to the scrollbar, 51.
+    (Size(52, 80), 0, 50),
+    // 48: 47 to the scrollbar, still short of 50; the Playback clips.
+    (Size(48, 80), 0, 46),
+  ]) {
+    testWidgets('the plate keeps the margins while it fits, else runs to '
+        'the scrollbar, at $size', (t) async {
+      await _home(t, size);
+      final caption = await _seek(t, 'last at') - 2;
+      expect(t.screen.lines[caption], contains('▶ EDIT'));
+      final cream = ThemeData.dark().text.merge(const Style(inverse: true));
+      expect(t.screen.styleAt(left, caption).bg, isNull);
+      expect(t.screen.styleAt(left, caption).isInverse, isTrue);
+      expect(t.screen.styleAt(right, caption).isInverse, isTrue);
+      if (left > 0) {
+        expect(t.screen.styleAt(left - 1, caption).isInverse, isFalse);
+      }
+      expect(t.screen.styleAt(right + 1, caption), isNot(cream));
+      final recorded = t.screen.lines[caption + 2];
+      expect(recorded.indexOf('last at'), left + 1);
     });
   }
 

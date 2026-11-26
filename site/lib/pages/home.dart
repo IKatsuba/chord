@@ -71,6 +71,9 @@ class _HomePageState extends State<HomePage> {
   var _failed = false;
   var _generation = 0;
 
+  // w pressed before the recording came: it plays once it does.
+  var _watchPending = false;
+
   static const _installId = 'home:install';
   static const _watchId = 'home:watch';
 
@@ -110,14 +113,22 @@ class _HomePageState extends State<HomePage> {
           _playback = PlaybackController(paced_)..seekTo(paced_.duration);
         }
       });
+      if (_watchPending) {
+        _watchPending = false;
+        // Once the Playback is built, so it can take the focus.
+        if (recording != null) context.owner.afterLayout(_watch);
+      }
     });
   }
 
   void _watch() {
+    if (!mounted) return;
     final playback = _playback;
     if (playback != null) {
       _playbackFocus.requestFocus();
       playback.restart();
+    } else if (!_failed) {
+      _watchPending = true;
     }
     // The scroll view brings a newly focused Playback into sight after
     // this frame's layout, and one taller than the view to its own top,
@@ -217,6 +228,12 @@ class _HomePageState extends State<HomePage> {
           : constraints.maxWidth >= narrowWidth
           ? 2
           : 1;
+      Widget plate(int width) => Builder(
+        builder: (context) {
+          _plate = context;
+          return _plateOf(theme, content, width);
+        },
+      );
       return ScrollPage(
         controller: _scroll,
         bindings: [
@@ -250,12 +267,13 @@ class _HomePageState extends State<HomePage> {
           ],
           Text(''),
           Text('FIG. 1 / A REAL SESSION, RECORDED', style: orange),
-          Builder(
-            builder: (context) {
-              _plate = context;
-              return _plateOf(theme, content);
-            },
-          ),
+          // A recording and its frame that do not fit in the margins take
+          // the window's width up to the scrollbar; past that, the Playback
+          // clips and pans.
+          if (homeRecordingFor(content - 2).cols + 2 > content)
+            FullBleed(plate(constraints.maxWidth - 1))
+          else
+            plate(content),
           Text(''),
           Text('─' * content, style: theme.border, softWrap: false),
           Row(
@@ -366,24 +384,25 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// FIG. 1's cream plate: its caption row ink on cream, then the
-  /// recording, with a cell of cream around it.
-  Widget _plateOf(ThemeData theme, int content) {
+  /// FIG. 1's cream plate, [width] wide: its caption row ink on cream, then
+  /// the recording, with a cell of cream around it. The recording is the
+  /// one for the [content] width.
+  Widget _plateOf(ThemeData theme, int content, int width) {
     final cream = theme.text.merge(const Style(inverse: true));
     final playback = _playback;
     Widget caption(String words) => SizedBox(
-      width: content,
+      width: width,
       child: Text(' $words', style: cream.merge(Style.bold), softWrap: false),
     );
     Widget inside;
     String words;
     if (playback == null) {
       words = _failed ? "▶ EDIT · COULDN'T LOAD" : '▶ EDIT · LOADING…';
-      inside = SizedBox(height: 1, width: content - 2);
+      inside = SizedBox(height: 1, width: width - 2);
     } else {
       final size = homeRecordingFor(content - 2);
       inside = SizedBox(
-        width: content - 2 < size.cols ? content - 2 : size.cols,
+        width: width - 2 < size.cols ? width - 2 : size.cols,
         height: size.rows,
         child: Playback(playback, focusNode: _playbackFocus),
       );
@@ -391,7 +410,7 @@ class _HomePageState extends State<HomePage> {
     }
     return Box(
       background: cream,
-      width: content,
+      width: width,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

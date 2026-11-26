@@ -55,7 +55,12 @@ void main() {
         final (kx, ky) = find(t, '03 / THE GALLERY');
         expect(kx, 4, reason: 'a 4-column margin');
         expect(t.screen.styleAt(kx, ky), theme.accent.merge(Style.bold));
-        expect(t.screen.lines[ky + 1], contains('██'), reason: 'giant');
+        expect(
+          t.screen.lines[ky + 1].replaceAll('┃', '').trim(),
+          '',
+          reason: 'a blank row under the kicker',
+        );
+        expect(t.screen.lines[ky + 2], contains('██'), reason: 'giant');
         expect(t.screen, shows("Nine of chord_tui's examples"));
         final (dx, dy) = find(t, 'DEMO');
         expect(t.screen.styleAt(dx, dy), selectedName);

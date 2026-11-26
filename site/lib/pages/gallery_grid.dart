@@ -35,7 +35,7 @@ class _GalleryPageState extends State<GalleryPage> {
   var _columns = 3;
 
   // The list items before the first row of cells: the header's.
-  static const _headerItems = 6;
+  static const _headerItems = 7;
 
   @override
   void dispose() {
@@ -118,6 +118,7 @@ class _GalleryPageState extends State<GalleryPage> {
         sections: [
           Text(''),
           const Kicker(3, 'THE GALLERY'),
+          Text(''),
           const GiantWord('GALLERY'),
           Text(''),
           const Paragraph(

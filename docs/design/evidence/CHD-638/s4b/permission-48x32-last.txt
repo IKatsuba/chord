@@ -1,0 +1,33 @@
+48x32, 5 frames; last frame:
+| ▀▄     chord v0.72.2                           |
+| ▀▀▀▄   claude · Claude Opus 5.5                |
+| ▄▀▀▀   ~/src/app                               |
+| ▀▀     ? for shortcuts · /help                 |
+|                                                |
+| › Write the release notes into notes.txt       |
+|                                                |
+| ⏺ Write(notes.txt)                             |
+|   ⎿  Waiting…                                  |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+| ››› Waiting for permission… (0s)               |
+|                                                |
+|╭──────────────────────────────────────────────╮|
+|│ Write notes.txt                              │|
+|│                                              │|
+|│   1 + notes                                  │|
+|│                                              │|
+|│ Do you want to proceed?                      │|
+|│ ❯ 1. Allow                                   │|
+|│   2. Always allow                            │|
+|│   3. Deny                                    │|
+|│                                              │|
+|│ Esc to reject                                │|
+|╰──────────────────────────────────────────────╯|
+|                                                |
+|╭──────────────────────────────────────────────╮|
+|│ ›                                            │|
+|╰──────────────────────────────────────────────╯|
+|  ? for shortcuts     Claude Opus 5.5 · medium  |

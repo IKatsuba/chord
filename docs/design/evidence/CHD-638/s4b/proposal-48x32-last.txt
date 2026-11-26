@@ -1,0 +1,33 @@
+48x32, 4 frames; last frame:
+|      Write the smallest test that fails for    |
+|      the bug's own reason.                     |
+|                                                |
+|      coder's instructions                      |
+|      Make that test pass with the smallest     |
+|      change; never touch tests.                |
+|                                                |
+|      reviewer's instructions                   |
+|      Read the diff against the job and the     |
+|      test; change nothing.                     |
+|                                                |
+|      One writer per file at a time. The lead   |
+|      writes to main when the job is done.      |
+|                                                |
+| ››› Waiting for you… (0s)                      |
+|                                                |
+|╭──────────────────────────────────────────────╮|
+|│ Save team bugfix?                            │|
+|│                                              │|
+|│ ❯ 1. Yes, for this project   .chord/teams/   │|
+|│   bugfix.md                                  │|
+|│   2. Yes, for every project  ~/.config/      │|
+|│   chord/teams/bugfix.md                      │|
+|│   3. No, tell claude what to change          │|
+|│                                              │|
+|│ Esc to tell claude what to change            │|
+|╰──────────────────────────────────────────────╯|
+|                                                |
+|╭──────────────────────────────────────────────╮|
+|│ ›                                            │|
+|╰──────────────────────────────────────────────╯|
+|  ? for shortcuts     Claude Opus 5.5 · medium  |

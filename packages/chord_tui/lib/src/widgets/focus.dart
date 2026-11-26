@@ -442,9 +442,16 @@ class _ActionsState extends State<Actions> {
   @override
   Widget build(BuildContext context) {
     final above = _above;
+    final own = {for (final b in widget.bindings) ?b.id};
     return _ActionsScope(
-      bound: {...?above?.bound, for (final b in _bound.reversed) ?b.id: b},
-      declared: {...?above?.declared, for (final b in widget.bindings) ?b.id},
+      // An id this Actions declares is its own even when the keymap took
+      // every key from it: an outer binding of that id does not show through.
+      bound: {
+        for (final MapEntry(:key, :value) in (above?.bound ?? const {}).entries)
+          if (!own.contains(key)) key: value,
+        for (final b in _bound.reversed) ?b.id: b,
+      },
+      declared: {...?above?.declared, ...own},
       child: _FocusMarker(node: _node, child: widget.child),
     );
   }

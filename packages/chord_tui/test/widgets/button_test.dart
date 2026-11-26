@@ -66,6 +66,35 @@ void main() {
       expect('${found!.chord}', 'ctrl+k');
     });
 
+    testWidgets('an id the nearest Actions declares stays its own when a '
+        'keymap unbinds it there', (t) async {
+      var outer = 0, inner = 0;
+      await t.pumpWidget(
+        Actions(
+          bindings: [Binding('o', 'Outer', () => outer++, id: 'x')],
+          child: Keymap(
+            data: const KeymapData({'x': []}),
+            child: Actions(
+              bindings: [Binding('n', 'Inner', () => inner++, id: 'x')],
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: FilledButton(action: 'x', child: Text('Act')),
+              ),
+            ),
+          ),
+        ),
+        size: const Size(80, 24),
+      );
+      expect(
+        t.screen.styleAt(0, 0),
+        dark.dim.merge(const Style(bold: true, inverse: true)),
+      );
+      expect(t.screen.lines[3], '', reason: 'no key row');
+      await t.mouse(at(MouseEventKind.press, 1, 1));
+      await t.mouse(at(MouseEventKind.release, 1, 1));
+      expect((outer, inner), (0, 0));
+    });
+
     testWidgets('a dependent rebuilds when the binding changes', (t) async {
       final enabled = ValueNotifier(true);
       await t.pumpWidget(

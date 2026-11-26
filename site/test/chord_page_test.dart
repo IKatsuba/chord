@@ -33,6 +33,7 @@ Future<FakeHost> _chord(WidgetTester t, Size size) async {
 }
 
 void main() {
+  _burst();
   test('sections stack below 139 columns', () {
     expect(chordStackWidth, 139);
     expect(chordPlateWidth, 84);
@@ -307,5 +308,26 @@ void main() {
     await t.pump();
     await _seek(t, 'FIG. 02');
     expect(height(), lessThan(wrapped));
+  });
+}
+
+void _burst() {
+  testWidgets('Down on the flows index, then Ctrl+Q before the next frame, '
+      'goes home cleanly', (t) async {
+    final host = FakeHost('/chord');
+    await t.pumpWidget(
+      Site(host: host, recordings: _shots, lengths: _lengths),
+      size: const Size(80, 24),
+    );
+    await t.pump();
+    for (var i = 0; i < 5; i++) {
+      await t.press('tab');
+    }
+    t.host.handleKey(const KeyEvent('down'));
+    t.host.handleKey(KeyCombo.parse('ctrl+q').toEvent());
+    await t.pump();
+    await t.pump();
+    expect(host.pushed, ['/']);
+    expect(t.screen, shows('A TERMINAL WINDOW'));
   });
 }

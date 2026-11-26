@@ -181,9 +181,12 @@ class _ChordPageState extends State<ChordPage> {
       if (mounted && row != null) Scrollable.ensureVisible(row);
     }
 
-    context.owner.afterLayout(() {
+    // The owner, not the context: the page may be gone before either pass.
+    final owner = context.owner;
+    owner.afterLayout(() {
+      if (!mounted) return;
       reveal();
-      context.owner.afterLayout(reveal);
+      owner.afterLayout(reveal);
     });
   }
 

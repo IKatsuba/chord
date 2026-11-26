@@ -61,7 +61,8 @@ export 'src/widgets/diff.dart';
 export 'src/widgets/dialog.dart';
 export 'src/widgets/fold.dart';
 export 'src/widgets/form.dart';
-export 'src/widgets/focus.dart' hide NoFocusRequests, actionDeclared;
+export 'src/widgets/focus.dart'
+    hide NoFocusRequests, actionDeclared, focusElementFor;
 export 'src/widgets/focus_manager.dart';
 export 'src/widgets/framework.dart';
 export 'src/widgets/host.dart';
@@ -80,6 +81,7 @@ export 'src/widgets/run_app.dart';
 export 'src/widgets/scroll_bindings.dart';
 export 'src/widgets/scroll_controller.dart';
 export 'src/widgets/scrollbar.dart';
+export 'src/widgets/scroll_view.dart';
 export 'src/widgets/spinner.dart';
 export 'src/widgets/table.dart';
 export 'src/widgets/text_area.dart';

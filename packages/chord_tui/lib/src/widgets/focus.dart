@@ -16,6 +16,25 @@ class NoFocusRequests extends InheritedWidget {
   bool updateShouldNotify(NoFocusRequests oldWidget) => false;
 }
 
+/// The element of the [Focus] that holds [node], at or under [root]; null
+/// when it is elsewhere, for a scroll view to bring its focus into sight.
+@internal
+Element? focusElementFor(Element root, FocusNode node) {
+  Element? found;
+  void visit(Element e) {
+    if (found != null) return;
+    final w = e.widget;
+    if (w is _FocusMarker && identical(w.node, node)) {
+      found = e;
+      return;
+    }
+    e.visitChildren(visit);
+  }
+
+  visit(root);
+  return found;
+}
+
 class _FocusMarker extends InheritedWidget {
   const _FocusMarker({required this.node, required super.child});
 

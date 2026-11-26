@@ -794,6 +794,81 @@ String? stepLabel(Step step) => switch (step) {
   UntilShown() || Pause() || Aged() => null,
 };
 
+/// What playing a shot does to its pane, as [playSteps] drives it.
+class ShotPane {
+  /// A pane driven by these.
+  const ShotPane({
+    required this.type,
+    required this.send,
+    required this.until,
+    required this.exited,
+    required this.age,
+    required this.respawn,
+    required this.idle,
+    required this.sample,
+    required this.label,
+  });
+
+  /// Types text as it is.
+  final void Function(String text) type;
+
+  /// Sends tmux key names.
+  final void Function(List<String> keys) send;
+
+  /// Waits for the screen to show text, sampling as it waits.
+  final Future<void> Function(String text) until;
+
+  /// Waits for chord to leave, sampling as it waits.
+  final Future<void> Function() exited;
+
+  /// Ages the records.
+  final void Function(List<int> hours) age;
+
+  /// Starts chord again.
+  final void Function(List<String> args) respawn;
+
+  /// Waits, sampling every 100 ms.
+  final Future<void> Function(Duration time) idle;
+
+  /// Takes the screen as a recording's frame.
+  final void Function() sample;
+
+  /// Marks the next frame with a step's label.
+  final void Function(String label) label;
+}
+
+/// Plays [steps] on [pane]: the screen taken before the first, after every
+/// step, and while each one waits, each step labelled before it acts.
+Future<void> playSteps(List<Step> steps, ShotPane pane) async {
+  pane.sample();
+  for (final step in steps) {
+    if (stepLabel(step) case final label?) pane.label(label);
+    switch (step) {
+      case TypeText(:final text):
+        pane.type(text);
+        await pane.idle(const Duration(milliseconds: 300));
+      case SendKeys(:final keys):
+        pane.send(keys);
+        await pane.idle(const Duration(milliseconds: 300));
+      case UntilShown(:final text):
+        await pane.until(text);
+      case Exited():
+        await pane.exited();
+      case Aged(:final hours):
+        pane.age(hours);
+      case Respawn(:final args):
+        pane.respawn(args);
+      case Pause(:final ms):
+        await pane.idle(Duration(milliseconds: ms));
+    }
+    // A wait already met, or a step with no wait, still leaves its frame
+    // before the next step changes the screen.
+    pane.sample();
+  }
+  // What the last keys set off drawn, and the spinner's frame with it.
+  await pane.idle(const Duration(milliseconds: 400));
+}
+
 /// The shot's screen as chord drew it, with its colours, in a [cols] by
 /// [rows] pane; with [recording], every frame it went through on the way.
 Future<String> capture(
@@ -872,41 +947,31 @@ Future<String> capture(
       }
     }
 
-    sample();
-    for (final step in shot.steps) {
-      if (stepLabel(step) case final label?) recording?.step(label);
-      switch (step) {
-        case TypeText(:final text):
-          _tmux(['send-keys', '-t', 'shot', '-l', text]);
-          await idle(const Duration(milliseconds: 300));
-        case SendKeys(:final keys):
-          _tmux(['send-keys', '-t', 'shot', ...keys]);
-          await idle(const Duration(milliseconds: 300));
-        case UntilShown(:final text):
-          await _waitFor(
-            () => _screen().contains(text),
-            '${shot.name}: "$text" never came.',
-            each: sample,
-          );
-        case Exited():
-          await _waitFor(
-            () =>
-                _tmux(['display', '-p', '-t', 'shot', '#{pane_dead}']).trim() ==
-                '1',
-            '${shot.name}: chord never left.',
-            each: sample,
-          );
-        case Aged(:final hours):
-          age(p.join(dir, 'state', 'chord', 'records'), hours);
-        case Respawn(:final args):
-          _tmux(['respawn-pane', '-k', '-t', 'shot', chord(args)]);
-        case Pause(:final ms):
-          await idle(Duration(milliseconds: ms));
-      }
-    }
-
-    // What the last keys set off drawn, and the spinner's frame with it.
-    await idle(const Duration(milliseconds: 400));
+    await playSteps(
+      shot.steps,
+      ShotPane(
+        type: (text) => _tmux(['send-keys', '-t', 'shot', '-l', text]),
+        send: (keys) => _tmux(['send-keys', '-t', 'shot', ...keys]),
+        until: (text) => _waitFor(
+          () => _screen().contains(text),
+          '${shot.name}: "$text" never came.',
+          each: sample,
+        ),
+        exited: () => _waitFor(
+          () =>
+              _tmux(['display', '-p', '-t', 'shot', '#{pane_dead}']).trim() ==
+              '1',
+          '${shot.name}: chord never left.',
+          each: sample,
+        ),
+        age: (hours) => age(p.join(dir, 'state', 'chord', 'records'), hours),
+        respawn: (args) =>
+            _tmux(['respawn-pane', '-k', '-t', 'shot', chord(args)]),
+        idle: idle,
+        sample: sample,
+        label: (label) => recording?.step(label),
+      ),
+    );
     return colours();
   } finally {
     Process.runSync('tmux', ['-L', _socket, 'kill-server']);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import 'package:chord_tui/chord_tui.dart' show TerminalRecording;
+import 'package:characters/characters.dart';
+import 'package:chord_tui/chord_tui.dart' show TerminalRecording, cellWidth;
 import 'package:test/test.dart';
 
 import '../../tool/recordings.dart';
@@ -13,7 +14,9 @@ import '../../tool/screenshots.dart'
         SendKeys,
         TypeText,
         UntilShown,
+        ShotPane,
         keyLabel,
+        playSteps,
         stepLabel;
 
 const _ms = Duration(milliseconds: 1);
@@ -103,5 +106,62 @@ void main() {
     final cut = cutLabel('typed ${'x' * 60}');
     expect(cut, hasLength(40));
     expect(cut, endsWith('…'));
+  });
+
+  test('labels are cut by cells, wide characters and emoji whole', () {
+    final wide = cutLabel('typed ${'日本語' * 10}');
+    expect(cellWidth(wide), lessThanOrEqualTo(40));
+    expect(wide, endsWith('…'));
+    final family = '👨‍👩‍👧';
+    final emoji = cutLabel('typed ${family * 30}');
+    expect(cellWidth(emoji), lessThanOrEqualTo(40));
+    // Every grapheme before the ellipsis is a whole family.
+    final graphemes = emoji.characters.toList();
+    expect(graphemes.last, '…');
+    for (final g in graphemes.skip(6).take(graphemes.length - 7)) {
+      expect(g, family);
+    }
+  });
+
+  test('a frame is taken after every step, before the next acts', () async {
+    final calls = <String>[];
+    final pane = ShotPane(
+      type: (text) => calls.add('type'),
+      send: (keys) => calls.add('send'),
+      // Met at once: no sample while waiting.
+      until: (text) async => calls.add('until'),
+      exited: () async => calls.add('exited'),
+      age: (hours) => calls.add('age'),
+      respawn: (args) => calls.add('respawn'),
+      idle: (time) async => calls.add('idle'),
+      sample: () => calls.add('sample'),
+      label: (label) => calls.add('label $label'),
+    );
+    await playSteps(const [
+      TypeText('hi'),
+      UntilShown('hi'),
+      Aged([1]),
+      Respawn(['--resume']),
+      SendKeys(['Enter']),
+    ], pane);
+    expect(calls, [
+      'sample',
+      'label typed hi',
+      'type',
+      'idle',
+      'sample',
+      'until',
+      'sample',
+      'age',
+      'sample',
+      'label started again',
+      'respawn',
+      'sample',
+      'label enter',
+      'send',
+      'idle',
+      'sample',
+      'idle',
+    ]);
   });
 }

@@ -5,6 +5,8 @@ library;
 
 import 'dart:convert';
 
+import 'package:chord_tui/chord_tui.dart' show truncate;
+
 /// The sizes each shot is recorded at: the rooms the site gives a
 /// recording in a 120x40 and an 80x24 window.
 const recordingSizes = [(cols: 120, rows: 36), (cols: 80, rows: 20)];
@@ -69,6 +71,5 @@ bool _same(List<String> a, List<String> b) {
   return a.length == b.length;
 }
 
-/// A step's label, cut to [width] characters with `…`.
-String cutLabel(String label, {int width = 40}) =>
-    label.length <= width ? label : '${label.substring(0, width - 1)}…';
+/// A step's label, cut to [width] cells with `…`, graphemes whole.
+String cutLabel(String label, {int width = 40}) => truncate(label, width);

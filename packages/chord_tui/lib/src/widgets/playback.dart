@@ -216,8 +216,21 @@ class _PlaybackState extends State<Playback> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(builder: _layout);
+
+  // The keys are bound under the layout: panning is offered only where the
+  // room cuts the recording, so the help lists no key that does nothing.
+  Widget _layout(BuildContext context, BoxConstraints constraints) {
     final controller = widget.controller;
+    final recording = controller.recording;
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : recording.cols;
+    final height = constraints.hasBoundedHeight
+        ? constraints.maxHeight
+        : recording.rows;
+    final across = recording.cols > width;
+    final down = recording.rows > height;
     return Actions(
       bindings: [
         Binding('space', 'Play or pause', _toggle),
@@ -226,27 +239,21 @@ class _PlaybackState extends State<Playback> {
         Binding('left', 'Previous step', controller.previousStep),
         Binding('h', 'Previous step', controller.previousStep),
         Binding('r', 'Restart', controller.restart),
-        Binding('shift+right', 'Pan right', () => _pan(1, 0)),
-        Binding('shift+left', 'Pan left', () => _pan(-1, 0)),
-        Binding('shift+down', 'Pan down', () => _pan(0, 1)),
-        Binding('shift+up', 'Pan up', () => _pan(0, -1)),
+        Binding('shift+right', 'Pan', () => _pan(1, 0), enabled: across),
+        Binding('shift+left', 'Pan', () => _pan(-1, 0), enabled: across),
+        Binding('shift+down', 'Pan', () => _pan(0, 1), enabled: down),
+        Binding('shift+up', 'Pan', () => _pan(0, -1), enabled: down),
       ],
       child: Focus(
         focusNode: _node,
         autofocus: widget.autofocus,
-        child: LayoutBuilder(builder: _layout),
+        child: _frame(width, height),
       ),
     );
   }
 
-  Widget _layout(BuildContext context, BoxConstraints constraints) {
+  Widget _frame(int width, int height) {
     final recording = widget.controller.recording;
-    final width = constraints.hasBoundedWidth
-        ? constraints.maxWidth
-        : recording.cols;
-    final height = constraints.hasBoundedHeight
-        ? constraints.maxHeight
-        : recording.rows;
     _room = Size(width, height);
     // A wider room after a resize may leave less to pan over.
     _panX = _clampPan(_panX, recording.cols, width);

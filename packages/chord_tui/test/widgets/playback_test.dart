@@ -28,6 +28,13 @@ Widget _page(PlaybackController controller, {bool autofocus = true}) => Column(
   ],
 );
 
+Widget _withHelp(PlaybackController controller) => Column(
+  children: [
+    Expanded(child: Playback(controller, autofocus: true)),
+    const KeyHelp(),
+  ],
+);
+
 void main() {
   for (final size in const [Size(120, 40), Size(80, 24)]) {
     testWidgets('draws the frame from the top left, at $size', (t) async {
@@ -168,27 +175,47 @@ void main() {
     expect(t.screen.lines.take(2), ['wered  ›', '⌄⌄⌄⌄⌄⌄⌄⌄']);
   });
 
-  testWidgets('key help lists what the keys do', (t) async {
+  for (final size in const [Size(120, 40), Size(80, 24)]) {
+    testWidgets('key help lists the keys, no Pan when it fits, $size', (
+      t,
+    ) async {
+      final controller = PlaybackController(_recording);
+      addTearDown(controller.dispose);
+      await t.pumpWidget(_withHelp(controller), size: size);
+      expect(
+        t.screen.lines.last,
+        'space Play or pause  right/l Next step  left/h Previous step  '
+        'r Restart',
+      );
+      await t.press('shift+right');
+      await t.press('shift+down');
+      expect(t.screen.lines.first, 'chord one');
+    });
+  }
+
+  testWidgets('Pan is one entry, for the cut directions only', (t) async {
     final controller = PlaybackController(_recording);
     addTearDown(controller.dispose);
+    // 120 columns by two rows for the recording's three.
+    await t.pumpWidget(_withHelp(controller), size: const Size(120, 3));
+    expect(t.screen.lines.last, endsWith('r Restart  shift+down/shift+up Pan'));
+    await t.pumpWidget(_withHelp(controller), size: const Size(10, 10));
+    expect(t.screen.lines.first, 'chord one›');
     await t.pumpWidget(
       Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Playback(controller, autofocus: true)),
-          const KeyHelp(),
+          SizedBox(
+            height: 2,
+            width: 10,
+            child: Playback(controller, autofocus: true),
+          ),
+          const Expanded(child: KeyHelp()),
         ],
       ),
-      size: const Size(120, 40),
+      size: const Size(140, 10),
     );
-    for (final action in [
-      'Play or pause',
-      'Next step',
-      'Previous step',
-      'Restart',
-      'Pan right',
-    ]) {
-      expect(t.screen, shows(action));
-    }
+    expect(t.screen, shows('shift+right/shift+left/shift+down/shift+up Pan'));
   });
 
   test('sliceColumns keeps styles and blanks cut wide characters', () {

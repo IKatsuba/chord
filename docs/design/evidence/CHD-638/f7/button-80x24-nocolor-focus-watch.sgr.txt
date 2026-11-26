@@ -1,0 +1,12 @@
+
+
+  ESC[1;7m                     ESC[0m   ESC[1m╭──────────────────╮ESC[0m
+  ESC[1;7m    Install chord    ESC[0m   ESC[1m│ESC[0m   ESC[1;4mWatch it runESC[0m   ESC[1m│ESC[0m
+  ESC[1;7m                     ESC[0m   ESC[1m╰──────────────────╯ESC[0m
+         ESC[2mpress ESC[0;1miESC[0m                ESC[2mpress ESC[0;1mwESC[0m
+
+  ESC[1;7m            ESC[0m   ESC[2m╭──────────────╮ESC[0m
+  ESC[1;7m    Save    ESC[0m   ESC[2m│ESC[0m   ESC[1;2mDisabledESC[0m   ESC[2m│ESC[0m
+  ESC[1;7m            ESC[0m   ESC[2m╰──────────────╯ESC[0m
+
+  Pressed: nothing yet

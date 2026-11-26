@@ -6,3 +6,7 @@ tags:
     # Exports HEAD and runs `dart pub publish --dry-run` on it: run on its
     # own with `dart test -t publish --run-skipped`.
     skip: "run with: dart test -t publish --run-skipped"
+  browser:
+    # Builds Wasm and drives the system's Chrome: run on its own with
+    # `dart test -t browser --run-skipped`.
+    skip: "run with: dart test -t browser --run-skipped"

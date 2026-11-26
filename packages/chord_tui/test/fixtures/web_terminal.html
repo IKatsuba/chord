@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- A page terminal for web_terminal_browser_test.dart: records what the
+     app writes and lets the test type and resize. -->
+<meta charset="utf-8">
+<title>web terminal</title>
+<link rel="icon" href="data:,">
+<script type="module">
+  const writes = [];
+  let data, resize;
+  globalThis.chordTerminal = {
+    cols: 40,
+    rows: 5,
+    write: (text) => writes.push(text),
+    onData: (callback) => { data = callback; },
+    onResize: (callback) => { resize = callback; },
+  };
+  globalThis.testWrites = () => writes.join('');
+  globalThis.testType = (text) => data(text);
+  globalThis.testResize = (cols, rows) => resize(cols, rows);
+  globalThis.testOpened = [];
+  // Recorded, not followed: the test has no network.
+  window.open = (...args) => { testOpened.push(args); return null; };
+  const { compileStreaming } = await import('./web_terminal.mjs');
+  const app = await compileStreaming(fetch('./web_terminal.wasm'));
+  (await app.instantiate({})).invokeMain();
+</script>

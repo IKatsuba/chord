@@ -19,7 +19,7 @@ void main() {
         );
         final m = DisplayText.measure('CHORD.', DisplaySize.large);
         expect(m, (width: 6 * 12 - 2, height: 7));
-        expect(t.screen.lines[0], startsWith('  ██████    ██      ██'));
+        expect(t.screen.lines[0], startsWith('  ████████  ██      ██'));
         expect(t.screen.lines[6].length, lessThanOrEqualTo(m.width));
         expect(t.screen.lines[7], '');
       });

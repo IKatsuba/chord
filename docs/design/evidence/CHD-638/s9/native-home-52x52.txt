@@ -1,0 +1,52 @@
+
+  CHORD / CHORD_TUI                         MENU m
+
+────────────────────────────────────────────────────
+                                                   ┃
+                                                   ┃
+    ████████  ██      ██    ██████                 ┃
+  ██          ██      ██  ██      ██               ┃
+  ██          ██      ██  ██      ██               ┃
+  ██          ██████████  ██      ██               ┃
+  ██          ██      ██  ██      ██               ┃
+  ██          ██      ██  ██      ██               ┃
+    ████████  ██      ██    ██████                 ┃
+                                                   ┃
+  ████████    ████████                             ┃
+  ██      ██  ██      ██                           ┃
+  ██      ██  ██      ██                           ┃
+  ████████    ██      ██                           ┃
+  ██  ██      ██      ██                           ┃
+  ██    ██    ██      ██  ████                     ┃
+  ██      ██  ████████    ████                     ┃
+
+  A TERMINAL WINDOW
+  FOR CODING AGENTS.
+
+  Claude, Codex, Gemini and Cursor side by side,
+  every action on a key. And the Dart framework
+  that draws it, and draws this page, cell by
+  cell.
+
+   INSTALL  i     WATCH IT RUN  w
+
+
+  THE TERMINAL IS THE PAGE  ✦  EVERY ACTION HAS A K
+
+
+  ▄▄▀▀▀▀▀▀▄▄    ▄▄██
+  ██      ██      ██
+  ██      ██      ██
+    ▀▀▀▀▀▀      ▀▀▀▀▀▀
+
+  THE APP
+  ───────────────────────────────────────────────
+  Sessions, agents, teams, permissions and plans,
+  in one window.
+
+  → PRESS 1
+
+  ▄▄▀▀▀▀▀▀▄▄  ▄▄▀▀▀▀▀▀▄▄
+  ██      ██        ▄▄▀▀
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ ? keys

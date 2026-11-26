@@ -1,0 +1,40 @@
+
+  CHORD / CHORD_TUI                            01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    permissions and plans, in    for the terminal, in         examples, running on this    source.
+    one window.                  Dart, from scratch.          page.
+                                                                                           → PRESS 4
+    → PRESS 1                    → PRESS 2                    → PRESS 3
+
+
+    FIG. 1 / A REAL SESSION, RECORDED
+
+     ▶ EDIT · 0:03 · SPACE PAUSES
+
+      ▀▄     chord v0.72.2
+      ▀▀▀▄   claude · Claude Opus 5.5
+      ▄▀▀▀   ~/src/app
+      ▀▀     ? for shortcuts · /help
+
+
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+     ╭──────────────────────────────────────────────────────────────────────────────╮                                  ┃
+     │ › Greet people by name with a template literal                               │                                  ┃
+     ╰──────────────────────────────────────────────────────────────────────────────╯                                  ┃
+                                                    Claude Opus 5.5 · medium effort                                    ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+    ───────────────────────────────────────────────────────────────────────────────────────────────────────────────    ┃
+    MIT  ·  MADE WITH CHORD_TUI  ·  DRAWN BY WTERM                                                      ?  ALL KEYS    ┃
+                                                                                                                       ┃
+ space Play/pause  right/l Next  left/h Previous  r Restart  i install  w watch  1–4 go  up/down scroll  ? keys

@@ -34,6 +34,10 @@ external set _documentTitle(String title);
 /// calling back with the new columns and rows. The clipboard, links and
 /// the title go to the browser: `navigator.clipboard`, `window.open` and
 /// `document.title`. The bell is silent.
+///
+/// A WebTerminal lives as long as its page: it binds the page's callbacks
+/// once, when made, and has no dispose. One instance serves runApp after
+/// runApp, each entering and leaving it again.
 class WebTerminal extends HostTerminal {
   WebTerminal._(
     _PageTerminal page,

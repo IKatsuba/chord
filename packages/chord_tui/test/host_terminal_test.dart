@@ -44,6 +44,28 @@ void main() {
     expect(host.written, [_enter, _mouseOn, _mouseOff, _leave]);
   });
 
+  test('a failed mouse-off write still gives the screen back', () async {
+    final written = <String>[];
+    final terminal = HostTerminal(
+      write: (data) {
+        if (data == _mouseOff) throw StateError('write failed');
+        written.add(data);
+      },
+      input: const Stream.empty(),
+      size: () => const Size(20, 3),
+      resizes: const Stream.empty(),
+      mouse: true,
+    );
+    terminal.enter();
+    await expectLater(
+      terminal.leave(),
+      throwsA(
+        isA<StateError>().having((e) => e.message, 'message', 'write failed'),
+      ),
+    );
+    expect(written, [_enter, _mouseOn, _leave]);
+  });
+
   test('leave before enter writes nothing', () async {
     final host = _Host();
     await host.terminal().leave();
@@ -90,6 +112,35 @@ void main() {
     await run.timeout(const Duration(seconds: 5));
     expect(host.written.first, _enter);
     expect(host.written.last, _leave);
+  });
+
+  test('one terminal serves runApp after runApp, keys once each', () async {
+    final host = _Host();
+    final terminal = host.terminal(mouse: true);
+    for (var run = 1; run <= 2; run++) {
+      var presses = 0;
+      final done = runApp(
+        Actions(
+          bindings: [Binding('x', 'Count', () => presses++)],
+          child: Text('run $run'),
+        ),
+        terminal: terminal,
+        exitProcess: false,
+        handleSignals: false,
+        environment: const {},
+      );
+      await _until(() => host.written.join().contains('run $run'));
+      host.input.add('x');
+      await _until(() => presses > 0);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(presses, 1);
+      host.input.add('\x03');
+      await done.timeout(const Duration(seconds: 5));
+    }
+    final written = host.written.join();
+    expect(_enter.allMatches(written), hasLength(2));
+    expect(_leave.allMatches(written), hasLength(2));
+    expect(written, endsWith('$_mouseOff$_leave'));
   });
 }
 

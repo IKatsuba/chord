@@ -1,6 +1,6 @@
 // A chord_tui app over WebTerminal, for web_terminal_browser_test.dart:
 // `c` copies, `o` opens a link, `t` sets the title, Shift+Enter is a
-// kitty key; Ctrl+C quits. The console says each size laid out, each key
+// kitty key; Ctrl+C quits. runApp runs twice on the same terminal. The console says each size laid out, each key
 // handled and how runApp ended: the screen is written only where it
 // changes.
 import 'dart:js_interop';
@@ -58,15 +58,17 @@ class _AppState extends State<_App> {
 
 Future<void> main() async {
   final terminal = WebTerminal(mouse: true);
-  try {
-    await runApp(
-      _App(terminal),
-      terminal: terminal,
-      exitProcess: false,
-      handleSignals: false,
-    );
-    _log('runApp returned'.toJS);
-  } catch (error) {
-    _log('runApp failed: $error'.toJS);
+  for (var run = 1; run <= 2; run++) {
+    try {
+      await runApp(
+        _App(terminal),
+        terminal: terminal,
+        exitProcess: false,
+        handleSignals: false,
+      );
+      _log('runApp returned $run'.toJS);
+    } catch (error) {
+      _log('runApp failed: $error'.toJS);
+    }
   }
 }

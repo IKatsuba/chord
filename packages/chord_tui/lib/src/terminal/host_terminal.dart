@@ -58,8 +58,23 @@ class HostTerminal extends Terminal {
   Future<void> leave() async {
     if (!_entered) return;
     _entered = false;
-    if (mouse) write('\x1b[?1000l\x1b[?1002l\x1b[?1006l');
-    write('\x1b[?2004l\x1b[0m\x1b[0 q\x1b[?25h\x1b[?1049l');
+    // Each restore is tried whatever the one before did, so a failed write
+    // leaves no mode behind that a later one could undo; the first failure
+    // is thrown once all were tried.
+    (Object, StackTrace)? failed;
+    for (final bytes in [
+      if (mouse) '\x1b[?1000l\x1b[?1002l\x1b[?1006l',
+      '\x1b[?2004l\x1b[0m\x1b[0 q\x1b[?25h\x1b[?1049l',
+    ]) {
+      try {
+        write(bytes);
+      } catch (error, stack) {
+        failed ??= (error, stack);
+      }
+    }
+    if (failed case (final error, final stack)) {
+      Error.throwWithStackTrace(error, stack);
+    }
   }
 
   @override

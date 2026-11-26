@@ -120,25 +120,45 @@ void main() {
 
   test('Ctrl+C quits cleanly: runApp returns, modes undone', () async {
     await page.evaluate<void>(r"() => testType('\x03')");
-    await _until(page, "testWrites().endsWith('\\x1b[?1049l')");
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    expect(console, contains('runApp returned'));
+    await _seen(console, 'runApp returned 1');
     final written = await page.evaluate<String>('() => testWrites()');
     expect(
       written,
-      endsWith(
+      contains(
         '\x1b[?1000l\x1b[?1002l\x1b[?1006l'
         '\x1b[?2004l\x1b[0m\x1b[0 q\x1b[?25h\x1b[?1049l',
       ),
     );
     expect(errors, isEmpty);
   });
+
+  test('the same terminal serves a second runApp, keys once each', () async {
+    // The second run has entered again after the first one's leave.
+    await _until(
+      page,
+      "testWrites().lastIndexOf('\\x1b[?1049h') > "
+      "testWrites().lastIndexOf('\\x1b[?1049l')",
+    );
+    final copies = console.where((line) => line == 'did copied').length;
+    await page.evaluate<void>("() => testType('c')");
+    await _seen(console, 'did copied', times: copies + 1);
+    // A doubled page callback would handle the key twice.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(console.where((line) => line == 'did copied').length, copies + 1);
+    await page.evaluate<void>(r"() => testType('\x03')");
+    await _seen(console, 'runApp returned 2');
+    expect(console.where((line) => line.startsWith('runApp')).toList(), [
+      'runApp returned 1',
+      'runApp returned 2',
+    ]);
+    expect(errors, isEmpty);
+  });
 }
 
-/// Waits for the page's console to say [line].
-Future<void> _seen(List<String> console, String line) async {
+/// Waits for the page's console to have said [line] [times] times.
+Future<void> _seen(List<String> console, String line, {int times = 1}) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
-  while (!console.contains(line)) {
+  while (console.where((said) => said == line).length < times) {
     if (DateTime.now().isAfter(deadline)) fail('timed out on $line');
     await Future<void>.delayed(const Duration(milliseconds: 20));
   }

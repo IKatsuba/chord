@@ -146,9 +146,12 @@ class _HomePageState extends State<HomePage> {
     // this frame's layout, and one taller than the view to its own top,
     // under the caption; that jump lays out again, and the second pass puts
     // the plate's top back at the view's top.
-    context.owner.afterLayout(() {
+    // The owner, not the context: home may be gone before either pass.
+    final owner = context.owner;
+    owner.afterLayout(() {
+      if (!mounted) return;
       _bringPlate();
-      context.owner.afterLayout(_bringPlate);
+      owner.afterLayout(_bringPlate);
     });
     setState(() {});
   }

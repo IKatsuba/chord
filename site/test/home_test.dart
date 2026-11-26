@@ -88,6 +88,7 @@ Future<FakeHost> _home(WidgetTester t, Size size) async {
 }
 
 void main() {
+  _burst();
   test('the plate plays the largest recording that fits inside it', () {
     // 192 columns leave 183 inside the margins and 181 inside the plate.
     expect(homeRecordingFor(181), (cols: 120, rows: 36));
@@ -373,5 +374,22 @@ void main() {
     final again = await _home(t, const Size(120, 120));
     await t.press('3');
     expect(again.pushed, ['/chord_tui/gallery']);
+  });
+}
+
+void _burst() {
+  // Ctrl+Q does nothing at home, so i leaves it.
+  testWidgets('w, then i before the next frame, leaves home cleanly', (
+    t,
+  ) async {
+    final host = FakeHost('/', files);
+    await t.pumpWidget(Site(host: host), size: const Size(80, 24));
+    await t.pump();
+    t.host.handleKey(const KeyEvent('w'));
+    t.host.handleKey(const KeyEvent('i'));
+    await t.pump();
+    await t.pump();
+    expect(host.pushed, ['/install']);
+    expect(t.screen, shows('brew install ikatsuba/tap/chord'));
   });
 }

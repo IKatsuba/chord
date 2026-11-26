@@ -136,7 +136,13 @@ class _SiteState extends State<Site> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ..._header(context, width),
+            // One child whatever the width, so the page after it keeps its
+            // place, and its state, across a resize.
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: _header(context, width),
+            ),
             Expanded(child: _page()),
             if (_keysOpen) _KeysPanel(width: width),
             if (narrow) const KeyRow(),

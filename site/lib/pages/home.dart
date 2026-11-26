@@ -21,17 +21,28 @@ class HomePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (wide) ...[
-              Text(
-                'A terminal window for coding agents, and the Flutter-shaped '
-                'Dart framework it is built on.',
-              ),
-              Text('This page is that framework, compiled to WebAssembly.'),
-            ] else
-              Text(
-                'A terminal window for coding agents, and the framework it is '
-                'built on.',
-              ),
+            // One child whatever the width, so the menu after it keeps its
+            // place, and its selection, across a resize.
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: wide
+                  ? [
+                      Text(
+                        'A terminal window for coding agents, and the '
+                        'Flutter-shaped Dart framework it is built on.',
+                      ),
+                      Text(
+                        'This page is that framework, compiled to WebAssembly.',
+                      ),
+                    ]
+                  : [
+                      Text(
+                        'A terminal window for coding agents, and the '
+                        'framework it is built on.',
+                      ),
+                    ],
+            ),
             Text(''),
             SiteMenu([
               SiteMenuItem(

@@ -56,17 +56,23 @@ class KeyHelp extends StatelessWidget {
     return ListenableBuilder(
       listenable: fm,
       builder: (context) {
-        final pending = fm.pendingChord;
+        final listed = listedBindings(fm, boundary);
+        // A pending chord is this row's to show only where a listed binding
+        // finishes it: one only outer or taken keys finish is not.
+        final waiting = fm.pendingChord;
+        final pending = listed.any((b) => b.chord.startsWith(waiting))
+            ? waiting
+            : const <KeyCombo>[];
         final builder = _builder;
         if (builder != null) {
           return builder(
             context,
-            List<Binding>.unmodifiable(listedBindings(fm, boundary)),
+            List<Binding>.unmodifiable(listed),
             List<KeyCombo>.unmodifiable(pending),
           );
         }
         final spans = <TextSpan>[];
-        for (final group in groupBindings(listedBindings(fm, boundary))) {
+        for (final group in groupBindings(listed)) {
           final chords = [
             for (final chord in group.chords)
               if (pending.isEmpty || chord.startsWith(pending)) chord,
@@ -75,6 +81,9 @@ class KeyHelp extends StatelessWidget {
           if (spans.isNotEmpty) spans.add(TextSpan(separator));
           spans.add(TextSpan(chords.join('/'), style: keyStyle));
           spans.add(TextSpan(' ${group.description}', style: descriptionStyle));
+        }
+        if (waiting.isNotEmpty && pending.isEmpty) {
+          return const SizedBox();
         }
         if (pending.isNotEmpty) {
           spans.insert(
@@ -161,6 +170,22 @@ class _KeyHelpBoundaryState extends State<KeyHelpBoundary> {
   final _node = FocusNode(canRequestFocus: false, debugLabel: 'key help');
 
   @override
+  void initState() {
+    super.initState();
+    _taken[_node] = widget.taken;
+  }
+
+  @override
+  void didUpdateWidget(KeyHelpBoundary oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_sameKeys(oldWidget.taken, widget.taken)) return;
+    _taken[_node] = widget.taken;
+    // Every help row reads taken keys, inside and outside alike, and all of
+    // them listen to the manager.
+    context.owner.focusManager.notifyListeners();
+  }
+
+  @override
   void dispose() {
     _node.dispose();
     super.dispose();
@@ -168,7 +193,6 @@ class _KeyHelpBoundaryState extends State<KeyHelpBoundary> {
 
   @override
   Widget build(BuildContext context) {
-    _taken[_node] = widget.taken;
     return Focus(
       focusNode: _node,
       canRequestFocus: false,
@@ -176,6 +200,9 @@ class _KeyHelpBoundaryState extends State<KeyHelpBoundary> {
     );
   }
 }
+
+bool _sameKeys(Set<KeyCombo> a, Set<KeyCombo> b) =>
+    a.length == b.length && a.containsAll(b);
 
 class _BoundaryScope extends InheritedWidget {
   const _BoundaryScope({required this.node, required super.child});

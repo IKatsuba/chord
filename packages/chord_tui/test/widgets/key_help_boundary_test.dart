@@ -38,8 +38,13 @@ Widget _host({
   );
 }
 
-String _row(WidgetTester t, String label) =>
-    t.screen.lines[t.screen.lines.indexOf(label) + 1];
+/// The help row under [label]; an empty row takes no height, so none may
+/// follow the label at the bottom.
+String _row(WidgetTester t, String label) {
+  final lines = t.screen.lines;
+  final at = lines.indexOf(label) + 1;
+  return at < lines.length ? lines[at] : '';
+}
 
 void main() {
   for (final size in const [Size(120, 40), Size(80, 24)]) {
@@ -93,6 +98,66 @@ void main() {
       _row(t, 'outside:'),
       'ctrl+x …  ctrl+x a Anchor  ctrl+x b Bottom  ctrl+x z Outer',
     );
+  });
+
+  testWidgets('a chord only outer keys finish is not shown inside', (t) async {
+    await t.pumpWidget(
+      _host(inner: const [], outer: [Binding('ctrl+x z', 'Outer', () {})]),
+      size: const Size(120, 40),
+    );
+    await t.press('ctrl+x');
+    expect(_row(t, 'inside:'), '');
+    expect(_row(t, 'outside:'), 'ctrl+x …  ctrl+x z Outer');
+  });
+
+  testWidgets('a chord only taken keys finish is shown nowhere', (t) async {
+    await t.pumpWidget(
+      _host(
+        inner: [Binding('ctrl+x a', 'Anchor', () {})],
+        taken: {KeyCombo.parse('ctrl+x')},
+      ),
+      size: const Size(120, 40),
+    );
+    await t.press('ctrl+x');
+    expect(_row(t, 'inside:'), '');
+    expect(_row(t, 'outside:'), '');
+  });
+
+  testWidgets('changing only taken updates both rows at once', (t) async {
+    final taken = ValueNotifier<Set<KeyCombo>>(const {});
+    // The same widget instance every build: nothing below changes.
+    final embedded = Actions(
+      bindings: [
+        Binding('ctrl+o', 'Toggle', () {}),
+        Binding('ctrl+q', 'Quit', () {}),
+      ],
+      child: Focus(
+        autofocus: true,
+        child: Column(children: [Text('inside:'), const KeyHelp()]),
+      ),
+    );
+    await t.pumpWidget(
+      Column(
+        children: [
+          Expanded(
+            child: ListenableBuilder(
+              listenable: taken,
+              builder: (_) =>
+                  KeyHelpBoundary(taken: taken.value, child: embedded),
+            ),
+          ),
+          Text('outside:'),
+          const KeyHelp(),
+        ],
+      ),
+      size: const Size(120, 40),
+    );
+    expect(_row(t, 'inside:'), 'ctrl+o Toggle  ctrl+q Quit');
+    expect(_row(t, 'outside:'), 'ctrl+o Toggle  ctrl+q Quit');
+    taken.value = {KeyCombo.parse('ctrl+q')};
+    await t.pump();
+    expect(_row(t, 'inside:'), 'ctrl+o Toggle');
+    expect(_row(t, 'outside:'), 'ctrl+o Toggle');
   });
 
   testWidgets('an inside with no bindings of its own lists nothing', (t) async {

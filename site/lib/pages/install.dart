@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:chord_tui/chord_tui.dart';
 
 import '../grid.dart' show GridStep;
+import '../giant.dart';
 import '../page.dart';
+import 'gallery_grid.dart' show cellGap;
 import '../palette.dart';
 
 /// One way in: its name, the command, and what it suits.
@@ -48,7 +50,7 @@ class _InstallPageState extends State<InstallPage> {
   var _lastCard = 0;
   final _scroll = ScrollController();
 
-  // The page's list items before the first row of cards: the header.
+  // The page's list items before the first row of cells: the header's.
   static const _headerItems = 7;
 
   /// The list item the selection is in, with [rows] rows of cards.
@@ -100,29 +102,30 @@ class _InstallPageState extends State<InstallPage> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      // As many cards to a row as leave each command whole: a card's inner
-      // width is its own less the frame and the padding.
-      final content = pageContentWidth(constraints.maxWidth);
+      // As many cells to a row as leave each command whole.
+      final content = pageContentWidth(
+        constraints.maxWidth,
+        measure: posterMeasure,
+      );
       final widest = installWays.fold(
         0,
         (w, way) => cellWidth('\$ ${way.command}') > w
             ? cellWidth('\$ ${way.command}')
             : w,
       );
-      final columns = [
-        3,
-        2,
-        1,
-      ].firstWhere((n) => n == 1 || (content - 2 * (n - 1)) ~/ n - 6 >= widest);
+      final columns = [3, 2, 1].firstWhere(
+        (n) => n == 1 || (content - cellGap * (n - 1)) ~/ n >= widest,
+      );
       final theme = Theme.of(context);
       final palette = theme.extension<SitePalette>() ?? const SitePalette();
+      final orange = theme.accent.merge(Style.bold);
       final copy = _copied
-          ? Text('copied', style: theme.accent, softWrap: false)
+          ? Text('COPIED', style: orange, softWrap: false)
           : Text.rich(
               TextSpan(
                 '',
                 children: [
-                  TextSpan('copy ', style: theme.dim),
+                  TextSpan('COPY ', style: theme.dim),
                   TextSpan('c', style: theme.text.merge(Style.bold)),
                 ],
               ),
@@ -146,6 +149,7 @@ class _InstallPageState extends State<InstallPage> {
         if (mounted) revealItem(_scroll, item);
       });
       return SitePage(
+        measure: posterMeasure,
         controller: _scroll,
         bindings: [
           for (final (key, step) in const [
@@ -158,40 +162,30 @@ class _InstallPageState extends State<InstallPage> {
           Binding('c', 'copy', () => _copy(context)),
         ],
         sections: [
-          Text.rich(
-            TextSpan(
-              '',
-              children: [
-                TextSpan('Home', style: theme.dim),
-                TextSpan(' › ', style: theme.dim),
-                TextSpan('Install', style: theme.text),
-              ],
-            ),
-            softWrap: false,
-          ),
           Text(''),
-          Text('INSTALL', style: theme.accent.merge(Style.bold)),
-          Text('Three ways in.', style: theme.text.merge(Style.bold)),
+          const Kicker(4, 'INSTALL'),
           Text(''),
-          Text(
+          const GiantWord('INSTALL'),
+          Text(''),
+          const Paragraph(
             'chord is one native binary for macOS and Linux, arm64 and x64. '
             'Pick a way; c copies its command.',
-            style: theme.dim,
           ),
           Text(''),
           for (final row in rows) ...[
             LayoutBuilder(
               builder: (context, c) {
-                final room = c.maxWidth - 2 * (columns - 1);
+                // Leftover columns go one each to the first cells, so a row
+                // ends at the margin.
+                final room = c.maxWidth - cellGap * (columns - 1);
                 return Row(
-                  spacing: 2,
+                  spacing: cellGap,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (final (j, i) in row.indexed)
-                      _card(
+                      _cell(
                         theme,
-                        installWays[i],
-                        i == _selected,
+                        i,
                         room ~/ columns + (j < room % columns ? 1 : 0),
                         copy,
                       ),
@@ -199,9 +193,9 @@ class _InstallPageState extends State<InstallPage> {
                 );
               },
             ),
-            Text(''),
+            const SizedBox(height: 2),
           ],
-          Text('THEN', style: theme.accent.merge(Style.bold)),
+          Text('THEN / OPEN A SESSION', style: orange),
           Box(
             background: palette.raised,
             padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
@@ -238,45 +232,55 @@ class _InstallPageState extends State<InstallPage> {
     },
   );
 
-  Widget _card(
-    ThemeData theme,
-    InstallWay way,
-    bool selected,
-    int width,
-    Widget copy,
-  ) => Box(
-    border: Border.rounded.withStyle(selected ? theme.accent : theme.border),
-    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-    width: width,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              way.name,
-              style: (selected ? theme.accent : theme.text).merge(Style.bold),
-              softWrap: false,
-            ),
-            const Spacer(),
-            if (selected) copy,
-          ],
-        ),
-        Text(''),
-        Text.rich(
-          TextSpan(
-            '',
+  /// One way in: its orange numeral, the caps name over a rule (ink on
+  /// orange, with the copy hint, when selected), the command and the note.
+  Widget _cell(ThemeData theme, int i, int width, Widget copy) {
+    final way = installWays[i];
+    final selected = i == _selected;
+    return SizedBox(
+      width: width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DisplayText(
+            '0${i + 1}',
+            size: DisplaySize.numeral,
+            style: theme.accent,
+          ),
+          Text(''),
+          Row(
             children: [
-              TextSpan(r'$ ', style: theme.dim),
-              TextSpan(way.command, style: theme.accent),
+              Text(
+                way.name.toUpperCase(),
+                style: selected
+                    ? theme.accent.merge(const Style(bold: true, inverse: true))
+                    : theme.text.merge(Style.bold),
+                softWrap: false,
+              ),
+              const Spacer(),
+              if (selected) copy,
             ],
           ),
-          softWrap: false,
-        ),
-        Text(''),
-        Text(way.note, style: theme.dim),
-      ],
-    ),
-  );
+          Text(
+            '─' * width,
+            style: selected ? theme.accent : theme.border,
+            softWrap: false,
+          ),
+          Text.rich(
+            TextSpan(
+              '',
+              children: [
+                TextSpan(r'$ ', style: theme.dim),
+                TextSpan(way.command, style: theme.accent),
+              ],
+            ),
+            softWrap: false,
+          ),
+          Text(''),
+          Text(way.note, style: theme.dim),
+        ],
+      ),
+    );
+  }
 }

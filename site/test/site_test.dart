@@ -105,9 +105,8 @@ void main() {
     testWidgets('not found keeps the path and offers home, $size', (t) async {
       final host = FakeHost('/chord_tui/markdwon');
       await t.pumpWidget(Site(host: host), size: size);
-      expect(t.screen, shows('404 · page not found'));
+      expect(t.screen, shows('PAGE NOT FOUND.'));
       expect(t.screen, shows('/chord_tui/markdwon'));
-      expect(t.screen, shows('press enter'));
       expect(host.titles, ['not found · chord']);
       expect(
         t.screen.lines.last,

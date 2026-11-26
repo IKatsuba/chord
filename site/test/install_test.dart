@@ -33,21 +33,23 @@ int rowOf(WidgetTester t, String text) =>
 void main() {
   for (final (size, columns) in const [
     (Size(171, 50), 3),
-    (Size(120, 40), 2),
-    (Size(80, 24), 1),
+    // 33 columns a cell: the longest command, 33 cells, just fits.
+    (Size(120, 40), 3),
+    // 80x60: at 80x24 the split giant word puts the cells below the fold.
+    (Size(80, 60), 1),
     (Size(54, 56), 1),
   ]) {
     group('at $size', () {
       testWidgets('the header, then $columns card(s) to a row, every command '
           'whole', (t) async {
         await install(t, size);
-        expect(t.screen, shows('Home › Install'));
-        final (ix, iy) = find(t, 'INSTALL');
+        final (ix, iy) = find(t, '04 / INSTALL');
         expect(t.screen.styleAt(ix, iy), theme.accent.merge(Style.bold));
-        expect(t.screen, shows('Three ways in.'));
-        final row = rowOf(t, 'Homebrew');
-        expect(t.screen.lines[row].contains('npm'), columns >= 2);
-        expect(t.screen.lines[row].contains('From source'), columns == 3);
+        expect(t.screen.lines[iy + 2], contains('██'), reason: 'giant word');
+        expect(t.screen, shows('chord is one native binary'));
+        final row = rowOf(t, 'HOMEBREW');
+        expect(t.screen.lines[row].contains('NPM'), columns >= 2);
+        expect(t.screen.lines[row].contains('FROM SOURCE'), columns == 3);
         // Whole wherever the page is scrolled to show them.
         final seen = <String>{};
         for (var n = 0; n < 12; n++) {
@@ -61,13 +63,16 @@ void main() {
         expect(seen, {for (final way in installWays) way.command});
       });
 
-      testWidgets('the first card is selected and says copy c', (t) async {
+      testWidgets('the first cell is selected and says COPY c', (t) async {
         await install(t, size);
-        final (x, y) = find(t, 'Homebrew');
-        expect(t.screen.styleAt(x, y), theme.accent.merge(Style.bold));
-        expect(t.screen.styleAt(x - 3, y - 2), theme.accent, reason: 'frame');
-        expect(t.screen.lines[y], contains('copy c'));
-        expect(t.screen.lines.where((l) => l.contains('copy c')), hasLength(1));
+        final (x, y) = find(t, 'HOMEBREW');
+        expect(
+          t.screen.styleAt(x, y),
+          theme.accent.merge(const Style(bold: true, inverse: true)),
+        );
+        expect(t.screen.styleAt(x, y + 1), theme.accent, reason: 'rule');
+        expect(t.screen.lines[y], contains('COPY c'));
+        expect(t.screen.lines.where((l) => l.contains('COPY c')), hasLength(1));
       });
     });
   }
@@ -76,20 +81,20 @@ void main() {
     t,
   ) async {
     await install(t, const Size(171, 50));
-    String selected() => t.screen.lines.firstWhere((l) => l.contains('copy c'));
+    String selected() => t.screen.lines.firstWhere((l) => l.contains('COPY c'));
     await t.press('left');
-    expect(selected(), contains('Homebrew'));
+    expect(selected(), contains('HOMEBREW'));
     await t.press('right');
-    expect(selected(), contains('npm'));
+    expect(selected(), contains('NPM'));
     await t.press('right');
     await t.press('right');
-    expect(selected(), contains('From source'));
+    expect(selected(), contains('FROM SOURCE'));
     await t.press('down');
     expect(selected(), contains('shell'));
     await t.press('down');
     expect(selected(), contains('shell'));
     await t.press('up');
-    expect(selected(), contains('From source'));
+    expect(selected(), contains('FROM SOURCE'));
   });
 
   testWidgets('c copies the selected command and says copied for two '
@@ -98,15 +103,15 @@ void main() {
     await t.press('right');
     await t.press('c');
     expect(t.terminal.copied, ['npm i -g @chorded/chord']);
-    final (x, y) = find(t, 'copied');
-    expect(t.screen.styleAt(x, y), theme.accent);
-    expect(t.screen, isNot(shows('copy c')));
+    final (x, y) = find(t, 'COPIED');
+    expect(t.screen.styleAt(x, y), theme.accent.merge(Style.bold));
+    expect(t.screen, isNot(shows('COPY c')));
     await t.press('down');
     await t.press('c');
     expect(t.terminal.copied.last, thenCommand);
     await t.pump(const Duration(milliseconds: 2100));
-    expect(t.screen, shows('copy c'));
-    expect(t.screen, isNot(shows('copied')));
+    expect(t.screen, shows('COPY c'));
+    expect(t.screen, isNot(shows('COPIED')));
   });
 
   for (final size in const [Size(80, 24), Size(54, 30), Size(43, 20)]) {
@@ -115,22 +120,22 @@ void main() {
     ) async {
       await install(t, size);
       for (final (key, name, command) in [
-        ('right', 'npm', installWays[1].command),
-        ('right', 'From source', installWays[2].command),
+        ('right', 'NPM', installWays[1].command),
+        ('right', 'FROM SOURCE', installWays[2].command),
         ('down', 'shell', thenCommand),
-        ('up', 'From source', installWays[2].command),
-        ('left', 'npm', installWays[1].command),
-        ('left', 'Homebrew', installWays[0].command),
+        ('up', 'FROM SOURCE', installWays[2].command),
+        ('left', 'NPM', installWays[1].command),
+        ('left', 'HOMEBREW', installWays[0].command),
       ]) {
         await t.press(key);
         await t.pump();
-        final hint = t.screen.lines.where((l) => l.contains('copy c'));
+        final hint = t.screen.lines.where((l) => l.contains('COPY c'));
         expect(hint, hasLength(1), reason: 'after $key');
         expect(hint.single, contains(name), reason: 'after $key');
         await t.press('c');
         expect(t.terminal.copied.last, command);
-        expect(t.screen, shows('copied'));
-        // The next move takes copied back to copy c.
+        expect(t.screen, shows('COPIED'));
+        // The next move takes copied back to COPY c.
       }
     });
   }
@@ -138,27 +143,27 @@ void main() {
   testWidgets('a resize keeps the selection in sight', (t) async {
     await install(t, const Size(171, 50));
     await t.press('down');
-    expect(t.screen, shows('copy c'));
+    expect(t.screen, shows('COPY c'));
     await t.resize(const Size(54, 30));
     await t.pump();
     expect(
-      t.screen.lines.where((l) => l.contains('copy c')).single,
+      t.screen.lines.where((l) => l.contains('COPY c')).single,
       contains('shell'),
     );
     await t.press('up');
     await t.pump();
     expect(
-      t.screen.lines.where((l) => l.contains('copy c')).single,
-      contains('Homebrew'),
+      t.screen.lines.where((l) => l.contains('COPY c')).single,
+      contains('HOMEBREW'),
     );
     await t.resize(const Size(171, 50));
     await t.pump();
-    expect(t.screen, shows('copy c'));
+    expect(t.screen, shows('COPY c'));
   });
 
   testWidgets('the Then block is a shell on the raised colour', (t) async {
     await install(t, const Size(171, 50));
-    final (x, y) = find(t, 'THEN');
+    final (x, y) = find(t, 'THEN / OPEN A SESSION');
     expect(t.screen.styleAt(x, y), theme.accent.merge(Style.bold));
     final (sx, sy) = find(t, 'shell');
     expect(t.screen.styleAt(sx, sy).bg, SiteColors.raised);

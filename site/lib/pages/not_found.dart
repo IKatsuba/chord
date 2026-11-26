@@ -1,11 +1,10 @@
 import 'package:chord_tui/chord_tui.dart';
 
-import '../chord_art.dart';
 import '../page.dart';
 
-/// What a path no page has shows: chord's art, "404 · page not found", the
-/// path, and a button home on Enter (Esc too, the shell's). It does not go
-/// home by itself, so a mistyped link stays readable.
+/// What a path no page has shows, in C: the giant `404` in orange, `PAGE NOT
+/// FOUND.`, the path, and a button home on Enter (Esc too, the shell's). It
+/// does not go home by itself, so a mistyped link stays readable.
 class NotFoundPage extends StatelessWidget {
   /// Nothing at [path]; [home] goes home.
   const NotFoundPage(this.path, this.home, {super.key});
@@ -22,30 +21,36 @@ class NotFoundPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return SitePage(
+      measure: posterMeasure,
       bindings: [Binding('enter', 'home', home, id: _homeId)],
       sections: [
         Text(''),
-        // The art by the room the measure leaves it.
+        Text(''),
         LayoutBuilder(
-          builder: (context, c) =>
-              Center(child: ChordArt(artFormFor(c.maxWidth))),
-        ),
-        Text(''),
-        Center(
-          child: Text(
-            '404 · page not found',
-            style: theme.text.merge(Style.bold),
+          builder: (context, c) => DisplayText(
+            '404',
+            size:
+                DisplayText.measure('404', DisplaySize.huge).width <= c.maxWidth
+                ? DisplaySize.huge
+                : DisplaySize.large,
+            style: theme.accent,
           ),
         ),
-        Center(child: Text(path, softWrap: false)),
         Text(''),
-        Center(
-          // The page holds the focus; Enter is the page's binding.
-          child: FilledButton(
-            action: _homeId,
-            canRequestFocus: false,
-            child: Text('Home'),
-          ),
+        Text('PAGE NOT FOUND.', style: theme.text.merge(Style.bold)),
+        Text(path, softWrap: false),
+        Text(''),
+        Text(''),
+        Row(
+          children: [
+            // The page holds the focus; Enter is the page's binding.
+            FilledButton(
+              action: _homeId,
+              dense: true,
+              canRequestFocus: false,
+              child: Text('HOME'),
+            ),
+          ],
         ),
       ],
     );

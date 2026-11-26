@@ -214,6 +214,8 @@ class _SiteState extends State<Site> {
         child: Focus(
           canRequestFocus: false,
           onKeyCapture: _capture,
+          // A paste while the panel is open goes nowhere, like its keys.
+          onPasteCapture: (_) => _keysOpen,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

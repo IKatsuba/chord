@@ -115,6 +115,20 @@ void main() {
     expect(t.screen.lines, isNot(contains(matches(RegExp(r'\?/f1')))));
   });
 
+  testWidgets('a paste while the panel is open edits nothing', (t) async {
+    await t.pumpWidget(
+      Site(host: FakeHost('/chord_tui/text_area'), gallery: siteGallery),
+      size: const Size(120, 40),
+    );
+    await t.press('f1');
+    await t.paste('pasted under');
+    await t.paste('');
+    await t.press('esc');
+    expect(t.screen, isNot(shows('pasted under')));
+    await t.paste('pasted over');
+    expect(t.screen, shows('pasted over'));
+  });
+
   testWidgets('the open panel swallows clicks and the wheel', (t) async {
     final host = FakeHost('/chord_tui/picker');
     await t.pumpWidget(

@@ -88,7 +88,10 @@ void main() {
       expect(t.screen.lines[35], contains('esc'));
       await t.resize(const Size(80, 24));
       expect(t.screen, shows('❯ 2. chord_tui'));
-      expect(t.screen.lines[1], contains('github.com'));
+      expect(t.screen.lines[1], isNot(contains('GitHub')));
+      await t.resize(const Size(120, 40));
+      expect(t.screen.lines[1], contains('GitHub ↗ g'));
+      expect(t.screen, shows('❯ 2. chord_tui'));
       await t.press('enter');
       expect(host.pushed, ['/chord_tui']);
     });

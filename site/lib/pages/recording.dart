@@ -55,6 +55,9 @@ class _RecordingPageState extends State<RecordingPage> {
   String? _file;
   PlaybackController? _controller;
   var _failed = false;
+  // Which fetch the page waits on: an older one that returns later, even
+  // for the same file, is dropped.
+  var _generation = 0;
 
   String get _wanted {
     final size = recordingSizeFor(widget.cols, widget.rows - 1);
@@ -73,11 +76,16 @@ class _RecordingPageState extends State<RecordingPage> {
     if (_wanted != _file) _load();
   }
 
+  // Called from initState and didUpdateWidget, where the build follows:
+  // the page says it is loading from the moment a fetch begins.
   Future<void> _load() async {
     final file = _file = _wanted;
+    final generation = ++_generation;
+    _controller?.dispose();
+    _controller = null;
+    _failed = false;
     final text = await widget.host.recording(file);
-    // A newer fetch, or the page gone, wins.
-    if (!mounted || file != _file) return;
+    if (!mounted || generation != _generation) return;
     TerminalRecording? recording;
     try {
       if (text != null) {

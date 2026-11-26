@@ -39,6 +39,7 @@ Future<void> main(List<String> args) async {
         p.join(p.dirname(Platform.script.toFilePath()), '..'),
       );
       final env = Platform.environment;
+      final home = env['HOME'] ?? '';
       final release = Release(
         root: root,
         runner: ProcessReleaseRunner(root: root, env: env),
@@ -46,8 +47,8 @@ Future<void> main(List<String> args) async {
         err: stderr.writeln,
         sleep: (duration) => Future<void>.delayed(duration),
         tty: stdin.hasTerminal && stdout.hasTerminal,
-        home: env['HOME'] ?? '',
-        sdks: Sdks.of(env),
+        home: home,
+        sdks: Sdks.of(env, home),
         sdkDir: p.dirname(p.dirname(Platform.resolvedExecutable)),
         fake: () {
           if (fakeAgent.reason case final reason?) die(reason);

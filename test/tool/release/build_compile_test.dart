@@ -16,7 +16,7 @@ final root = p.normalize(p.absolute('.'));
 
 final runner = ProcessReleaseRunner(root: root, env: Platform.environment);
 
-final sdks = Sdks.of(const {});
+final sdks = Sdks.of(const {}, '');
 
 final hostIsArmMac =
     Platform.isMacOS && Platform.version.contains('macos_arm64');

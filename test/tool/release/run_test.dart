@@ -167,7 +167,7 @@ void main() {
         sleep: (_) async {},
         tty: true,
         home: '/home/x',
-        sdks: const Sdks(dart: 'dart', version: '3.13.5'),
+        sdks: const Sdks(dart: 'dart', version: '3.13.5', cache: '/cache'),
         sdkDir: '/sdk',
         fake: () => 'fake',
         platform: platform,

@@ -4638,3 +4638,27 @@ that differ, or that a key, paste or button separates, stay apart in
 order. Routing wheel reports on the last laid-out geometry without a
 rebuild was the other option; it was not taken because it gives up the
 host's rule that a report is hit-tested against current geometry.
+
+## CHD-635: the release fetches its own x64 Dart SDK
+
+darwin-x64 is built by an x64 Dart SDK of the host's version under Rosetta
+(Q362), and the release used to stop until `CHORD_DART_X64` named one. The
+owner decided the release finds that SDK itself and downloads it when it is
+missing, with no variable to set; `CHORD_DART_X64` is removed (Q415). The
+SDK is kept in the user cache by version, `~/Library/Caches` (or
+`$XDG_CACHE_HOME`) under `chord-release/dart-sdk/<version>/macos-x64`, so
+every checkout reuses it and old versions stay until deleted by hand (Q412).
+The version and channel are the running Dart's (Q413). The zip is checked
+against the `.sha256sum` the Dart archive publishes beside it, over HTTPS,
+and the unpacked `bin/dart` must still say that version under
+`arch -x86_64` (Q414). An SDK is unpacked beside its cache folder and
+renamed into place only once it passes, so an interrupted download is never
+taken for a cached one. The download goes through a fetcher the tests
+replace, so no test reaches the network.
+A cached SDK that does not run under `arch -x86_64` is refused with the
+error and its path, not downloaded again: a cache entry exists only after
+passing both checks, so the host cannot run it (no Rosetta, say) and a new
+copy would fail the same way. One that runs but says another version, or
+none, is damaged; it is replaced by a fresh download, and the release says
+so. A fresh download that fails either check is refused and nothing of it
+is kept.

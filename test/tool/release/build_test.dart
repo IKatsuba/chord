@@ -5,14 +5,13 @@ import 'package:test/test.dart';
 
 import '../../../tool/release/build.dart';
 import '../../../tool/release/runner.dart';
+import '../../../tool/release/x64_sdk.dart';
 import '../../../tool/targets.dart';
 import 'fixtures/recording_runner.dart';
 
-const sdks = Sdks(
-  dart: '/sdk/bin/dart',
-  version: '3.13.5',
-  x64Dart: '/x64/dart',
-);
+const sdks = Sdks(dart: '/sdk/bin/dart', version: '3.13.5', cache: '/cache');
+
+const x64 = '/x64/dart';
 
 Target named(String name) => targets.firstWhere((t) => t.name == name);
 
@@ -81,7 +80,7 @@ void main() {
     test('every release build is stamped official', () {
       for (final target in targets) {
         expect(
-          compileArgv(target, sdks),
+          compileArgv(target, sdks, x64Dart: x64),
           contains('--define=chord.official=true'),
           reason: target.name,
         );
@@ -89,7 +88,7 @@ void main() {
     });
 
     test('the x64 SDK builds Intel macOS under Rosetta', () {
-      expect(compileArgv(named('darwin-x64'), sdks), [
+      expect(compileArgv(named('darwin-x64'), sdks, x64Dart: x64), [
         'arch',
         '-x86_64',
         '/x64/dart',
@@ -118,80 +117,41 @@ void main() {
       });
     }
 
-    test('Intel macOS without the x64 SDK names the variable and the '
-        'download', () {
-      expect(
-        () => compileArgv(
-          named('darwin-x64'),
-          const Sdks(dart: 'dart', version: '3.13.5'),
-        ),
-        dies(
-          'CHORD_DART_X64 is not set: darwin-x64 is built by the x64 Dart '
-          'SDK 3.13.5 under Rosetta; download dartsdk-macos-x64-release.zip '
-          'of 3.13.5 from https://dart.dev/get-dart/archive and set '
-          'CHORD_DART_X64 to its bin/dart',
-        ),
-      );
+    test('Intel macOS is not built without the x64 SDK', () {
+      expect(() => compileArgv(named('darwin-x64'), sdks), throwsArgumentError);
     });
 
-    test('the SDKs of this process read the variable', () {
-      expect(Sdks.of({'CHORD_DART_X64': '/x/dart'}).x64Dart, '/x/dart');
-      expect(Sdks.of({'CHORD_DART_X64': ''}).x64Dart, isNull);
-      expect(Sdks.of({}).version, Platform.version.split(' ').first);
-    });
-  });
-
-  group('the x64 SDK', () {
-    test('of the same version is taken', () async {
-      final runner = RecordingRunner(goodBuild);
-      await checkX64Sdk(runner, sdks);
-      expect(runner.argvs, [
-        ['arch', '-x86_64', '/x64/dart', '--version'],
-      ]);
-    });
-
-    test('of another version is refused', () async {
-      final runner = RecordingRunner(
-        (_) => const Ran(0, stdout: 'Dart SDK version: 3.12.0 (stable)\n'),
-      );
-      await expectLater(
-        checkX64Sdk(runner, sdks),
-        dies(
-          '/x64/dart is Dart 3.12.0, not 3.13.5: darwin-x64 is built by '
-          'the same SDK as the rest',
-        ),
-      );
-    });
-
-    test('that does not run is refused with its words', () async {
-      final runner = RecordingRunner(
-        (_) => const Ran(null, stderr: 'No such file or directory\n'),
-      );
-      await expectLater(
-        checkX64Sdk(runner, sdks),
-        dies('arch -x86_64 /x64/dart --version failed: No such file'),
-      );
-    });
-
-    test('that is missing is refused before anything runs', () async {
-      final runner = RecordingRunner();
-      await expectLater(
-        checkX64Sdk(runner, const Sdks(dart: 'dart', version: '3.13.5')),
-        dies('CHORD_DART_X64 is not set'),
-      );
-      expect(runner.calls, isEmpty);
+    test('the SDKs of this process keep the x64 SDK in the user cache', () {
+      expect(Sdks.of({'XDG_CACHE_HOME': '/xdg'}, '/h').cache, '/xdg');
+      expect(Sdks.of({}, '/h').cache, '/h/Library/Caches');
+      expect(Sdks.of({}, '/h').version, Platform.version.split(' ').first);
     });
   });
 
   group('compile', () {
-    test('checks the x64 SDK, builds every target loud, then checks each '
-        'kind', () async {
+    late Sdks kept;
+    late String x64Dart;
+    setUp(() {
+      kept = Sdks(
+        dart: sdks.dart,
+        version: sdks.version,
+        cache: p.join(root.path, 'cache'),
+        fetch: (url) => throw StateError('fetched $url'),
+      );
+      x64Dart = sdkDart(sdkFolder(kept.cache, kept.version));
+      File(x64Dart).createSync(recursive: true);
+    });
+
+    test('takes the kept x64 SDK, builds every target loud, then checks '
+        'each kind', () async {
+      final said = <String>[];
       final runner = RecordingRunner(goodBuild);
-      await compile(runner, sdks, root.path);
+      await compile(runner, kept, root.path, said.add);
+      expect(said, isEmpty);
       expect(runner.calls.first.argv, [
         'arch',
         '-x86_64',
-        '/x64/dart',
+        x64Dart,
         '--version',
       ]);
       expect(
@@ -200,7 +160,8 @@ void main() {
             [...call.argv, if (call.loud) 'loud'],
         ],
         [
-          for (final t in targets) [...compileArgv(t, sdks), 'loud'],
+          for (final t in targets)
+            [...compileArgv(t, kept, x64Dart: x64Dart), 'loud'],
         ],
       );
       expect(runner.argvs.skip(5), [
@@ -220,10 +181,10 @@ void main() {
             argv.contains('--target-arch=x64') ? const Ran(1) : goodBuild(argv),
       );
       await expectLater(
-        compile(runner, sdks, root.path),
+        compile(runner, kept, root.path, (_) {}),
         dies('compile of linux-x64 failed'),
       );
-      expect(runner.argvs.last, compileArgv(named('linux-x64'), sdks));
+      expect(runner.argvs.last, compileArgv(named('linux-x64'), kept));
     });
 
     test('a binary of the wrong kind is refused', () async {
@@ -239,7 +200,7 @@ void main() {
         return goodBuild(argv);
       });
       await expectLater(
-        compile(runner, sdks, root.path),
+        compile(runner, kept, root.path, (_) {}),
         dies(
           'build/release/linux-arm64/chord is build/release/linux-arm64/'
           'chord: ELF 64-bit LSB pie executable, x86-64',
@@ -353,11 +314,27 @@ esac
   });
 
   group('tester: build failure boundaries', () {
+    late Sdks kept;
+    late String x64Dart;
+    setUp(() {
+      kept = Sdks(
+        dart: sdks.dart,
+        version: sdks.version,
+        cache: p.join(root.path, 'cache'),
+        fetch: (url) => throw StateError('fetched $url'),
+      );
+      x64Dart = sdkDart(sdkFolder(kept.cache, kept.version));
+      File(x64Dart).createSync(recursive: true);
+    });
+
     test(
       'a failed SDK preflight starts no compile and creates no output',
       () async {
         final runner = RecordingRunner((_) => const Ran(3, stderr: 'refused'));
-        await expectLater(compile(runner, sdks, root.path), dies('refused'));
+        await expectLater(
+          compile(runner, kept, root.path, (_) {}),
+          dies('refused'),
+        );
         expect(runner.calls, hasLength(1));
         expect(Directory(p.join(root.path, 'build')).existsSync(), isFalse);
       },
@@ -367,14 +344,14 @@ esac
       test(
         'a signalled ${target.name} compile stops before the next command',
         () async {
-          final command = compileArgv(target, sdks);
+          final command = compileArgv(target, kept, x64Dart: x64Dart);
           final runner = RecordingRunner(
             (argv) => argv.join('\u0000') == command.join('\u0000')
                 ? const Ran(null)
                 : goodBuild(argv),
           );
           await expectLater(
-            compile(runner, sdks, root.path),
+            compile(runner, kept, root.path, (_) {}),
             dies('compile of $target failed'),
           );
           expect(runner.argvs.last, command);
@@ -401,10 +378,11 @@ esac
       const sdk = Sdks(
         dart: '/sdk with spaces/dart',
         version: '3.13.5',
-        x64Dart: '/x64 with spaces/dart',
+        cache: '/cache',
       );
+      const spaced = '/x64 with spaces/dart';
       expect(compileArgv(named('darwin-arm64'), sdk).first, sdk.dart);
-      expect(compileArgv(named('darwin-x64'), sdk)[2], sdk.x64Dart);
+      expect(compileArgv(named('darwin-x64'), sdk, x64Dart: spaced)[2], spaced);
     });
   });
 }

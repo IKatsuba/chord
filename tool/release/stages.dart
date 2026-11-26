@@ -211,7 +211,8 @@ final List<Stage> chordStages = [
     about: _about('compile'),
     versioned: true,
     outputs: (_) => [for (final target in targets) binaryOf(target)],
-    run: (release, _, _) => compile(release.runner, release.sdks, release.root),
+    run: (release, _, _) =>
+        compile(release.runner, release.sdks, release.root, release.out),
   ),
   Stage(
     name: 'sign',

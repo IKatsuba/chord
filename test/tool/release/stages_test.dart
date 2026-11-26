@@ -39,7 +39,7 @@ void main() {
     sleep: (_) async {},
     tty: false,
     home: '/home/x',
-    sdks: const Sdks(dart: 'dart', version: '3.13.5', x64Dart: '/x64/dart'),
+    sdks: const Sdks(dart: 'dart', version: '3.13.5', cache: '/cache'),
     sdkDir: '/sdk',
     fake: () => "bun '/chord/fake.ts'",
     platform: platform,

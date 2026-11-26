@@ -1,0 +1,40 @@
+
+  CHORD / CHORD_TUI                            01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                                       ┃
+    03 / THE GALLERY                                                                                                   ┃
+      ████████    ██████    ██          ██          ██████████  ████████    ██      ██                                 ┃
+    ██          ██      ██  ██          ██          ██          ██      ██  ██      ██                                 ┃
+    ██          ██      ██  ██          ██          ██          ██      ██    ██  ██                                   ┃
+    ██  ██████  ██████████  ██          ██          ████████    ████████        ██                                     ┃
+    ██      ██  ██      ██  ██          ██          ██          ██  ██          ██                                     ┃
+    ██      ██  ██      ██  ██          ██          ██          ██    ██        ██      ████                           ┃
+      ████████  ██      ██  ██████████  ██████████  ██████████  ██      ██      ██      ████                           ┃
+                                                                                                                       ┃
+    Nine of chord_tui's examples, compiled to WebAssembly with this page. Pick one with the                            ┃
+    arrows or its number; Enter runs it, Esc comes back.                                                               ┃
+                                                                                                                       ┃
+    ▄▄▀▀▀▀▀▀▄▄    ▄▄██                     ▄▄▀▀▀▀▀▀▄▄  ▄▄▀▀▀▀▀▀▄▄                 ▄▄▀▀▀▀▀▀▄▄  ▀▀▀▀▀▀▀▀▄▄               ┃
+    ██      ██      ██                     ██      ██        ▄▄▀▀                 ██      ██    ▄▄▄▄▄▄▀▀               ┃
+    ██      ██      ██                     ██      ██    ▄▄▀▀                     ██      ██          ██               ┃
+      ▀▀▀▀▀▀      ▀▀▀▀▀▀                     ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀                   ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀                 ┃
+                                                                                                                       ┃
+    DEMO                        ⏎ RUN      MARKDOWN                               PICKER                               ┃
+    ─────────────────────────────────      ─────────────────────────────────      ─────────────────────────────────    ┃
+     ┌ left ─┐┌ right ──┐                   # Release notes                        › clau
+     │ one   ││ focused  │
+     │ two   ││ ❯ three  │                  - **Plans** you can edit               › 1 claude    opus
+     └───────┘└──────────┘                  - Faster `resume`                        2 claude    sonnet
+
+    The framework tour: layout, focus      Headings, lists, tables and code,      Numbered choices with a fuzzy
+    and keys.                              streamed as it arrives.                filter as you type.
+
+
+    ▄▄▀▀▀▀▀▀▄▄      ▄▄██                   ▄▄▀▀▀▀▀▀▄▄  ██▀▀▀▀▀▀▀▀                 ▄▄▀▀▀▀▀▀▄▄    ▄▄▀▀▀▀
+    ██      ██  ▄▄▀▀  ██                   ██      ██  ▀▀▀▀▀▀▀▀▄▄                 ██      ██  ██▄▄▄▄▄▄
+    ██      ██  ▀▀▀▀▀▀██▀▀                 ██      ██  ▄▄      ██                 ██      ██  ██      ██
+      ▀▀▀▀▀▀          ▀▀                     ▀▀▀▀▀▀      ▀▀▀▀▀▀                     ▀▀▀▀▀▀      ▀▀▀▀▀▀
+
+    FORM                                   TEXT AREA                              DIFF
+ left/right/up/down move  enter run  1–9 open  escape up  ? keys

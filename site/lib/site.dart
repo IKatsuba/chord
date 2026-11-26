@@ -23,7 +23,11 @@ const wideWidth = 100;
 /// out.
 const panelOnly = 'panel:';
 
-const _homeKeysId = '${panelOnly}home-keys';
+/// The id prefix of the site's own bindings: on a page that runs an
+/// example, the help row lists these alone.
+const siteKeys = 'site:';
+
+const _homeKeysId = '${siteKeys}home';
 const _repositoryId = '${panelOnly}repository';
 
 /// The whole site: a header, the page the route names, and its keys.
@@ -115,13 +119,7 @@ class _SiteState extends State<Site> {
             _keysOpen ? 'close' : (_route is NotFoundRoute ? 'home' : 'up'),
             _escape,
             enabled: _keysOpen || !home,
-          ),
-          Binding('?', 'keys', () => setState(() => _keysOpen = !_keysOpen)),
-          Binding(
-            'g',
-            'open GitHub',
-            () => widget.host.openUrl(repositoryUrl),
-            id: _repositoryId,
+            id: '${siteKeys}escape',
           ),
           // Quit means home; on home these do nothing, and never end the
           // program.
@@ -132,6 +130,18 @@ class _SiteState extends State<Site> {
               () => _open(const HomeRoute()),
               id: _homeKeysId,
             ),
+          Binding(
+            '?',
+            'keys',
+            () => setState(() => _keysOpen = !_keysOpen),
+            id: '${siteKeys}keys',
+          ),
+          Binding(
+            'g',
+            'open GitHub',
+            () => widget.host.openUrl(repositoryUrl),
+            id: _repositoryId,
+          ),
         ],
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,7 +156,10 @@ class _SiteState extends State<Site> {
             Expanded(child: _page()),
             if (_keysOpen) _KeysPanel(width: width),
             if (narrow) const KeyRow(),
-            _HelpRow(narrow: narrow),
+            _HelpRow(
+              narrow: narrow,
+              embedding: _route is ExampleRoute || _route is ChordTuiRoute,
+            ),
           ],
         ),
       );
@@ -213,11 +226,14 @@ String _crumbs(SiteRoute route) {
 }
 
 /// The keys in scope on one row, `…` where they overflow: on a phone only
-/// Esc and `?`; never the [panelOnly] ones.
+/// Esc and `?`; never the [panelOnly] ones. On a page [embedding] an
+/// example, only the site's own, Ctrl+Q home among them: the example's are
+/// in its frame. Elsewhere home is left to the `?` panel.
 class _HelpRow extends StatelessWidget {
-  const _HelpRow({required this.narrow});
+  const _HelpRow({required this.narrow, required this.embedding});
 
   final bool narrow;
+  final bool embedding;
 
   @override
   Widget build(BuildContext context) => KeyHelp.builder(
@@ -225,19 +241,24 @@ class _HelpRow extends StatelessWidget {
       final theme = Theme.of(context);
       final spans = <TextSpan>[TextSpan(' ')];
       for (final group in groupBindings(bindings)) {
-        if (group.id?.startsWith(panelOnly) ?? false) continue;
+        final id = group.id ?? '';
+        if (id.startsWith(panelOnly)) continue;
+        if (embedding ? !id.startsWith(siteKeys) : id == _homeKeysId) {
+          continue;
+        }
         if (narrow &&
             !(group.chords.first.toString() == 'escape' ||
                 group.chords.first.toString() == '?')) {
           continue;
         }
         if (spans.length > 1) spans.add(TextSpan('  '));
+        // Ctrl+C is home too, but the row names the one key to learn.
+        final chords = id == _homeKeysId
+            ? [group.chords.first.toString()]
+            : [for (final chord in group.chords) chord.toString()];
         spans
           ..add(
-            TextSpan(
-              group.chords.join('/'),
-              style: theme.text.merge(Style.bold),
-            ),
+            TextSpan(keysLabel(chords), style: theme.text.merge(Style.bold)),
           )
           ..add(TextSpan(' ${group.description}', style: theme.dim));
       }
@@ -289,4 +310,17 @@ class _KeysPanel extends StatelessWidget {
       );
     },
   );
+}
+
+/// How a help row writes [chords]: a run of three or more digits in order
+/// as a range, `1–9`; anything else joined by `/`.
+String keysLabel(List<String> chords) {
+  final digits = [for (final c in chords) int.tryParse(c)];
+  final run =
+      chords.length >= 3 &&
+      chords.every((c) => c.length == 1) &&
+      digits.every((d) => d != null) &&
+      [for (var i = 1; i < digits.length; i++) digits[i]! == digits[i - 1]! + 1]
+          .every((ok) => ok);
+  return run ? '${chords.first}–${chords.last}' : chords.join('/');
 }

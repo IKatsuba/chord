@@ -23,6 +23,25 @@ void main() {
     }
   });
 
+  test('a run of digits is written as a range, anything else joined', () {
+    expect(keysLabel(['1', '2', '3', '4']), '1–4');
+    expect(keysLabel(['1', '2', '3', '4', '5', '6', '7', '8', '9']), '1–9');
+    expect(keysLabel(['1', '2']), '1/2');
+    expect(keysLabel(['1', '3', '4']), '1/3/4');
+    expect(keysLabel(['up', 'down']), 'up/down');
+  });
+
+  testWidgets('the gallery writes its nine digits as one range', (t) async {
+    await t.pumpWidget(
+      Site(host: FakeHost('/chord_tui/gallery'), gallery: siteGallery),
+      size: const Size(80, 24),
+    );
+    expect(
+      t.screen.lines.last,
+      ' up/down move  enter open  1–9 jump  escape up  ? keys',
+    );
+  });
+
   testWidgets('the gallery lists every example and opens by number', (t) async {
     final host = FakeHost('/chord_tui/gallery');
     await t.pumpWidget(
@@ -55,6 +74,35 @@ void main() {
             .skip(1)
             .where((l) => l.replaceAll(RegExp(r'[│ ]'), '').isNotEmpty);
         expect(inside, isNotEmpty);
+      });
+    }
+
+    for (final size in _sizes) {
+      testWidgets('${entry.name}: the rows keep their own keys, $size', (
+        t,
+      ) async {
+        await t.pumpWidget(
+          Site(
+            host: FakeHost('/chord_tui/${entry.name}'),
+            gallery: siteGallery,
+          ),
+          size: size,
+        );
+        // The dialog example opens its dialog once the first frame is laid.
+        await t.pump();
+        final lines = t.screen.lines;
+        // The site's row: its own keys only, the same on every example.
+        expect(
+          lines.last,
+          entry.ownsEscape
+              ? ' ctrl+q home  ? keys'
+              : ' escape up  ctrl+q home  ? keys',
+        );
+        // The frame's rows: the example's keys, never the site's or Quit.
+        final framed = lines.where((l) => l.startsWith(' │')).join('\n');
+        for (final site in ['? keys', 'open GitHub', 'ctrl+q', 'Quit']) {
+          expect(framed, isNot(contains(site)), reason: site);
+        }
       });
     }
 
@@ -106,6 +154,15 @@ void main() {
       expect(t.screen, shows('The Flutter way, for the terminal'));
       expect(t.screen, shows('example/main.dart'));
       expect(t.screen, shows('▸ Run checks'));
+      // README's example lists its own key alone in its frame.
+      expect(
+        t.screen.lines,
+        contains(matches(RegExp(r'^ │ctrl\+o Toggle tool details +│$'))),
+      );
+      expect(
+        t.screen.lines.last,
+        ' enter gallery  escape up  ctrl+q home  ? keys',
+      );
       await t.press('ctrl+o');
       expect(t.screen, shows('▾ Run checks'));
       await t.press('enter');

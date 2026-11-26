@@ -18,7 +18,7 @@ void main() {
     expect(t.screen, shows('❯ 1. chord'));
     expect(t.screen, shows('4. Install'));
     expect(t.screen, shows('Try it'));
-    expect(lines.last, ' up/down move  enter open  1/2/3/4 jump  ? keys');
+    expect(lines.last, ' up/down move  enter open  1–4 jump  ? keys');
     expect(host.titles, ['chord and chord_tui']);
   });
 

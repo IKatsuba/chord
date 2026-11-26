@@ -1,4 +1,5 @@
 import 'package:chord_site/page.dart';
+import 'package:chord_site/palette.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_tui/chord_tui.dart';
 import 'package:chord_tui/testing.dart';
@@ -71,7 +72,12 @@ void main() {
   });
 
   group('CHD-638 tester: shell menu lifetime', () {
-    for (final size in [const Size(54, 56), const Size(43, 37)]) {
+    for (final size in [
+      const Size(80, 24),
+      const Size(52, 52),
+      const Size(54, 56),
+      const Size(43, 37),
+    ]) {
       testWidgets('keys panel blocks menu selection and resumes it at $size', (
         t,
       ) async {
@@ -87,7 +93,7 @@ void main() {
         expect(host.pushed, isEmpty);
         expect(host.opened, isEmpty);
         await t.press('f1');
-        expect(t.screen, shows('❯ 2 chord_tui'));
+        expect(t.screen, shows('❯ 02 FRAMEWORK'));
         await t.press('enter');
         expect(host.pushed, ['/chord_tui']);
       });
@@ -111,5 +117,26 @@ void main() {
         },
       );
     }
+  });
+
+  group('CHD-638 tester: C shell scroll style', () {
+    testWidgets('the page thumb stays muted at both ends', (t) async {
+      final c = ScrollController();
+      await t.pumpWidget(
+        Theme(
+          data: siteTheme(),
+          child: SitePage(
+            controller: c,
+            sections: [for (var i = 0; i < 200; i++) Text('row$i')],
+          ),
+        ),
+      );
+      expect(t.screen.charAt(79, 0), '┃');
+      expect(t.screen.styleAt(79, 0).fg, SiteColors.muted);
+      c.toBottom();
+      await t.pump();
+      expect(t.screen.charAt(79, 23), '┃');
+      expect(t.screen.styleAt(79, 23).fg, SiteColors.muted);
+    });
   });
 }

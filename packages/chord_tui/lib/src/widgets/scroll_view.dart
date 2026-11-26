@@ -1,5 +1,4 @@
 import '../foundation/geometry.dart';
-import '../input/keys.dart';
 import '../rendering/box.dart';
 import '../rendering/scroll_view.dart';
 import 'editor_cursor.dart';
@@ -23,6 +22,7 @@ class SingleChildScrollView extends StatefulWidget {
     super.key,
     this.controller,
     this.padding = EdgeInsets.zero,
+    this.scrollsOnWheel = true,
     required this.child,
   });
 
@@ -32,6 +32,9 @@ class SingleChildScrollView extends StatefulWidget {
 
   /// The space around [child] inside the content.
   final EdgeInsets padding;
+
+  /// Whether the wheel scrolls it, a row a step, as on a page.
+  final bool scrollsOnWheel;
 
   /// The content.
   final Widget child;
@@ -147,18 +150,13 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     _lastCursor = cursor;
   }
 
-  void _wheel(MouseEvent event) {
-    final scroll = _scroll;
-    for (var i = 0; i < event.scrollDelta.y.abs(); i++) {
-      event.scrollDelta.y < 0 ? scroll.lineUp() : scroll.lineDown();
-    }
-  }
-
   @override
   Widget build(BuildContext context) => _ScrollViewScope(
     state: this,
     child: Listener(
-      onPointerSignal: _wheel,
+      onPointerSignal: widget.scrollsOnWheel
+          ? (event) => scrollByWheel(_scroll, event)
+          : null,
       child: _ScrollViewport(
         controller: _scroll,
         padding: widget.padding,

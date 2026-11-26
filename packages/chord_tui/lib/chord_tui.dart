@@ -79,7 +79,7 @@ export 'src/widgets/playback.dart' hide sliceColumns, playbackBarText;
 export 'src/widgets/overlay.dart';
 export 'src/widgets/run_app.dart';
 export 'src/widgets/scroll_bindings.dart';
-export 'src/widgets/scroll_controller.dart';
+export 'src/widgets/scroll_controller.dart' hide scrollByWheel;
 export 'src/widgets/scrollbar.dart';
 export 'src/widgets/scroll_view.dart';
 export 'src/widgets/spinner.dart';

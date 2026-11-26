@@ -1,6 +1,6 @@
 name: chord
 description: chord, the full-screen terminal client for ACP coding agents, ported to Dart on chord_tui.
-version: 0.72.0
+version: 0.72.1
 publish_to: none
 
 environment:

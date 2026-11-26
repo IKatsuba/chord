@@ -1,6 +1,6 @@
-/// The site's dark palette, direction A of CHD-638: as chord_tui roles for
-/// the cells, and as [SitePalette] for the site's own surfaces. index.html
-/// sets the same background and text colours on the page around the grid.
+/// The site's palette, direction C of CHD-638: ink, cream and one signal
+/// orange, as chord_tui roles for the cells and as [SitePalette] for the
+/// site's own surfaces. index.html sets the same ink and cream on the page.
 library;
 
 import 'package:chord_tui/chord_tui.dart';
@@ -8,37 +8,34 @@ import 'package:chord_tui/chord_tui.dart';
 /// The site's colours, by role, as hex for the page and the cells to agree.
 abstract final class SiteColors {
   /// Every cell without its own background, and the page.
-  static final background = RgbColor.hex('#0d0e12');
-
-  /// The nav, the help row, the sidebar, inline code strips.
-  static final surface = RgbColor.hex('#16171d');
-
-  /// Code blocks, previews, placeholder rooms.
-  static final raised = RgbColor.hex('#1d1f27');
-
-  /// Rules, frames, cards and the scrollbar thumb.
-  static final line = RgbColor.hex('#2b2e38');
+  static final ink = RgbColor.hex('#0c0c0c');
 
   /// Text, the terminal's own foreground.
-  static final text = RgbColor.hex('#e7e7ea');
+  static final cream = RgbColor.hex('#f2ead9');
 
-  /// Descriptions, captions and key hints.
-  static final muted = RgbColor.hex('#8d919c');
+  /// Accent, links and focus: the one loud colour.
+  static final orange = RgbColor.hex('#ff5a1f');
 
-  /// Focus, the current item, links, the primary button and the band.
-  static final mint = RgbColor.hex('#5eead4');
+  /// Descriptions, captions and key words.
+  static final muted = RgbColor.hex('#8a8478');
 
-  /// The wordmark's gradient end and code keywords.
-  static final violet = RgbColor.hex('#a78bfa');
+  /// Rules, frames and cells.
+  static final rule = RgbColor.hex('#2e2b26');
 
-  /// The wordmark's full stop, strings and warnings.
-  static final amber = RgbColor.hex('#fbbf24');
+  /// Code blocks and previews.
+  static final raised = RgbColor.hex('#171614');
 
-  /// Success and added lines.
-  static final green = RgbColor.hex('#4ade80');
+  /// The help row.
+  static final bar = RgbColor.hex('#141312');
 
-  /// Failure and removed lines.
-  static final red = RgbColor.hex('#f87171');
+  /// Success, and added lines.
+  static final green = RgbColor.hex('#8fbf73');
+
+  /// Failure, and removed lines.
+  static final red = RgbColor.hex('#e5484d');
+
+  /// Warnings, and code types.
+  static final sand = RgbColor.hex('#e8c58a');
 }
 
 /// The site's surfaces no chord_tui role names, read with
@@ -47,42 +44,42 @@ class SitePalette extends ThemeExtension<SitePalette> {
   /// The palette of [SiteColors].
   const SitePalette();
 
-  /// The nav, help row and sidebar background.
-  Style get surface => Style(bg: SiteColors.surface);
+  /// The help row's background.
+  Style get bar => Style(bg: SiteColors.bar);
 
-  /// Code blocks, previews and placeholder rooms.
+  /// Code blocks and previews.
   Style get raised => Style(bg: SiteColors.raised);
 }
 
-/// The site's theme: chord_tui's dark theme with direction A's colours.
-/// Text stays the terminal's own foreground, which index.html sets.
+/// The site's theme: chord_tui's dark theme in direction C's colours. Text
+/// stays the terminal's own foreground, cream, which index.html sets.
 ThemeData siteTheme() {
   final dark = ThemeData.dark();
-  final code = dark.code!.terminal;
+  final orange = Style(fg: SiteColors.orange);
   return dark.copyWith(
     dim: Style(fg: SiteColors.muted),
-    accent: Style(fg: SiteColors.mint),
-    link: Style(fg: SiteColors.mint),
-    inlineCode: Style(bg: SiteColors.surface),
+    accent: orange,
+    link: orange,
+    focus: orange,
+    inlineCode: Style(bg: SiteColors.raised),
     success: Style(fg: SiteColors.green),
-    warning: Style(fg: SiteColors.amber),
+    warning: Style(fg: SiteColors.sand),
     error: Style(fg: SiteColors.red),
-    border: Style(fg: SiteColors.line),
-    focus: Style(fg: SiteColors.mint),
+    border: Style(fg: SiteColors.rule),
     diff: dark.diff.copyWith(
       added: Style(fg: SiteColors.green),
       removed: Style(fg: SiteColors.red),
     ),
     code: CodeTones(
       terminal: Tones(
-        keyword: Style(fg: SiteColors.violet),
-        string: Style(fg: SiteColors.amber),
-        number: code.number,
+        keyword: orange,
+        string: Style(fg: SiteColors.green),
+        type: Style(fg: SiteColors.sand),
         comment: Style(fg: SiteColors.muted),
-        title: code.title,
-        type: code.type,
-        name: code.name,
-        meta: code.meta,
+        number: Style.plain,
+        title: Style.plain,
+        name: Style.plain,
+        meta: Style.plain,
       ),
     ),
     extensions: const [SitePalette()],

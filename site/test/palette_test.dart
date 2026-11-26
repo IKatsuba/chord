@@ -11,60 +11,58 @@ RgbColor hexIn(String css, String pattern) {
 }
 
 void main() {
-  test('the theme paints with direction A\'s roles', () {
+  test('the theme paints with direction C\'s roles', () {
     final theme = siteTheme();
+    final orange = Style(fg: SiteColors.orange);
     expect(theme.brightness, Brightness.dark);
-    expect(theme.text, Style.plain, reason: 'the page sets the foreground');
+    expect(theme.text, Style.plain, reason: 'the page sets cream');
     expect(theme.dim, Style(fg: SiteColors.muted));
-    expect(theme.accent, Style(fg: SiteColors.mint));
-    expect(theme.focus, Style(fg: SiteColors.mint));
-    expect(theme.link, Style(fg: SiteColors.mint));
-    expect(theme.border, Style(fg: SiteColors.line));
-    expect(theme.warning, Style(fg: SiteColors.amber));
+    expect(theme.accent, orange);
+    expect(theme.focus, orange);
+    expect(theme.link, orange);
+    expect(theme.border, Style(fg: SiteColors.rule));
+    expect(theme.warning, Style(fg: SiteColors.sand));
     expect(theme.success, Style(fg: SiteColors.green));
     expect(theme.error, Style(fg: SiteColors.red));
-    expect(theme.inlineCode, Style(bg: SiteColors.surface));
-    expect(theme.code!.terminal.keyword, Style(fg: SiteColors.violet));
-    expect(theme.code!.terminal.string, Style(fg: SiteColors.amber));
+    expect(theme.diff.added, Style(fg: SiteColors.green));
+    expect(theme.diff.removed, Style(fg: SiteColors.red));
+    final code = theme.code!.terminal;
+    expect(code.keyword, orange);
+    expect(code.string, Style(fg: SiteColors.green));
+    expect(code.type, Style(fg: SiteColors.sand));
+    expect(code.comment, Style(fg: SiteColors.muted));
+    for (final rest in [code.number, code.title, code.name, code.meta]) {
+      expect(rest, Style.plain, reason: 'cream');
+    }
     final palette = theme.extension<SitePalette>()!;
-    expect(palette.surface, Style(bg: SiteColors.surface));
+    expect(palette.bar, Style(bg: SiteColors.bar));
     expect(palette.raised, Style(bg: SiteColors.raised));
   });
 
   group('index.html', () {
     final page = File('web/index.html').readAsStringSync();
+    final terminal = RegExp(r'\n  #terminal \{([^}]*)\}').firstMatch(page)![1]!;
 
-    test('draws the page and the grid in the palette\'s background and '
-        'text', () {
+    test('draws the page and the grid in ink and cream', () {
       expect(
         hexIn(page, r'html, body \{[^}]*background: (#[0-9a-f]{6})'),
-        SiteColors.background,
+        SiteColors.ink,
       );
-      expect(hexIn(page, r'--term-bg: (#[0-9a-f]{6})'), SiteColors.background);
-      expect(hexIn(page, r'--term-fg: (#[0-9a-f]{6})'), SiteColors.text);
+      expect(hexIn(page, r'--term-bg: (#[0-9a-f]{6})'), SiteColors.ink);
+      expect(hexIn(page, r'--term-fg: (#[0-9a-f]{6})'), SiteColors.cream);
     });
 
     test('lets the grid fill the window: no padding, corners or shadow', () {
-      final terminal = RegExp(
-        r'\n  #terminal \{([^}]*)\}',
-      ).firstMatch(page)![1]!;
       expect(terminal, contains('padding: 0;'));
       expect(terminal, contains('border-radius: 0;'));
       expect(terminal, contains('box-shadow: none;'));
     });
 
-    test('uses 14 px on 18 px rows, and 12 px on 15 px under 600 px', () {
-      final terminal = RegExp(
-        r'\n  #terminal \{([^}]*)\}',
-      ).firstMatch(page)![1]!;
-      expect(terminal, contains('--term-font-size: 14px;'));
-      expect(terminal, contains('--term-row-height: 18px;'));
-      expect(terminal, contains('--term-line-height: 1.25;'));
-      final phone = RegExp(
-        r'@media \(max-width: 599\.98px\) \{\s*#terminal \{([^}]*)\}',
-      ).firstMatch(page)![1]!;
-      expect(phone, contains('--term-font-size: 12px;'));
-      expect(phone, contains('--term-row-height: 15px;'));
+    test('one size at every width: 12.5 px on 16 px rows, no breakpoint', () {
+      expect(terminal, contains('--term-font-size: 12.5px;'));
+      expect(terminal, contains('--term-row-height: 16px;'));
+      expect(terminal, contains('--term-line-height: 1.28;'));
+      expect(page, isNot(contains('@media')));
     });
   });
 }

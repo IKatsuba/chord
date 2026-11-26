@@ -10,7 +10,7 @@ const _sizes = [Size(120, 40), Size(80, 24), Size(43, 37)];
 
 /// The nav's current section, as the dark theme draws it.
 final current = ThemeData.dark().accent.merge(
-  Style(bold: true, underline: true, bg: SiteColors.surface),
+  Style(bold: true, underline: true, bg: SiteColors.bar),
 );
 
 void main() {

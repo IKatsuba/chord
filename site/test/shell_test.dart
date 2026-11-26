@@ -26,7 +26,7 @@ void main() {
           'line-coloured rule', (t) async {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
         for (final y in [0, 1, 2]) {
-          expect(t.screen.styleAt(size.width - 1, y).bg, SiteColors.surface);
+          expect(t.screen.styleAt(size.width - 1, y).bg, SiteColors.bar);
         }
         expect(t.screen.styleAt(0, 3), ThemeData.dark().border);
         final nav = t.screen.lines[1];
@@ -44,7 +44,7 @@ void main() {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
         expect(
           t.screen.styleAt(size.width - 1, size.height - 1).bg,
-          SiteColors.surface,
+          SiteColors.bar,
         );
       });
 
@@ -82,7 +82,7 @@ void main() {
       testWidgets('m opens the menu over the page; esc closes it', (t) async {
         final host = FakeHost('/install');
         await t.pumpWidget(Site(host: host), size: size);
-        expect(t.screen.styleAt(0, 0).bg, SiteColors.surface);
+        expect(t.screen.styleAt(0, 0).bg, SiteColors.bar);
         await t.press('m');
         final lines = t.screen.lines;
         expect(lines.sublist(2, 9), [
@@ -94,7 +94,7 @@ void main() {
           '     GitHub ↗ g',
           '',
         ]);
-        expect(t.screen.styleAt(5, 6).bg, SiteColors.surface);
+        expect(t.screen.styleAt(5, 6).bg, SiteColors.bar);
         expect(lines.last, ' esc close');
         // Nothing reaches the page meanwhile.
         await t.paste('typed');

@@ -23,34 +23,28 @@
   }
   /* The palette's background and text, as site/lib/palette.dart has them,
      so the strip a partial cell leaves matches the cells. */
-  html, body { margin: 0; height: 100%; background: #0d0e12; overflow: hidden; }
+  html, body { margin: 0; height: 100%; background: #0c0c0c; overflow: hidden; }
   #terminal {
     position: fixed;
     inset: 0;
     padding: 0;
     border-radius: 0;
     box-shadow: none;
-    --term-bg: #0d0e12;
-    --term-fg: #e7e7ea;
-    --term-font-size: 14px;
-    --term-row-height: 18px;
-    --term-line-height: 1.25;
+    --term-bg: #0c0c0c;
+    --term-fg: #f2ead9;
+    /* One size at every width (Q432): the layout adapts by cells alone. */
+    --term-font-size: 12.5px;
+    --term-row-height: 16px;
+    --term-line-height: 1.28;
     --term-font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
     /* wterm turns ligatures off; this keeps JetBrains Mono's code ligatures,
        which it keeps in calt, off too: one glyph per cell. */
     font-feature-settings: "calt" 0, "liga" 0;
   }
-  /* Phones: a denser grid, so a 390 px window gets 54 columns. */
-  @media (max-width: 599.98px) {
-    #terminal {
-      --term-font-size: 12px;
-      --term-row-height: 15px;
-    }
-  }
   /* A fixed grid, for captures: the element is the grid's size, so nothing
      of the page shows around it. */
   #terminal.fixed { right: auto; bottom: auto; width: max-content; height: max-content; }
-  noscript { display: block; padding: 1em; color: #e4e4e4; font: 16px system-ui; }
+  noscript { display: block; padding: 1em; color: #f2ead9; font: 16px system-ui; }
 </style>
 <script type="importmap">
 { "imports": {

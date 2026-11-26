@@ -391,7 +391,7 @@ class _SiteState extends State<Site> {
                         ? null
                         : (Theme.of(context).extension<SitePalette>() ??
                                   const SitePalette())
-                              .surface,
+                              .bar,
                     width: width,
                     child: _HelpRow(
                       narrow: narrow,

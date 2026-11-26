@@ -81,8 +81,7 @@ class SiteNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final surface =
-        (theme.extension<SitePalette>() ?? const SitePalette()).surface;
+    final surface = (theme.extension<SitePalette>() ?? const SitePalette()).bar;
     final mark = _tap(
       () => open(const HomeRoute()),
       Text.rich(
@@ -239,7 +238,7 @@ class NavMenu extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Box(
-          background: palette.surface,
+          background: palette.bar,
           width: width,
           child: Column(
             mainAxisSize: MainAxisSize.min,

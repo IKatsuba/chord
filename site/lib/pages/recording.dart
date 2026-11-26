@@ -144,11 +144,16 @@ class _RecordingPageState extends State<RecordingPage> {
       );
     }
     final fit = recordingFitFor(widget.cols, widget.rows);
-    final needed = fit.rows + (fit.framed ? 6 : 2);
+    final needed = fit.framed ? fit.rows + 6 : widget.rows;
     final above = ((widget.rows - needed) ~/ 2).clamp(0, widget.rows);
+    // A clipped recording gets what the page has left, its bar and blank
+    // below it, so Playback pans to what does not fit.
+    final roomRows = fit.rows + 2 > widget.rows
+        ? (widget.rows - 2).clamp(1, fit.rows)
+        : fit.rows;
     final room = SizedBox(
       width: fit.cols < widget.cols ? fit.cols : widget.cols,
-      height: fit.rows,
+      height: roomRows,
       child: Playback(controller, autofocus: true),
     );
     return Column(

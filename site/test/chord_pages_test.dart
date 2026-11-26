@@ -42,6 +42,7 @@ final _files = {
 const _names = ['permission', 'start'];
 
 void main() {
+  _shortPages();
   test('the largest recording that fits with its frame, caption and bar '
       'is chosen; else 48x32 bare; else 48x32 clipped', () {
     // Pages at the design's grids: the window less the nav and help rows,
@@ -245,4 +246,27 @@ void main() {
     expect(host.fetched, ['permission.48x32.rec.json']);
     expect(t.screen.lines[4], endsWith('›'));
   });
+}
+
+void _shortPages() {
+  for (final size in const [Size(80, 24), Size(43, 37)]) {
+    testWidgets('a page too short for 48x32 keeps its bar in sight, and '
+        'shift+down pans to the recording\'s last row, at $size', (t) async {
+      final host = FakeHost('/chord/permission', _files);
+      await t.pumpWidget(
+        Site(host: host, recordings: _names),
+        size: size,
+      );
+      await t.pump();
+      expect(host.fetched, ['permission.48x32.rec.json']);
+      final pageEnd = size.height - 2 - (size.width < 60 ? 1 : 0);
+      expect(t.screen.lines[pageEnd].trim(), startsWith('▶  0:00'));
+      expect(t.screen, isNot(shows('row 31')));
+      for (var i = 0; i < 32; i++) {
+        await t.press('shift+down');
+      }
+      expect(t.screen, shows('row 31'));
+      expect(t.screen.lines[pageEnd].trim(), startsWith('▶'));
+    });
+  }
 }

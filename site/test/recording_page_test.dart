@@ -45,13 +45,13 @@ void main() {
     final host = _SlowHost();
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 42),
+      size: const Size(122, 47),
     );
     host.pending.single.$2.complete(_big);
     await t.pump();
     expect(t.screen, shows('big recording'));
-    await t.resize(const Size(80, 24));
-    expect(t.screen, shows('loading permission…'));
+    await t.resize(const Size(82, 31));
+    expect(t.screen, shows('LOADING PERMISSION…'));
     expect(t.screen, isNot(shows('big recording')));
     expect(host.pending.last.$1, 'permission.80x20.rec.json');
     host.pending.last.$2.complete(_small);
@@ -63,13 +63,13 @@ void main() {
     final host = _SlowHost();
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(80, 24),
+      size: const Size(82, 31),
     );
     host.pending.single.$2.complete(null);
     await t.pump();
-    expect(t.screen, shows("couldn't load permission"));
-    await t.resize(const Size(120, 42));
-    expect(t.screen, shows('loading permission…'));
+    expect(t.screen, shows("COULDN'T LOAD PERMISSION"));
+    await t.resize(const Size(122, 47));
+    expect(t.screen, shows('LOADING PERMISSION…'));
     host.pending.last.$2.complete(_big);
     await t.pump();
     expect(t.screen, shows('big recording'));
@@ -79,10 +79,10 @@ void main() {
     final host = _SlowHost();
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 42),
+      size: const Size(122, 47),
     );
-    await t.resize(const Size(80, 24));
-    await t.resize(const Size(120, 42));
+    await t.resize(const Size(82, 31));
+    await t.resize(const Size(122, 47));
     final [a, b, c] = host.pending;
     expect(
       [a.$1, b.$1, c.$1],
@@ -109,7 +109,7 @@ void main() {
     final host = _SlowHost();
     await t.pumpWidget(
       Site(host: host, recordings: _names),
-      size: const Size(120, 42),
+      size: const Size(122, 47),
     );
     host.popped.add('/chord');
     await t.pump();

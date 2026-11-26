@@ -292,6 +292,98 @@ void main() {
         expect(await screen(), contains('▶'));
       });
 
+      group('tester: viewport and emulated touch', () {
+        test('auto-resize keeps the selected home action', () async {
+          try {
+            await page.setViewport(
+              const DeviceViewport(width: 1200, height: 800),
+            );
+            await open('/', size: '');
+            await until('❯ 1. chord');
+            final before = await page.evaluate<Map<dynamic, dynamic>>(
+              '() => ({cols: chordTerminal.cols, rows: chordTerminal.rows})',
+            );
+            await page.keyboard.press(Key.arrowDown);
+            await until('❯ 2. chord_tui');
+            await page.setViewport(
+              const DeviceViewport(width: 700, height: 500),
+            );
+            await page.waitForFunction(
+              '() => chordTerminal.cols < ${before['cols']} && '
+              'chordTerminal.rows < ${before['rows']}',
+            );
+            await until('❯ 2. chord_tui');
+            expect(await pathname(), base);
+            await page.keyboard.press(Key.enter);
+            await until('chord › chord_tui');
+            expect(await pathname(), '${base}chord_tui');
+          } finally {
+            await page.setViewport(
+              const DeviceViewport(width: 1200, height: 800),
+            );
+          }
+        });
+
+        test('emulated phone taps open a menu row and toggle F1', () async {
+          try {
+            await page.setViewport(
+              const DeviceViewport(
+                width: 390,
+                height: 844,
+                deviceScaleFactor: 2,
+                isMobile: true,
+                hasTouch: true,
+              ),
+            );
+            await open('/', size: 'cols=43&rows=37');
+            await until('2. chord_tui');
+            final menu = await page.evaluate<Map<dynamic, dynamic>>('''() => {
+              const row = [...document.querySelectorAll("#terminal .term-row")]
+                .find((r) => r.innerText.includes("2. chord_tui"));
+              const box = row.getBoundingClientRect();
+              return {x: box.left + 60, y: box.top + box.height / 2};
+            }''');
+            await page.touchscreen.tap(
+              Point(
+                (menu['x'] as num).toDouble(),
+                (menu['y'] as num).toDouble(),
+              ),
+            );
+            await until('chord › chord_tui');
+            expect(await pathname(), '${base}chord_tui');
+
+            Future<void> tapF1() async {
+              final key = await page.evaluate<Map<dynamic, dynamic>>('''() => {
+                const row = [...document.querySelectorAll("#terminal .term-row")]
+                  .find((r) => r.innerText.includes("esc") &&
+                    r.innerText.includes("tab") && r.innerText.includes("f1"));
+                const box = row.getBoundingClientRect();
+                const column = row.innerText.indexOf("f1");
+                return {x: box.left + (column + 0.5) * box.width / chordTerminal.cols,
+                  y: box.top + box.height / 2};
+              }''');
+              await page.touchscreen.tap(
+                Point(
+                  (key['x'] as num).toDouble(),
+                  (key['y'] as num).toDouble(),
+                ),
+              );
+            }
+
+            await tapF1();
+            await until(' Keys');
+            await tapF1();
+            await page.waitForFunction('''() =>
+              ![...document.querySelectorAll("#terminal .term-row")]
+                .some((r) => r.innerText.includes(" Keys"))''');
+          } finally {
+            await page.setViewport(
+              const DeviceViewport(width: 1200, height: 800),
+            );
+          }
+        });
+      });
+
       test('the console stayed clean', () {
         expect(errors, isEmpty);
         expect(server!.errors, isEmpty);

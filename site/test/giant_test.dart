@@ -17,6 +17,46 @@ void main() {
     expect(giantLayout('INSTALL', 47).lines, ['INST', 'ALL.']);
   });
 
+  test('where the halves need more than the room at large, the word steps '
+      'down to half; the margins stay', () {
+    // GALL at large is 4 × 12 − 2 = 46 columns.
+    expect(giantLayout('GALLERY', 46).size, DisplaySize.large);
+    expect(giantLayout('GALLERY', 46).lines, ['GALL', 'ERY.']);
+    // A 360 px phone, 48 columns, leaves 43 inside its margins.
+    final narrow = giantLayout('GALLERY', 43);
+    expect(narrow.size, DisplaySize.half);
+    // Whole at half is 8 × 6 − 1 = 47, more than 43: split again.
+    expect(narrow.lines, ['GALL', 'ERY.']);
+    expect(giantLayout('INSTALL', 43).size, DisplaySize.half);
+    expect(
+      giantLayout('CHORD', 43).size,
+      DisplaySize.large,
+      reason: 'CHO is 34',
+    );
+  });
+
+  for (final width in const [43, 46]) {
+    testWidgets('GALLERY. never draws wider than $width columns', (t) async {
+      await t.pumpWidget(
+        Theme(
+          data: siteTheme(),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(width: width, child: const GiantWord('GALLERY')),
+          ),
+        ),
+        size: const Size(80, 40),
+      );
+      final drawn = t.screen.lines.where((l) => l.contains(RegExp('[█▀▄]')));
+      expect(drawn, isNotEmpty);
+      for (final line in drawn) {
+        expect(line.trimRight().length, lessThanOrEqualTo(width), reason: line);
+      }
+      // Every glyph whole: the stop's cells are there.
+      expect(t.screen.text.contains(RegExp('[█▀▄]')), isTrue);
+    });
+  }
+
   for (final size in const [Size(120, 40), Size(54, 56)]) {
     testWidgets('the giant word is cream with an orange stop, and the '
         'kicker orange caps, at $size', (t) async {

@@ -1,20 +1,25 @@
 import 'package:chord_tui/chord_tui.dart';
 
 /// The lines and size [word] (with its full stop) is drawn at in [width]
-/// columns: whole at huge where it fits, else whole at large, else split
-/// into halves at large, the first half the longer (`GALL` / `ERY.`).
+/// columns: whole at huge where it fits, else at large, whole or split into
+/// halves with the first the longer (`GALL` / `ERY.`), and where neither
+/// fits at large, the same at half. The margins stay; the word shrinks.
 ({DisplaySize size, List<String> lines}) giantLayout(String word, int width) {
   final full = '$word.';
-  for (final size in [DisplaySize.huge, DisplaySize.large]) {
-    if (DisplayText.measure(full, size).width <= width) {
-      return (size: size, lines: [full]);
-    }
-  }
   final half = (full.length + 1) ~/ 2;
-  return (
-    size: DisplaySize.large,
-    lines: [full.substring(0, half), full.substring(half)],
-  );
+  final split = [full.substring(0, half), full.substring(half)];
+  bool fits(List<String> lines, DisplaySize size) =>
+      lines.every((l) => DisplayText.measure(l, size).width <= width);
+  final candidates = [
+    (size: DisplaySize.huge, lines: [full]),
+    (size: DisplaySize.large, lines: [full]),
+    (size: DisplaySize.large, lines: split),
+    (size: DisplaySize.half, lines: [full]),
+  ];
+  for (final c in candidates) {
+    if (fits(c.lines, c.size)) return c;
+  }
+  return (size: DisplaySize.half, lines: split);
 }
 
 /// A poster page's giant word, in cream with an orange full stop, at the

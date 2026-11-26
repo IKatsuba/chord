@@ -41,8 +41,7 @@ dart run tool/release.dart --help
 ```
 
 The maintainer runs `dart run tool/release.dart chord` locally
-on an arm64 Mac. It needs an x64 Dart SDK of the same version under Rosetta
-(`CHORD_DART_X64` names its `bin/dart`), the local Developer ID identity and
+on an arm64 Mac. It needs Rosetta, the local Developer ID identity and
 notarytool profile, npm and GitHub authentication, and the Dart fake agent.
 Preflight requires a clean tree and, for publishing, `origin` targeting
 `IKatsuba/chord`, with the version's branch level with it. Stable releases
@@ -50,6 +49,17 @@ publish from `main`; channels from their named branches, with npm's channel
 tag and a GitHub pre-release draft. `--bump` updates `pubspec.yaml`,
 `lib/version.dart`, the framework's `packages/chord_tui/pubspec.yaml` and
 its entry in the root `pubspec.lock` together.
+
+The release finds or downloads the x64 Dart SDK of the running Dart's
+version and channel. It caches it under `$XDG_CACHE_HOME`, or
+`~/Library/Caches` when unset or empty, in
+`chord-release/dart-sdk/<version>/macos-x64`, shared across checkouts.
+Downloads come from the Dart archive over HTTPS, checked against its
+published `.sha256sum`, then by `arch -x86_64 dart --version` before being
+kept. A cached SDK that cannot run is refused; one reporting another
+version or none is replaced. Old versions and ignored
+`macos-x64.partial-*` folders left by interrupted runs stay until deleted
+by hand.
 
 Stages install, check, compile four binaries, sign, self-test, notarise,
 pack and publish. Output in `build/release/` includes npm packages,

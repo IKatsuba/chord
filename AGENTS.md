@@ -209,6 +209,7 @@ dart test \
   test/cli_upgrade_test.dart test/upgrade_test.dart
 dart test test/upgrade_brew_test.dart
 dart test test/tool/release_test.dart test/tool/release
+dart test test/tool/release/x64_sdk*_test.dart
 dart test \
   test/tool/npm_test.dart test/tool/formula_test.dart
 dart test \
@@ -558,6 +559,7 @@ tool/screenshots_team.md team fixture for captures
 tool/screenshots_proposal.md proposed team fixture for captures
 tool/release.dart maintainer release command
 tool/release/ builds, notices, archives, signing and release state
+tool/release/x64_sdk.dart checked x64 Dart SDK download and shared cache
 tool/macos/chord.entitlements hardened-runtime Dart entitlement
 tool/notice.dart dimcode notice, no agent or dismissal writes
 tool/form.dart covered form and held-link fixtures
@@ -605,6 +607,10 @@ test/upgrade*_test.dart registry and package-manager upgrades
 test/tool/release_test.dart release CLI help and refusals
 test/tool/release/ release stages, state and recording runners
 test/tool/release/build_compile_test.dart native build checks
+test/tool/release/x64_sdk_test.dart SDK cache, downloads and checks
+test/tool/release/x64_sdk_tester_test.dart archive input boundaries
+test/tool/release/x64_sdk_provision_tester_test.dart staging and cache races
+test/tool/release/x64_sdk_fetch_tester_test.dart HTTP fetches on loopback
 test/tool/npm_test.dart package layout, manifests and shim
 test/tool/formula_test.dart stable formula and archive checksums
 test/tool/ci_test.dart native/cross-compile runner and command boundaries

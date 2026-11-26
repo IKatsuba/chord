@@ -20,4 +20,8 @@ abstract class SiteHost {
 
   /// Opens [url] in a new tab.
   void openUrl(String url);
+
+  /// The recording file [file] (`<name>.<cols>x<rows>.rec.json`), or null
+  /// where it cannot be had.
+  Future<String?> recording(String file);
 }

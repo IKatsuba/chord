@@ -78,7 +78,7 @@ class _SiteMenuState extends State<SiteMenu> {
                         style: theme.accent,
                       ),
                       TextSpan(
-                        '${widget.numbered ? '${i + 1}. ' : ''}'
+                        '${widget.numbered ? '${i + 1}.'.padRight('${items.length}.'.length + 1) : ''}'
                         '${items[i].label.padRight(width)}',
                         style: i == _selected
                             ? theme.text.merge(Style.bold)

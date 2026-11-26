@@ -15,6 +15,14 @@ external String get _baseUri;
 @JS('history.pushState')
 external void _pushState(JSAny? state, String unused, String url);
 
+@JS('fetch')
+external JSPromise<_Response> _fetch(String url);
+
+extension type _Response._(JSObject _) implements JSObject {
+  external bool get ok;
+  external JSPromise<JSString> text();
+}
+
 @JS('window.addEventListener')
 external void _addEventListener(String type, JSFunction listener);
 
@@ -53,4 +61,16 @@ class BrowserHost extends SiteHost {
 
   @override
   void openUrl(String url) => unawaited(terminal.openUrl(url));
+
+  // Relative, so it resolves against <base href> from any deep path.
+  @override
+  Future<String?> recording(String file) async {
+    try {
+      final response = await _fetch('recordings/$file').toDart;
+      if (!response.ok) return null;
+      return (await response.text().toDart).toDart;
+    } catch (_) {
+      return null;
+    }
+  }
 }

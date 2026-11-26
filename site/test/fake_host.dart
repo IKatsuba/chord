@@ -6,7 +6,13 @@ import 'package:chord_site/router.dart';
 /// A page for the site's tests: an address, a history and links, all kept
 /// in memory.
 class FakeHost extends SiteHost {
-  FakeHost([this.initialPath = '/']);
+  FakeHost([this.initialPath = '/', this.files = const {}]);
+
+  /// The recording files the page can fetch, by name.
+  final Map<String, String> files;
+
+  /// The files asked for, in order.
+  final fetched = <String>[];
 
   @override
   final String initialPath;
@@ -30,4 +36,10 @@ class FakeHost extends SiteHost {
 
   @override
   void openUrl(String url) => opened.add(url);
+
+  @override
+  Future<String?> recording(String file) async {
+    fetched.add(file);
+    return files[file];
+  }
 }

@@ -2,6 +2,7 @@
 // tmux before the web build: `dart run tool/terminal.dart [path]`. History
 // is kept in memory; F2 goes back, F3 forward, and links are not opened.
 import 'dart:async';
+import 'dart:io';
 
 import 'package:chord_site/host.dart';
 import 'package:chord_site/router.dart';
@@ -37,6 +38,14 @@ class _MemoryHost extends SiteHost {
   @override
   void openUrl(String url) {}
 
+  // The files the site build ships, read where tool/screenshots.dart wrote
+  // them.
+  @override
+  Future<String?> recording(String file) async {
+    final read = File('../docs/images/$file');
+    return read.existsSync() ? read.readAsString() : null;
+  }
+
   void move(int by) {
     final to = _at + by;
     if (to < 0 || to >= _entries.length) return;
@@ -69,9 +78,24 @@ Future<void> main(List<String> args) async {
             id: '${panelOnly}leave',
           ),
         ],
-        child: Site(host: host, gallery: siteGallery),
+        child: Site(
+          host: host,
+          gallery: siteGallery,
+          recordings: _recordings(),
+        ),
       ),
     ),
     terminal: terminal,
   );
+}
+
+/// The shots tool/screenshots.dart recorded, by name.
+List<String> _recordings() {
+  final images = Directory('../docs/images');
+  if (!images.existsSync()) return const [];
+  return [
+    for (final file in images.listSync())
+      if (file.path.endsWith('.120x36.rec.json'))
+        file.uri.pathSegments.last.replaceFirst('.120x36.rec.json', ''),
+  ]..sort();
 }

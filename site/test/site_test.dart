@@ -39,7 +39,8 @@ void main() {
     );
     final lines = t.screen.lines;
     expect(lines[0], matches(RegExp(r'^ chord › install +dev$')));
-    expect(t.screen, isNot(shows('github.com')));
+    expect(lines[0], isNot(contains('github.com')));
+    expect(lines[1], startsWith('──'));
     expect(lines[35], startsWith('  esc   tab   ←   ↑   ↓   →   enter'));
     expect(lines.last, ' escape up  ? keys');
   });
@@ -59,7 +60,7 @@ void main() {
     expect(host.pushed.last, '/');
     await t.press('4');
     expect(host.pushed.last, '/install');
-    expect(t.screen, shows('Homebrew, npm, from source.'));
+    expect(t.screen, shows('brew install ikatsuba/tap/chord'));
   });
 
   testWidgets('a tap opens the row tapped', (t) async {
@@ -75,7 +76,7 @@ void main() {
     await t.pumpWidget(Site(host: host), size: const Size(80, 24));
     host.popped.add('/chord');
     await t.pump();
-    expect(t.screen, shows('What chord is'));
+    expect(t.screen, shows('One terminal for every coding agent.'));
     expect(host.pushed, isEmpty);
     expect(host.titles.last, 'chord');
   });

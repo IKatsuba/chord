@@ -13,7 +13,7 @@ Future<void> main() async {
   // failure ends the loop, already said on the console.
   for (;;) {
     await runApp(
-      Site(host: host, gallery: siteGallery),
+      Site(host: host, gallery: siteGallery, recordings: _recordings),
       terminal: terminal,
       exitProcess: false,
       handleSignals: false,
@@ -21,3 +21,12 @@ Future<void> main() async {
     host.push(const HomeRoute());
   }
 }
+
+/// The recordings the build shipped under recordings/, by name, as it
+/// passes them with -DCHORD_RECORDINGS.
+final _recordings = [
+  for (final name in const String.fromEnvironment(
+    'CHORD_RECORDINGS',
+  ).split(','))
+    if (name.isNotEmpty) name,
+];

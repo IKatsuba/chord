@@ -6,11 +6,13 @@ import 'gallery.dart';
 import 'host.dart';
 import 'key_row.dart';
 import 'keys_panel.dart';
+import 'pages/chord.dart';
 import 'pages/chord_tui.dart';
 import 'pages/gallery.dart';
 import 'pages/home.dart';
+import 'pages/install.dart';
 import 'pages/not_found.dart';
-import 'pages/stub.dart';
+import 'pages/recording.dart';
 import 'router.dart';
 import 'version.dart';
 
@@ -172,7 +174,7 @@ class _SiteState extends State<Site> {
       final narrow = width < narrowWidth;
       // The page's rows: the window less the header (two rows, three where
       // the link folds under the name), the key row and the help row.
-      final headerRows = width >= narrowWidth && width < wideWidth ? 3 : 2;
+      final headerRows = _linkFolds(width) ? 3 : 2;
       final pageRows =
           constraints.maxHeight - headerRows - (narrow ? 1 : 0) - 1;
       _pageRows = pageRows;
@@ -233,7 +235,7 @@ class _SiteState extends State<Site> {
                   width: width,
                   child: Stack(
                     children: [
-                      _page(),
+                      _page(width, pageRows),
                       // The open panel sits at the bottom of the page, and stops
                       // clicks and the wheel short of it.
                       if (_keysOpen)
@@ -306,23 +308,34 @@ class _SiteState extends State<Site> {
           version,
         ],
       ),
-      if (width >= narrowWidth && width < wideWidth)
-        Row(children: [Text(' '), link]),
+      if (_linkFolds(width)) Row(children: [Text(' '), link]),
       Text('─' * width, style: theme.dim),
     ];
   }
 
-  Widget _page() => switch (_route) {
+  // Under the name below 100 columns; a recording page keeps its header to
+  // two rows instead, so an 80x20 recording fits an 80x24 window, and leaves
+  // the link to the keys panel's g.
+  bool _linkFolds(int width) =>
+      width >= narrowWidth && width < wideWidth && _route is! RecordingRoute;
+
+  Widget _page(int width, int rows) => switch (_route) {
     HomeRoute() => HomePage(_open),
-    ChordRoute() => const StubPage('chord', 'What chord is, and its screens.'),
-    RecordingRoute(:final name) => StubPage(name, 'A recording of chord.'),
+    ChordRoute() => ChordPage(widget.recordings, _open),
+    RecordingRoute(:final name) => RecordingPage(
+      key: ValueKey(name),
+      host: widget.host,
+      name: name,
+      cols: width,
+      rows: rows,
+    ),
     ChordTuiRoute() => ChordTuiPage(_gallery.readme, _open),
     GalleryRoute() => GalleryPage(_gallery, _open),
     ExampleRoute(:final name) => ExamplePage(
       _gallery[name]!,
       () => _open(const HomeRoute()),
     ),
-    InstallRoute() => const StubPage('Install', 'Homebrew, npm, from source.'),
+    InstallRoute() => const InstallPage(),
     NotFoundRoute(:final path) => NotFoundPage(
       path,
       () => _open(const HomeRoute()),

@@ -4655,3 +4655,10 @@ and the unpacked `bin/dart` must still say that version under
 renamed into place only once it passes, so an interrupted download is never
 taken for a cached one. The download goes through a fetcher the tests
 replace, so no test reaches the network.
+A cached SDK that does not run under `arch -x86_64` is refused with the
+error and its path, not downloaded again: a cache entry exists only after
+passing both checks, so the host cannot run it (no Rosetta, say) and a new
+copy would fail the same way. One that runs but says another version, or
+none, is damaged; it is replaced by a fresh download, and the release says
+so. A fresh download that fails either check is refused and nothing of it
+is kept.

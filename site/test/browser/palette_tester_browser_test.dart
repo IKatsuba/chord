@@ -39,18 +39,20 @@ void main() {
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       addTearDown(() => server.close(force: true));
       server.listen((request) async {
-        final path = request.uri.path == '/'
-            ? 'index.html'
-            : request.uri.path.substring(1);
-        final file = File('build/$path');
-        if (!file.existsSync()) {
+        final path = request.uri.path.substring(1);
+        final served = serve(request.uri.path, '/', {
+          if (File('build/$path').existsSync()) path,
+        });
+        if (served is! ServedFile) {
           request.response.statusCode = HttpStatus.notFound;
         } else {
           request.response.headers.set(
             HttpHeaders.contentTypeHeader,
-            contentTypeOf(path),
+            contentTypeOf(served.file),
           );
-          await request.response.addStream(file.openRead());
+          await request.response.addStream(
+            File('build/${served.file}').openRead(),
+          );
         }
         await request.response.close();
       });
@@ -75,8 +77,13 @@ void main() {
           }
         });
 
-        Future<void> size(int width, int height) =>
-            page.setViewport(DeviceViewport(width: width, height: height));
+        Future<void> size(int width, int height, num ratio) => page.setViewport(
+          DeviceViewport(
+            width: width,
+            height: height,
+            deviceScaleFactor: ratio,
+          ),
+        );
         Future<void> grid(int cols, int rows) async {
           await page.waitForFunction('''() => globalThis.chordTerminal &&
           chordTerminal.cols === $cols && chordTerminal.rows === $rows &&
@@ -85,24 +92,38 @@ void main() {
           getComputedStyle(document.querySelector('#terminal'))
             .getPropertyValue('--term-row-height') === '16px' &&
           getComputedStyle(document.querySelector('#terminal'))
-            .getPropertyValue('--term-line-height') === '1.28' ''');
+            .getPropertyValue('--term-line-height') === '1.28' &&
+          getComputedStyle(document.querySelector('#terminal'))
+            .letterSpacing === '-0.5px' ''');
         }
 
-        await size(1440, 900);
-        await page.goto('http://127.0.0.1:${server.port}/', wait: Until.load);
-        await grid(192, 56);
-        await size(390, 844);
-        await grid(52, 52);
-        await size(360, 640);
-        await grid(48, 40);
-        await size(820, 1180);
-        await grid(109, 73);
-        await size(1440, 900);
-        await grid(192, 56);
-        await size(599, 600);
-        await grid(79, 37);
-        await size(600, 600);
-        await grid(80, 37);
+        for (final ratio in [1, 2, 3]) {
+          await size(1440, 900, ratio);
+          // The gallery exercises the same grid without home's recording
+          // asset requests, which have their own integration checks.
+          await page.goto(
+            'http://127.0.0.1:${server.port}/chord_tui/gallery',
+            wait: Until.load,
+          );
+          await grid(205, 56);
+          await size(390, 844, ratio);
+          await grid(55, 52);
+          await size(360, 640, ratio);
+          await grid(51, 40);
+          await size(820, 1180, ratio);
+          await grid(117, 73);
+          await size(1440, 900, ratio);
+          await grid(205, 56);
+          await size(599, 600, ratio);
+          await grid(85, 37);
+          await size(600, 600, ratio);
+          await grid(85, 37);
+          // No density breakpoint: only a whole new 7 px cell adds a column.
+          await size(601, 600, ratio);
+          await grid(85, 37);
+          await size(602, 600, ratio);
+          await grid(86, 37);
+        }
         expect(errors, isEmpty);
       },
     );

@@ -108,6 +108,53 @@ void main() {
     expect(t.screen, isNot(shows('copied')));
   });
 
+  for (final size in const [Size(80, 24), Size(54, 30), Size(43, 20)]) {
+    testWidgets('the selection and its copy hint stay in sight at $size', (
+      t,
+    ) async {
+      await install(t, size);
+      for (final (key, name, command) in [
+        ('right', 'npm', installWays[1].command),
+        ('right', 'From source', installWays[2].command),
+        ('down', 'shell', thenCommand),
+        ('up', 'From source', installWays[2].command),
+        ('left', 'npm', installWays[1].command),
+        ('left', 'Homebrew', installWays[0].command),
+      ]) {
+        await t.press(key);
+        await t.pump();
+        final hint = t.screen.lines.where((l) => l.contains('copy c'));
+        expect(hint, hasLength(1), reason: 'after $key');
+        expect(hint.single, contains(name), reason: 'after $key');
+        await t.press('c');
+        expect(t.terminal.copied.last, command);
+        expect(t.screen, shows('copied'));
+        // The next move takes copied back to copy c.
+      }
+    });
+  }
+
+  testWidgets('a resize keeps the selection in sight', (t) async {
+    await install(t, const Size(171, 50));
+    await t.press('down');
+    expect(t.screen, shows('copy c'));
+    await t.resize(const Size(54, 30));
+    await t.pump();
+    expect(
+      t.screen.lines.where((l) => l.contains('copy c')).single,
+      contains('shell'),
+    );
+    await t.press('up');
+    await t.pump();
+    expect(
+      t.screen.lines.where((l) => l.contains('copy c')).single,
+      contains('Homebrew'),
+    );
+    await t.resize(const Size(171, 50));
+    await t.pump();
+    expect(t.screen, shows('copy c'));
+  });
+
   testWidgets('the Then block is a shell on the raised colour', (t) async {
     await install(t, const Size(171, 50));
     final (x, y) = find(t, 'THEN');

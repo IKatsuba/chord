@@ -14,6 +14,20 @@ const wideMeasure = 136;
 int pageContentWidth(int width, {int measure = narrowMeasure}) =>
     (width - 1 - 2 * (width < narrowWidth ? 2 : 4)).clamp(1, measure);
 
+/// Scrolls [scroll] the least that shows the whole of list item [item], or
+/// its top when it is taller than the view.
+void revealItem(ScrollController scroll, int item) {
+  if (scroll.viewRows <= 0) return;
+  final top = scroll.itemTop(item);
+  final bottom = top + scroll.itemRows(item);
+  final offset = scroll.offset;
+  if (top < offset || bottom - top > scroll.viewRows) {
+    scroll.jumpTo(top);
+  } else if (bottom > offset + scroll.viewRows) {
+    scroll.jumpTo(bottom - scroll.viewRows);
+  }
+}
+
 /// A page of sections in one scrolling list beside a [Scrollbar], centred
 /// in at most [measure] columns with a gutter each side (4, or 2 on a
 /// phone); below the measure it runs edge to edge. ↑↓, PgUp/PgDn,

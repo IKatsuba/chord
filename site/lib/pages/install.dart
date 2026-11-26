@@ -46,6 +46,15 @@ class _InstallPageState extends State<InstallPage> {
   // 0–2 the cards, 3 the Then block.
   var _selected = 0;
   var _lastCard = 0;
+  final _scroll = ScrollController();
+
+  // The page's list items before the first row of cards: the header.
+  static const _headerItems = 7;
+
+  /// The list item the selection is in, with [rows] rows of cards.
+  int _selectedItem(int columns, int rows) => _selected == 3
+      ? _headerItems + 2 * rows + 1
+      : _headerItems + 2 * (_selected ~/ columns);
 
   // ←→ move along the cards, ↓ from a card reaches Then, ↑ comes back.
   void _move(GridStep step) => setState(() {
@@ -81,6 +90,7 @@ class _InstallPageState extends State<InstallPage> {
   @override
   void dispose() {
     _copiedTimer?.cancel();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -129,7 +139,14 @@ class _InstallPageState extends State<InstallPage> {
               i,
           ],
       ];
+      // The selection, and its copy hint, stay in sight whatever moved it: a
+      // key, a resize or a change of columns.
+      final item = _selectedItem(columns, rows.length);
+      context.owner.afterLayout(() {
+        if (mounted) revealItem(_scroll, item);
+      });
       return SitePage(
+        controller: _scroll,
         bindings: [
           for (final (key, step) in const [
             ('left', GridStep.left),

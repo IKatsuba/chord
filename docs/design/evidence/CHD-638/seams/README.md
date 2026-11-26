@@ -107,3 +107,38 @@ Not recommended:
 
 The upstream report to wterm (`../wterm-seam-report.md`) still stands for
 fractional ratios.
+
+## Run 3: the site as built after Q436 (`q436/`)
+
+The site at ef49590c8 (S7's `letter-spacing: -0.5px`), with the same
+`?probe=permission` addition, captured at DPR 1, 1.25, 1.5 and 2 at
+1440x900, and at DPR 3 at 390x844. wterm measures the 7 px cell: 1440x900
+gives 205x56. The glyphs sit on the cell grid; frames join with no drift.
+
+Ticks on the rules:
+
+- **home**: only its top line's rule. Home is now direction C, and its
+  giant blocks and band text are lit runs, not rules, so the other lines in
+  `measure.json` don't count.
+- **permission**: the fixture's frame.
+- **markdown**: the example's code and table frames.
+
+| DPR | Cell in device px | home rule | permission | markdown |
+| --- | ----------------- | --------- | ---------- | -------- |
+| 1 | 7 | 1 | 3 | 11 |
+| 1.25 (Windows 125 %) | 8.75 | 28 | 110 | 134 |
+| 1.5 (Windows 150 %) | 10.5 | 48 | 151 | 238 |
+| 2 | 14 | 0 | 0 | 1 |
+| 3 (phone) | 21 | 0 | 3 | 3 |
+
+At 1, 2 and 3 the rules are clean; the few counts are real content, as
+before. At the fractional ratios the ticks return, because a 7 px cell is
+not a whole number of device pixels there. No single CSS value is whole at
+1, 1.25, 1.5, 2 and 3 at once except a 4 px or 8 px cell. 4 px is too narrow
+to read. 8 px (`+0.5px`) ticked at DPR 2 and 3 in run 2, because the glyph
+then no longer fills its cell.
+
+So after Q436 the seams remain only on displays scaled to 125 % or 150 %,
+which is typical of Windows laptops. Closing those needs wterm itself to
+snap glyph or cell positions to device pixels. That is what the upstream
+report (`../wterm-seam-report.md`) asks, now narrowed to fractional ratios.

@@ -25,9 +25,10 @@
 /// scenario each shot plays comes from `CHORD_FAKE_SCENARIO`, so the prompt
 /// typed can be a person's words.
 ///
-/// Beside each picture but the logos it writes the shot as two recordings,
-/// `docs/images/<name>.120x36.rec.json` and `<name>.80x20.rec.json`
-/// (`tool/recordings.dart`): the shot played again at each size, a frame
+/// Beside each picture but the logos it writes the shot as three
+/// recordings, `docs/images/<name>.120x36.rec.json`, `<name>.80x20.rec.json`
+/// and `<name>.48x32.rec.json` for phones (`tool/recordings.dart`): the shot
+/// played again at each size, a frame
 /// after every step and every 100 ms while it waits, for the site's
 /// Playback.
 ///

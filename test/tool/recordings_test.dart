@@ -22,11 +22,19 @@ import '../../tool/screenshots.dart'
 const _ms = Duration(milliseconds: 1);
 
 void main() {
-  test('each shot is recorded at the two rooms the site gives', () {
-    expect(recordingSizes, [(cols: 120, rows: 36), (cols: 80, rows: 20)]);
+  test('each shot is recorded at the three rooms the site gives', () {
+    expect(recordingSizes, [
+      (cols: 120, rows: 36),
+      (cols: 80, rows: 20),
+      (cols: 48, rows: 32),
+    ]);
     expect(
       [for (final size in recordingSizes) recordingName('permission', size)],
-      ['permission.120x36.rec.json', 'permission.80x20.rec.json'],
+      [
+        'permission.120x36.rec.json',
+        'permission.80x20.rec.json',
+        'permission.48x32.rec.json',
+      ],
     );
   });
 

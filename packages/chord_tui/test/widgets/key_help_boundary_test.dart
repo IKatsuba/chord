@@ -65,6 +65,18 @@ void main() {
     });
   }
 
+  testWidgets('a taken inner binding leaves the outer one listed', (t) async {
+    await t.pumpWidget(
+      _host(
+        inner: [Binding('ctrl+q', 'Quit', () {})],
+        outer: [Binding('ctrl+q', 'home', () {})],
+      ),
+      size: const Size(120, 40),
+    );
+    expect(_row(t, 'inside:'), '');
+    expect(_row(t, 'outside:'), 'escape up  ? keys  ctrl+q home');
+  });
+
   testWidgets('a taken key hides any chord starting with it', (t) async {
     await t.pumpWidget(
       _host(

@@ -217,7 +217,8 @@ class _BoundaryScope extends InheritedWidget {
 
 /// What help built under [boundary] lists of [fm]'s active bindings: those
 /// inside [boundary], or all when it is null, less those on keys a boundary
-/// around them takes. Inner bindings shadow outer ones first, as for keys.
+/// around them takes. Inner bindings shadow outer ones, as for keys; taken
+/// ones, which never get their key, shadow none.
 @visibleForTesting
 List<Binding> listedBindings(FocusManager fm, FocusNode? boundary) {
   final path = fm.focusPath;
@@ -234,9 +235,13 @@ List<Binding> listedBindings(FocusManager fm, FocusNode? boundary) {
   final out = <Binding>[];
   for (var i = 0; i < path.length; i++) {
     for (final b in path[i].bindings) {
-      if (!b.enabled || !seen.add(b.chord)) continue;
+      // A taken binding never gets its key, so it shadows nothing: an outer
+      // binding on that key stays listed.
+      if (!b.enabled || takenAbove[i].contains(b.chord.combos.first)) {
+        continue;
+      }
+      if (!seen.add(b.chord)) continue;
       if (i >= inside) continue;
-      if (takenAbove[i].contains(b.chord.combos.first)) continue;
       out.add(b);
     }
   }

@@ -22,10 +22,10 @@ void main() {
     });
 
     for (final size in [
-      const Size(171, 50),
+      const Size(192, 56),
       const Size(120, 40),
       const Size(80, 24),
-      const Size(54, 56),
+      const Size(52, 52),
     ]) {
       testWidgets('1000 navigation updates settle on the last card at $size', (
         t,
@@ -42,8 +42,8 @@ void main() {
         }
         await t.pump();
         expect(
-          t.screen.lines.firstWhere((line) => line.contains('⏎ run')),
-          contains('9  Mouse'),
+          t.screen.lines.firstWhere((line) => line.contains('⏎ RUN')),
+          contains('MOUSE'),
         );
         await t.press('enter');
         expect(host.pushed, ['/chord_tui/mouse']);
@@ -60,11 +60,11 @@ void main() {
           size: const Size(80, 24),
         );
         await t.press('end');
-        expect(t.screen, isNot(shows('⏎ run')));
+        expect(t.screen, isNot(shows('⏎ RUN')));
         await t.press('left');
         expect(
-          t.screen.lines.firstWhere((line) => line.contains('⏎ run')),
-          contains('1  Demo'),
+          t.screen.lines.firstWhere((line) => line.contains('⏎ RUN')),
+          contains('DEMO'),
         );
         await t.press('enter');
         expect(host.pushed, ['/chord_tui/demo']);

@@ -1,9 +1,7 @@
 import '../foundation/geometry.dart';
 import '../input/keys.dart';
 import '../rendering/basic.dart';
-import '../rendering/box.dart';
 import '../rendering/flex.dart';
-import '../terminal/buffer.dart';
 import '../terminal/style.dart';
 import '../text/span.dart';
 import 'basic.dart';
@@ -11,6 +9,7 @@ import 'focus.dart';
 import 'focus_manager.dart';
 import 'framework.dart';
 import 'listener.dart';
+import 'press_bounds.dart';
 import 'theme.dart';
 import 'theme_data.dart';
 
@@ -95,7 +94,7 @@ class _ButtonState extends State<_Button> {
   FocusNode? _own;
   FocusNode get _node => widget.focusNode ?? (_own ??= FocusNode());
   final _capture = PointerCaptureController();
-  final _bounds = _Bounds();
+  final _bounds = PressBounds();
   bool _pressing = false;
   void Function()? _press;
 
@@ -170,7 +169,8 @@ class _ButtonState extends State<_Button> {
         : null;
     return Focus(
       focusNode: _node,
-      autofocus: widget.autofocus,
+      // requestFocus does not ask canRequestFocus: a disabled one must not ask.
+      autofocus: widget.autofocus && enabled,
       canRequestFocus: enabled,
       onKey: (event) {
         if (press == null ||
@@ -200,7 +200,7 @@ class _ButtonState extends State<_Button> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _BoundsBox(bounds: _bounds, child: face),
+            PressBoundsBox(bounds: _bounds, child: face),
             ?keyRow,
           ],
         ),
@@ -255,41 +255,5 @@ class _ButtonState extends State<_Button> {
         ),
       ),
     );
-  }
-}
-
-/// Where the face last painted, so a release is checked against it.
-class _Bounds {
-  Rect rect = const Rect(0, 0, 0, 0);
-  bool contains(Offset p) => rect.contains(p.x, p.y);
-}
-
-class _BoundsBox extends SingleChildRenderObjectWidget {
-  const _BoundsBox({required this.bounds, required super.child});
-
-  final _Bounds bounds;
-
-  @override
-  _RenderBounds createRenderObject(BuildContext context) =>
-      _RenderBounds(bounds);
-
-  @override
-  void updateRenderObject(BuildContext context, _RenderBounds r) =>
-      r.bounds = bounds;
-}
-
-class _RenderBounds extends RenderProxyBox {
-  _RenderBounds(this.bounds);
-
-  _Bounds bounds;
-
-  @override
-  PaintCoverage describePaintCoverage(Rect localClip) =>
-      const PaintCoverage.empty(_RenderBounds);
-
-  @override
-  void paint(Canvas canvas, Offset origin) {
-    bounds.rect = Rect.fromOffsetSize(origin, size);
-    super.paint(canvas, origin);
   }
 }

@@ -286,7 +286,7 @@ void main() {
           dark.dim.merge(const Style(bold: true, inverse: true)),
         );
         expect(t.screen.styleAt(0, 3), dark.dim);
-        expect(t.focusManager.primaryFocus?.debugLabel, isNot('button'));
+        expect(t.focusManager.primaryFocus, isNull);
       });
 
       testWidgets('an action follows its binding: disabled with it, and its '

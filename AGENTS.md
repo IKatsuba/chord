@@ -129,7 +129,7 @@ source; the release bump updates it, `packages/chord_tui/pubspec.yaml`,
   dart run example/markdown_wrap.dart --narrow # narrow table fallback
   dart run example/diff.dart          # numbered, highlighted, wrapped diffs
   dart run example/display_text.dart # block-glyph display sizes and colours
-  dart run example/button.dart       # buttons and rebound action keys
+  dart run example/button.dart       # action buttons, focus and disabled state
   dart run example/link.dart         # links and terminal services
   dart run example/scrollbar.dart    # list position and thumb
   dart run example/scroll_view.dart  # live widgets and focus following
@@ -481,7 +481,7 @@ benchmark/list_view.dart    list frames, resize, streaming and cached switches
 example/main.dart           the package's runnable example
 example/playback.dart       recorded terminal, pause, steps and panning
 example/display_text.dart   block-glyph sizes and per-run colours
-example/button.dart         buttons, dense faces and rebound action keys
+example/button.dart         action buttons, focus and disabled state
 example/link.dart           URI and action links
 example/scrollbar.dart      list position and thumb
 example/scroll_view.dart    live widgets and focus following
@@ -521,7 +521,7 @@ site/lib/site.dart         page shell, global keys and navigation
 site/lib/pages/            home, chord, recordings, framework and install
 site/lib/keys_panel.dart   modal shortcuts panel
 site/lib/article.dart      chord_tui pages: index, article, margin and pager
-site/lib/live_plate.dart   live examples entered by Tab, left by Esc
+site/lib/live_plate.dart   live frames with captioned entry and exit keys
 site/lib/live/            prompt, permission, plan and start screen fixtures
 site/lib/scroll_page.dart page scrolling over live widgets
 site/lib/band.dart         the orange slogan band

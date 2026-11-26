@@ -162,10 +162,13 @@ dart run tool/build.dart build
 dart run tool/build.dart serve
 ```
 
-Open `http://127.0.0.1:8080/`. F1 lists keys; Ctrl+Q and Ctrl+C return home.
-Tab enters a live screen; Esc leaves it. The framework pages pair articles
-and source with live examples; phones have a tappable key row. The build
-writes `site/build/`; `--base=/chord/` on both commands previews a subpath. A static host must serve `.wasm` as
+Open `http://127.0.0.1:8080/`. F1 lists keys. Outside live frames, Ctrl+Q
+and Ctrl+C return home. On the chord page, Tab selects a plate and Enter
+enters it; on framework articles, Tab enters directly. Follow the plate's
+caption to leave: Esc, or Ctrl+Q where the example owns Esc. Ctrl+C follows
+Ctrl+Q. Framework articles include source and live examples; phones have
+a tappable key row. The build writes `site/build/`; `--base=/chord/` on both
+commands previews a subpath. A static host must serve `.wasm` as
 `application/wasm` and return `index.html` for page paths so direct links
 and browser Back work.
 

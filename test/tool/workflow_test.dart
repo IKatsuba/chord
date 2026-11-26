@@ -191,9 +191,12 @@ void main() {
       'dart test @ site',
       'dart run tool/build.dart build @ site',
       'dart test -t compile --run-skipped @ site',
+      'sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0',
       'dart test -t browser --run-skipped @ site',
       'dart test -t browser --run-skipped @ packages/chord_tui',
     ]);
+    // Chrome keeps its sandbox: no test is told to drop it.
+    expect(text, isNot(contains('no-sandbox')));
     // No size is measured or checked: the site has no budget.
     expect(runs('site').join('\n'), isNot(contains(RegExp('size|budget'))));
   });

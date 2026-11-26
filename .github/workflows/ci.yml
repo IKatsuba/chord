@@ -154,6 +154,10 @@ jobs:
         working-directory: site
       - run: dart test -t compile --run-skipped
         working-directory: site
+      # Chrome keeps its sandbox: Ubuntu 23.10 and later refuse it the
+      # unprivileged user namespaces it needs unless this is lifted, as
+      # puppeteer's troubleshooting guide says.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: dart test -t browser --run-skipped
         working-directory: site
       - run: dart test -t browser --run-skipped

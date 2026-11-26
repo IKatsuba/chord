@@ -78,6 +78,9 @@ void main() {
             size: size,
           );
           await t.press('x');
+          expect(events, isEmpty, reason: 'the plate has not been entered');
+          await t.press('tab');
+          await t.press('x');
           expect(events, ['key x']);
           final row = t.screen.lines.indexWhere(
             (line) => line.contains('probe input'),
@@ -132,13 +135,19 @@ void main() {
 
   group('tester: embedded editing and resize', () {
     for (final name in ['demo', 'picker', 'form', 'text_area']) {
-      testWidgets('? is typed in $name instead of opening help', (t) async {
+      testWidgets('? opens help on the page and is typed inside $name', (
+        t,
+      ) async {
         final host = FakeHost('/chord_tui/$name');
         addTearDown(host.popped.close);
         await t.pumpWidget(
           Site(host: host, gallery: siteGallery),
           size: const Size(80, 24),
         );
+        await t.press('?');
+        expect(t.screen, shows(' Keys'));
+        await t.press('f1');
+        await t.press('tab');
         if (name == 'picker') await t.press('/');
         await t.type('why?');
         expect(t.screen, isNot(shows(' Keys')));
@@ -155,6 +164,7 @@ void main() {
         Site(host: host, gallery: siteGallery),
         size: const Size(120, 40),
       );
+      await t.press('tab');
       await t.type('界🙂e\u0301');
       await t.press('f1');
       await t.press('end');

@@ -184,7 +184,13 @@ class _ButtonState extends State<_Button> {
         captureController: _capture,
         behavior: HitTestBehavior.opaque,
         onPointerDown: (event) {
-          if (press == null || event.button != MouseButton.primary) return;
+          // The key row under the face is not the button: a press starts on
+          // the face, as the release must end there.
+          if (press == null ||
+              event.button != MouseButton.primary ||
+              !_bounds.contains(event.position)) {
+            return;
+          }
           _capture.capture();
           _pressing = _capture.isCaptured;
         },

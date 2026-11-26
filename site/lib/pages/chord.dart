@@ -169,9 +169,23 @@ class _ChordPageState extends State<ChordPage> {
     ring[next].requestFocus();
   }
 
-  void _move(int step) => setState(
-    () => _selected = (_selected + step).clamp(0, _names.length - 1),
-  );
+  // Each flow row, as last built, to bring the selected one into sight.
+  final _rows = <int, BuildContext>{};
+
+  void _move(int step) {
+    setState(() => _selected = (_selected + step).clamp(0, _names.length - 1));
+    // The scroll view brings the focused index back to its own top after a
+    // key it took; the second pass, after that, puts the row back in sight.
+    void reveal() {
+      final row = _rows[_selected];
+      if (mounted && row != null) Scrollable.ensureVisible(row);
+    }
+
+    context.owner.afterLayout(() {
+      reveal();
+      context.owner.afterLayout(reveal);
+    });
+  }
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -293,18 +307,25 @@ class _ChordPageState extends State<ChordPage> {
         _ => const LiveStart(version: chordVersion),
       },
     );
-    if (stacked) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [text, Text(''), plate],
-      );
-    }
+    // One tree either way, so the fixture keeps its state across the
+    // stacking width: the plate is always the row's last cell, under the
+    // text when stacked.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: textWidth, child: text),
-        const SizedBox(width: 6),
-        SizedBox(width: chordPlateWidth, child: plate),
+        SizedBox(width: stacked ? 0 : textWidth, child: stacked ? null : text),
+        SizedBox(width: stacked ? 0 : 6),
+        SizedBox(
+          width: stacked ? content : chordPlateWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              stacked ? text : const SizedBox(),
+              stacked ? Text('') : const SizedBox(),
+              plate,
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -357,30 +378,35 @@ class _ChordPageState extends State<ChordPage> {
           end,
         ],
       );
-      return Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: (event) {
-          if (event.button == MouseButton.primary) {
-            widget.open(RecordingRoute(name));
-          }
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            head,
-            if (narrow)
-              Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Text(caption, style: theme.dim),
-              ),
-            Text(
-              '─' * content,
-              style: selected ? theme.accent : theme.border,
-              softWrap: false,
+      return Builder(
+        builder: (context) {
+          _rows[i] = context;
+          return Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerDown: (event) {
+              if (event.button == MouseButton.primary) {
+                widget.open(RecordingRoute(name));
+              }
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                head,
+                if (narrow)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Text(caption, style: theme.dim),
+                  ),
+                Text(
+                  '─' * content,
+                  style: selected ? theme.accent : theme.border,
+                  softWrap: false,
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
     }
 

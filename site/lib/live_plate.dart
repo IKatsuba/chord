@@ -90,7 +90,6 @@ class LivePlate extends StatefulWidget {
   final bool ownsEscape;
 
   static final _esc = KeyCombo.parse('esc');
-  static final _enterKey = KeyCombo.parse('enter');
   static final _scrolls = {
     for (final key in ['up', 'down', 'pageup', 'pagedown', 'home', 'end'])
       KeyCombo.parse(key),
@@ -118,20 +117,6 @@ class _LivePlateState extends State<LivePlate> {
 
   void _focusChanged() {
     if (mounted) setState(() {});
-  }
-
-  // Keys on the focused plate before it is entered.
-  bool _onPlateKey(KeyEvent event) {
-    if (_entered || !(widget.focusNode?.hasPrimaryFocus ?? false)) return false;
-    if (event.combo == LivePlate._enterKey) {
-      _enter();
-      return true;
-    }
-    if (event.combo == LivePlate._esc && widget.onEscape != null) {
-      widget.onEscape!();
-      return true;
-    }
-    return false;
   }
 
   @override
@@ -304,8 +289,17 @@ class _LivePlateState extends State<LivePlate> {
       ),
     );
     final node = widget.focusNode;
-    return node == null
-        ? plate
-        : Focus(focusNode: node, onKey: _onPlateKey, child: plate);
+    if (node == null) return plate;
+    // Focused and not entered, Enter enters and Esc gives the page back;
+    // entered, these step aside for the example's own.
+    final waiting = focused && !_entered;
+    return Actions(
+      bindings: [
+        Binding('enter', 'enter it', _enter, enabled: waiting),
+        if (widget.onEscape case final back?)
+          Binding('esc', 'back to the page', back, enabled: waiting),
+      ],
+      child: Focus(focusNode: node, child: plate),
+    );
   }
 }

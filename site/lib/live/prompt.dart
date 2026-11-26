@@ -7,7 +7,8 @@ class LivePrompt extends StatefulWidget {
   /// The prompt fixture.
   const LivePrompt({super.key, this.onLines});
 
-  /// Told the draft's line count as it changes, for a room that grows.
+  /// Told the draft's rows as the editor lays them out (wrapped lines
+  /// counted), for a room that grows.
   final void Function(int lines)? onLines;
 
   @override
@@ -19,17 +20,14 @@ class _LivePromptState extends State<LivePrompt> {
   var _sent = '';
   var _lines = 1;
 
-  @override
-  void initState() {
-    super.initState();
-    _draft.addListener(_drafted);
-  }
-
-  void _drafted() {
-    final lines = '\n'.allMatches(_draft.text).length + 1;
+  // Laid out: the page may grow the room, once this layout is done.
+  void _laidOut(TextAreaLayout layout) {
+    final lines = layout.rows.length;
     if (lines == _lines) return;
     _lines = lines;
-    widget.onLines?.call(lines);
+    context.owner.afterLayout(() {
+      if (mounted) widget.onLines?.call(lines);
+    });
   }
 
   @override
@@ -53,6 +51,7 @@ class _LivePromptState extends State<LivePrompt> {
           },
           onOlder: () {},
           onNewer: () {},
+          onLayoutChanged: _laidOut,
         ),
       ],
     ),

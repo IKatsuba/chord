@@ -219,4 +219,93 @@ void main() {
       expect(plate, contains('Do you want to proceed?'));
     });
   }
+
+  for (final (from, to) in const [
+    (Size(205, 56), Size(117, 56)),
+    (Size(117, 56), Size(205, 56)),
+  ]) {
+    testWidgets('a draft and an answer survive the sections stacking or '
+        'unstacking, ${from.width} to ${to.width}', (t) async {
+      await _chord(t, from);
+      await t.press('p');
+      await t.type('draft');
+      await t.press('esc');
+      await t.press('a');
+      await t.press('1');
+      await t.press('ctrl+q');
+      await t.resize(to);
+      await t.pump();
+      await t.press('p');
+      await t.type('ed');
+      expect(t.screen, shows('drafted'));
+      await t.press('esc');
+      await _seek(t, 'r ask again');
+      expect(t.screen, shows('r ask again'), reason: 'the answer stays');
+    });
+  }
+
+  testWidgets('the arrows bring the selected flow into sight on a short '
+      'page, and Enter plays the one shown', (t) async {
+    const ten = [
+      'start', 'team', 'proposal', 'edit', 'permission', //
+      'subagents', 'agents', 'resume', 'codeblocks', 'fork',
+    ];
+    final host = FakeHost('/chord');
+    await t.pumpWidget(
+      Site(host: host, recordings: ten),
+      size: const Size(80, 24),
+    );
+    await t.pump();
+    for (var i = 0; i < 5; i++) {
+      await t.press('tab');
+    }
+    for (var i = 0; i < 9; i++) {
+      await t.press('down');
+      await t.pump();
+      final row = _row(t, '⏎ PLAY');
+      expect(row, greaterThan(3), reason: 'row ${i + 2} in sight');
+      expect(row, lessThan(23));
+    }
+    expect(t.screen.lines[_row(t, '⏎ PLAY')], contains('10  FORK'));
+    await t.press('enter');
+    expect(host.pushed, ['/chord/fork']);
+  });
+
+  testWidgets('the help row names Enter and Esc on a focused plate, the '
+      'example'
+      's keys once entered, and Enter again once left', (t) async {
+    await _chord(t, const Size(205, 56));
+    await t.press('tab');
+    expect(t.screen.lines.last, contains('enter enter it'));
+    expect(t.screen.lines.last, contains('escape back to the page'));
+    await t.press('enter');
+    expect(t.screen.lines.last, startsWith(' escape leave'));
+    await t.press('esc');
+    expect(t.screen.lines.last, contains('enter enter it'));
+    await t.press('esc');
+    expect(t.screen.lines.last, isNot(contains('enter it')));
+    expect(t.screen.lines.last, contains('escape up'));
+    await t.press('f1');
+    expect(t.screen, shows(RegExp(r'shift\+tab\s+previous')));
+  });
+
+  testWidgets('a long draft that wraps grows the prompt'
+      's room, and a '
+      'wider window reflows it back', (t) async {
+    await _chord(t, const Size(55, 80));
+    int height() => _row(t, 'FIG. 02') - _row(t, 'FIG. 01');
+    await _seek(t, 'FIG. 02');
+    final one = height();
+    await t.press('p');
+    await t.type('word ' * 30);
+    await t.pump();
+    await _seek(t, 'FIG. 02');
+    final wrapped = height();
+    expect(wrapped, greaterThan(one));
+    expect(wrapped, lessThanOrEqualTo(one + 4));
+    await t.resize(const Size(205, 80));
+    await t.pump();
+    await _seek(t, 'FIG. 02');
+    expect(height(), lessThan(wrapped));
+  });
 }

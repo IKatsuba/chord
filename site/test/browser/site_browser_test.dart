@@ -16,6 +16,21 @@ import 'package:test/test.dart';
 // both ways, Back and Esc move as the Routes say, and the console stays
 // clean.
 
+/// A clipboard the page writes to instead of the system's, put in place
+/// before each document's own scripts run; `testCopied()` reads it.
+const clipboardStandIn = '''() => {
+  const copied = [];
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: {
+      writeText: async (text) => { copied.push(text); },
+      readText: async () => copied.at(-1) ?? "",
+      standIn: true,
+    },
+  });
+  globalThis.testCopied = () => copied;
+}''';
+
 /// `build.dart serve`, started and stopped by the test, its output kept.
 class _Server {
   _Server._(this._process, this.port, this._errors);
@@ -151,6 +166,9 @@ void main() {
       setUpAll(() async {
         server = await _Server.start(base);
         page = opened = await browser!.newPage();
+        // Before every document, so before the app: the site's copy keys
+        // reach a stand-in, never the person's own clipboard.
+        await page.evaluateOnNewDocument(clipboardStandIn);
         await page.setViewport(const DeviceViewport(width: 1200, height: 800));
         page.onConsole.listen((message) {
           if (message.type == ConsoleMessageType.error) {
@@ -188,6 +206,13 @@ void main() {
 
       Future<void> open(String path, {String size = 'cols=120&rows=40'}) async {
         await page.goto('${url(path)}?$size', wait: Until.load);
+        expect(
+          await page.evaluate<bool>(
+            '() => navigator.clipboard.standIn === true',
+          ),
+          isTrue,
+          reason: 'the clipboard is the stand-in',
+        );
         await page.waitForFunction('() => typeof chordStart === "number"');
       }
 
@@ -287,6 +312,16 @@ void main() {
         final first = lines.indexWhere((l) => l.contains('first'));
         final second = lines.indexWhere((l) => l.contains('second'));
         expect(second, greaterThan(first));
+      });
+
+      test('c on install copies to the stand-in clipboard', () async {
+        await open('/install');
+        await until('COPY c');
+        await page.keyboard.press(Key.keyC);
+        await until('COPIED');
+        expect(await page.evaluate<List<dynamic>>('() => testCopied()'), [
+          'brew install ikatsuba/tap/chord',
+        ]);
       });
 
       test('a recording page fetches and plays its recording', () async {

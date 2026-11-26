@@ -96,6 +96,8 @@ class _SitePageState extends State<SitePage> {
             autofocus: true,
             child: Scrollbar(
               controller: _scroll,
+              // C draws the thumb muted, not in the rule colour.
+              thumbStyle: Theme.of(context).dim,
               child: ListView.builder(
                 controller: _scroll,
                 scrollsOnWheel: true,

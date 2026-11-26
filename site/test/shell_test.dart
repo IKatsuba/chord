@@ -260,6 +260,15 @@ void main() {
       });
     }
 
+    testWidgets('the scrollbar thumb is muted under the site theme', (t) async {
+      await t.pumpWidget(
+        Theme(data: siteTheme(), child: page(200)),
+        size: const Size(120, 40),
+      );
+      expect(t.screen.charAt(119, 0), '┃');
+      expect(t.screen.styleAt(119, 0), Style(fg: SiteColors.muted));
+    });
+
     testWidgets('the wider measure for chord and the gallery', (t) async {
       await t.pumpWidget(
         page(3, measure: wideMeasure),

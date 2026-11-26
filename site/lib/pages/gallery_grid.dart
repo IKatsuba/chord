@@ -62,7 +62,8 @@ class _GalleryPageState extends State<GalleryPage> {
   // Each row of cells is an item, then its gap: keep the selected row whole
   // in sight.
   void _reveal() {
-    if (!mounted) return;
+    // An empty gallery has no row to show.
+    if (!mounted || _entries.isEmpty) return;
     revealItem(_scroll, _headerItems + 2 * (_selected ~/ _columns));
   }
 

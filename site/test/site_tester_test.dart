@@ -106,7 +106,7 @@ void main() {
           host.popped.add(i == 999 ? '/unknown/界🙂e\u0301' : '/install');
         }
         await t.pump();
-        expect(t.screen, shows('404 · page not found'));
+        expect(t.screen, shows('PAGE NOT FOUND.'));
         expect(t.screen, shows('/unknown/界🙂e\u0301'));
         expect(host.titles.last, 'not found · chord');
         expect(host.pushed, isEmpty);

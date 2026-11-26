@@ -30,6 +30,7 @@ class FilledButton extends _Button {
     super.focusNode,
     super.autofocus,
     super.showShortcut,
+    super.canRequestFocus,
   }) : super(filled: true);
 }
 
@@ -46,6 +47,7 @@ class OutlinedButton extends _Button {
     super.focusNode,
     super.autofocus,
     super.showShortcut,
+    super.canRequestFocus,
   }) : super(filled: false);
 }
 
@@ -58,6 +60,7 @@ abstract class _Button extends StatefulWidget {
     this.focusNode,
     this.autofocus = false,
     this.showShortcut = true,
+    this.canRequestFocus = true,
     required this.filled,
   }) : assert(
          onPressed == null || action == null,
@@ -83,6 +86,11 @@ abstract class _Button extends StatefulWidget {
   /// Whether an [action] button draws its key row under the face; a button
   /// without [action] never does.
   final bool showShortcut;
+
+  /// Whether it is a focus place, with Enter and space of its own; false
+  /// for a button in a list, where the page holds the focus. Its action's
+  /// key, a click and the key row work either way.
+  final bool canRequestFocus;
 
   final bool filled;
 
@@ -147,7 +155,7 @@ class _ButtonState extends State<_Button> {
     final binding = _binding(context);
     final press = _press = _onPress(binding);
     final enabled = press != null;
-    final focused = enabled && _node.hasFocus;
+    final focused = enabled && widget.canRequestFocus && _node.hasFocus;
     final face = widget.filled
         ? _filledFace(theme, enabled: enabled, focused: focused)
         : _outlinedFace(theme, enabled: enabled, focused: focused);
@@ -167,6 +175,40 @@ class _ButtonState extends State<_Button> {
             softWrap: false,
           )
         : null;
+    final body = Listener(
+      captureController: _capture,
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: (event) {
+        // The key row under the face is not the button: a press starts on
+        // the face, as the release must end there.
+        if (press == null ||
+            event.button != MouseButton.primary ||
+            !_bounds.contains(event.position)) {
+          return;
+        }
+        _capture.capture();
+        _pressing = _capture.isCaptured;
+      },
+      onPointerUp: (event) {
+        final was = _pressing;
+        _pressing = false;
+        if (!was || event.button != MouseButton.primary) return;
+        // What the last build allowed: a lookup belongs to build.
+        if (_bounds.contains(event.position)) _press?.call();
+      },
+      onPointerCancel: (_) => _pressing = false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          PressBoundsBox(bounds: _bounds, child: face),
+          ?keyRow,
+        ],
+      ),
+    );
+    // A widget that takes no focus has no keys of its own: its action's key
+    // and a click still press it.
+    if (!widget.canRequestFocus) return body;
     // Bound, not handled, so the help row lists them while it has focus.
     return Actions(
       bindings: [
@@ -190,37 +232,7 @@ class _ButtonState extends State<_Button> {
         // requestFocus does not ask canRequestFocus: a disabled one must not ask.
         autofocus: widget.autofocus && enabled,
         canRequestFocus: enabled,
-        child: Listener(
-          captureController: _capture,
-          behavior: HitTestBehavior.opaque,
-          onPointerDown: (event) {
-            // The key row under the face is not the button: a press starts on
-            // the face, as the release must end there.
-            if (press == null ||
-                event.button != MouseButton.primary ||
-                !_bounds.contains(event.position)) {
-              return;
-            }
-            _capture.capture();
-            _pressing = _capture.isCaptured;
-          },
-          onPointerUp: (event) {
-            final was = _pressing;
-            _pressing = false;
-            if (!was || event.button != MouseButton.primary) return;
-            // What the last build allowed: a lookup belongs to build.
-            if (_bounds.contains(event.position)) _press?.call();
-          },
-          onPointerCancel: (_) => _pressing = false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              PressBoundsBox(bounds: _bounds, child: face),
-              ?keyRow,
-            ],
-          ),
-        ),
+        child: body,
       ),
     );
   }

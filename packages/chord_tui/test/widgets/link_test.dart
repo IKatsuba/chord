@@ -161,6 +161,41 @@ void main() {
     });
   }
 
+  testWidgets('canRequestFocus false: it builds in a list, takes no Tab or '
+      'Enter, but its key and a click open it', (t) async {
+    var opened = 0;
+    await t.pumpWidget(
+      Actions(
+        bindings: [Binding('g', 'GitHub', () => opened++, id: 'g')],
+        child: Focus(
+          autofocus: true,
+          child: ListView.builder(
+            itemCount: 1,
+            itemBuilder: (context, _) => top(
+              Link(
+                'GitHub',
+                action: 'g',
+                external: true,
+                canRequestFocus: false,
+              ),
+            ),
+          ),
+        ),
+      ),
+      size: const Size(80, 24),
+    );
+    expect(t.screen.lines.first, 'GitHub ↗ g');
+    final page = t.focusManager.primaryFocus;
+    await t.press('tab');
+    expect(t.focusManager.primaryFocus, same(page));
+    await t.press('enter');
+    expect(opened, 0);
+    await t.press('g');
+    await click(t, 1, 0);
+    expect(opened, 2);
+    expect(t.screen.styleAt(0, 0), link);
+  });
+
   test('two of uri, onPressed and action assert', () {
     expect(
       () => Link('x', uri: Uri.parse('https://e.com'), onPressed: () {}),

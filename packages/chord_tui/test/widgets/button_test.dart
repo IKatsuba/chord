@@ -401,6 +401,43 @@ void main() {
     });
   }
 
+  testWidgets('canRequestFocus false: it builds in a list, takes no Tab, '
+      'but its key and a click press it', (t) async {
+    var pressed = 0;
+    await t.pumpWidget(
+      Actions(
+        bindings: [Binding('i', 'Install', () => pressed++, id: 'i')],
+        child: Focus(
+          autofocus: true,
+          child: ListView.builder(
+            itemCount: 1,
+            itemBuilder: (context, _) => Align(
+              alignment: Alignment.topLeft,
+              child: FilledButton(
+                action: 'i',
+                canRequestFocus: false,
+                child: Text('Install'),
+              ),
+            ),
+          ),
+        ),
+      ),
+      size: const Size(80, 24),
+    );
+    expect(t.screen, shows('press i'));
+    final page = t.focusManager.primaryFocus;
+    await t.press('tab');
+    expect(t.focusManager.primaryFocus, same(page), reason: 'no Tab stop');
+    await t.press('enter');
+    await t.press('space');
+    expect(pressed, 0, reason: 'no Enter or space of its own');
+    await t.press('i');
+    await t.mouse(at(MouseEventKind.press, 1, 1));
+    await t.mouse(at(MouseEventKind.release, 1, 1));
+    expect(pressed, 2);
+    expect(t.screen.styleAt(0, 0), face, reason: 'never drawn focused');
+  });
+
   test('onPressed and action together assert', () {
     expect(
       () => FilledButton(onPressed: () {}, action: 'x', child: Text('x')),

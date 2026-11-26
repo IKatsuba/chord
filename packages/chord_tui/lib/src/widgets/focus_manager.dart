@@ -517,6 +517,13 @@ class FocusManager extends ChangeNotifier {
     return false;
   }
 
+  bool _hasEligibleBelow(FocusNode node) {
+    for (final c in node._children) {
+      if (_eligible(c) || _hasEligibleBelow(c)) return true;
+    }
+    return false;
+  }
+
   bool _eligible(FocusNode? n) {
     if (n == null || n._manager != this || n.isDisposed) return false;
     if (!n.canRequestFocus) return false;
@@ -639,10 +646,18 @@ class FocusManager extends ChangeNotifier {
 
   /// The node key presses start from: the focused one, or the deepest
   /// first descendant of the root when nothing is focused.
+  ///
+  /// A scope that holds the focus itself, with no descendant that could take
+  /// it, starts presses from its own deepest first descendant, the same
+  /// fallback, so bindings under it with no focusable widget of their own
+  /// still get their keys. A scope with a focusable descendant starts them
+  /// from itself, as any focused node does.
   FocusNode get effectiveFocus {
     final p = _primary;
-    if (p != null) return p;
-    var n = root;
+    if (p != null && (p is! FocusScopeNode || _hasEligibleBelow(p))) {
+      return p;
+    }
+    var n = p ?? root;
     while (true) {
       // Keys never reach into an excluded subtree, as a closed fold.
       if (!n._descendantsAreFocusable) return n;

@@ -449,7 +449,8 @@ class _KeysPanel extends StatelessWidget {
       final shown = all.sublist(window.first, window.first + window.count);
       String keys(BindingGroup g) =>
           keysLabel([for (final chord in g.chords) chord.toString()]);
-      final keyWidth = shown.fold(
+      // Sized to every entry, so the descriptions stay put as it scrolls.
+      final keyWidth = all.fold(
         0,
         (w, g) => keys(g).length > w ? keys(g).length : w,
       );

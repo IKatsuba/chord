@@ -23,8 +23,9 @@ There are four things in the tree, and they do not mix:
 - **The Cursor Cloud adapter**, `packages/cursor-cloud-acp/`: a TypeScript
   ACP adapter with its own Bun workspace tooling and npm release.
 - **The website**, `site/` (package `chord_site`): a chord_tui app compiled
-  to Wasm and drawn by wterm, with live framework examples and recordings
-  of chord. It has its own dependencies and no shared release version.
+  to Wasm and drawn by wterm, with live framework examples, chord screen
+  fixtures and recordings. It depends on chord for the fixtures and has no
+  shared release version.
 
 The point of the port is to prove the framework: whenever the port needs
 something a terminal app would generally need (a scrolling list, a picker, a
@@ -96,6 +97,14 @@ source; the release bump updates it, `packages/chord_tui/pubspec.yaml`,
   dart test test/foundation/playback_test.dart test/playback_example_test.dart
   dart test test/widgets/playback*_test.dart
   dart test test/widgets/key_help_boundary*_test.dart
+  dart test test/widgets/display_text*_test.dart test/widgets/*button*_test.dart
+  dart test test/widgets/link*_test.dart \
+    test/widgets/can_request_focus*_test.dart
+  dart test test/widgets/scrollbar*_test.dart \
+    test/widgets/scroll_view*_test.dart
+  dart test test/widgets/scrolls_on_wheel*_test.dart
+  dart test test/widgets/exit_scope*_test.dart
+  dart test test/widgets/focus_scope_dispatch*_test.dart
   # Wasm builds and exit paths; Node on PATH for execution:
   dart test test/run_app*wasm*test.dart --run-skipped
   # System Chrome; CHROME overrides its path:
@@ -119,6 +128,11 @@ source; the release bump updates it, `packages/chord_tui/pubspec.yaml`,
   dart run example/markdown_wrap.dart # table cells and long URLs
   dart run example/markdown_wrap.dart --narrow # narrow table fallback
   dart run example/diff.dart          # numbered, highlighted, wrapped diffs
+  dart run example/display_text.dart # block-glyph display sizes and colours
+  dart run example/button.dart       # buttons and rebound action keys
+  dart run example/link.dart         # links and terminal services
+  dart run example/scrollbar.dart    # list position and thumb
+  dart run example/scroll_view.dart  # live widgets and focus following
   dart run example/playback.dart     # recorded terminal, steps and panning
   dart run example/diff_view.dart     # selected diff rows and full counts
   dart run example/middle.dart        # text retaining both ends around ...
@@ -212,6 +226,8 @@ dart test test/ui/app/propose_window_test.dart
 dart test test/ui/teams
 dart test test/platform/resources_readers_test.dart
 dart test test/platform/group_exec_contract_test.dart
+dart test test/platform/process_libc_tester_test.dart
+dart test test/platform/platform_wasm_tester_compile_test.dart --run-skipped
 dart test test/platform/heap*_test.dart test/cli_heap_test.dart
 dart test test/cli_help_columns*_test.dart
 dart test test/acp_set_title_targeted*_test.dart
@@ -335,6 +351,9 @@ dart compile exe benchmark/record_scan.dart -o build/record_scan
   dart analyze
   dart format --output=none --set-exit-if-changed .
   dart test                          # routes, pages, recordings and build logic
+  dart test test/live*_test.dart test/chord_page*_test.dart
+  dart test test/article*_test.dart test/home*_test.dart
+  dart test test/recording*_test.dart test/tool/sources_test.dart
   dart run tool/sources.dart          # refresh lib/sources.g.dart
   dart run tool/build.dart build      # static output in site/build/
   dart run tool/build.dart serve      # loopback preview with SPA fallback
@@ -405,6 +424,12 @@ lib/src/widgets/            the widget tree, focus and actions, the widgets
 lib/src/widgets/keymap.dart runtime rebinding by action id
 lib/src/widgets/form.dart   validated form, buttons and keyboard input
 lib/src/widgets/scroll_controller.dart retained scroll and row anchors
+lib/src/widgets/scroll_view.dart live widget scrolling and Scrollable
+lib/src/widgets/scrollbar.dart list and scroll view position thumb
+lib/src/widgets/button.dart FilledButton and OutlinedButton
+lib/src/widgets/link.dart URI and action links
+lib/src/widgets/display_text.dart scalable block-glyph text
+lib/src/widgets/exit_scope.dart embedded exit interception
 lib/src/widgets/markdown.dart Markdown and blocksOf styled rows per block
 test/                       framework tests
 test/main_example_test.dart package example folding and keys
@@ -438,6 +463,14 @@ test/foundation/           text editing, scroll, fold, picker and table widths
 test/foundation/text_editing_selection_test.dart selection and editing keys
 test/rendering/            item extents and clipping
 test/widgets/              layout, layers, focus, rich widgets and lifecycle
+test/widgets/display_text*_test.dart glyphs, sizes, style and clipping
+test/widgets/*button*_test.dart action keys, dense faces and input lifetime
+test/widgets/link*_test.dart URI, action and terminal ownership
+test/widgets/scrollbar*_test.dart thumb geometry, fades and lifecycle
+test/widgets/scroll_view*_test.dart live layout, reveal and focus following
+test/widgets/scrolls_on_wheel*_test.dart wheel routing and defaults
+test/widgets/exit_scope*_test.dart embedded exit ownership
+test/widgets/focus_scope_dispatch*_test.dart scope keys and deferred requests
 test/widgets/text_area_selection_test.dart editor selection and key help
 test/widgets/focus_reparent_tester_test.dart focus across rebuilds and moves
 test/widgets/list_view_switch_test.dart retained heights across list switches
@@ -447,6 +480,11 @@ benchmark/                 list, Markdown, selection and picker benchmarks
 benchmark/list_view.dart    list frames, resize, streaming and cached switches
 example/main.dart           the package's runnable example
 example/playback.dart       recorded terminal, pause, steps and panning
+example/display_text.dart   block-glyph sizes and per-run colours
+example/button.dart         buttons, dense faces and rebound action keys
+example/link.dart           URI and action links
+example/scrollbar.dart      list position and thumb
+example/scroll_view.dart    live widgets and focus following
 example/demo.dart           the framework's demo
 example/code.dart           highlighted code, numbering and wrapping
 example/markdown.dart       Markdown and streamed replies
@@ -484,6 +522,8 @@ site/lib/pages/            home, chord, recordings, framework and install
 site/lib/keys_panel.dart   modal shortcuts panel
 site/lib/article.dart      chord_tui pages: index, article, margin and pager
 site/lib/live_plate.dart   live examples entered by Tab, left by Esc
+site/lib/live/            prompt, permission, plan and start screen fixtures
+site/lib/scroll_page.dart page scrolling over live widgets
 site/lib/band.dart         the orange slogan band
 site/lib/sources.g.dart    generated example code the pages show
 site/lib/key_row.dart      tappable keys for narrow windows
@@ -495,8 +535,8 @@ site/tool/build.dart       static build, pinned assets and preview server
 site/tool/sources.dart     shown example code copied into lib/sources.g.dart
 site/tool/serving.dart     base paths, SPA fallback and content types
 site/tool/terminal.dart    native site shell fixture
-site/test/                router, responsive pages, gallery and recordings
-site/test/tool/           build, pinned assets and serving tests
+site/test/                routes, articles, live fixtures and recordings
+site/test/tool/           build, source drift, pinned assets and serving tests
 site/test/browser/        built-site Chrome smoke under both bases
 site/build/               generated static website
 packages/cursor-cloud-acp/  TypeScript Cursor Cloud ACP adapter
@@ -544,7 +584,9 @@ lib/teams.dart team files, checks, discovery and saving
 lib/yaml_stringify.dart team frontmatter as npm yaml writes it
 lib/editor.dart prompt editing through VISUAL, EDITOR or vi
 lib/headless.dart one-shot reply, diagnostics and JSON result
-lib/platform/ POSIX process groups and the re-exec launcher
+lib/platform/ native process groups and launcher, with web stand-ins
+lib/platform/*_ffi.dart native launcher, libc and architecture bindings
+lib/platform/*_web.dart web stand-ins for those native bindings
 lib/platform/signals.dart signal exits
 lib/platform/heap.dart SIGUSR2 memory reports and JIT heap snapshots
 lib/platform/resources.dart provider limits and reader ownership
@@ -633,7 +675,7 @@ tool/npm.dart platform packages and the Node shim
 tool/formula.dart stable Homebrew formula from archive checksums
 tool/ci.dart native build/version or Linux cross-compile check
 tool/shards.dart each test file assigned to exactly one CI shard
-tool/screenshots.dart PNGs, logos and two-size recordings from the Dart fake
+tool/screenshots.dart PNGs, logos and three-size recordings from the Dart fake
 tool/recordings.dart timed ANSI frames and labelled screenshot steps
 tool/screenshots_team.md team fixture for captures
 tool/screenshots_proposal.md proposed team fixture for captures
@@ -701,6 +743,8 @@ test/tool/workflow_test.dart CI jobs, SDK and read permissions
 .github/workflows/ci.yml Ubuntu checks, sharded suites and Linux builds
 test/platform/ launcher, process groups and signals, AOT included
 test/platform/group_exec_contract_test.dart launcher contract between versions
+test/platform/process_libc_tester_test.dart native process binding boundaries
+test/platform/platform_wasm_tester_compile_test.dart web platform seams
 test/platform/heap*_test.dart heap signal ownership and complete file writes
 test/session/ session, conversation, transcript and fake scenarios
 test/session/opening_meta_test.dart Claude opening metadata
@@ -842,14 +886,19 @@ The app lives under `lib/`, with snake_case file names;
   compile tags with `expect`, and the npm shim with Node 22.13. It builds
   linux-x64 natively and cross-compiles linux-arm64; `check` requires every
   job to pass. Darwin builds belong to the maintainer's local release.
-- The site has VM widget and router tests at 120x40, 80x24 and 43x37.
+- The site has VM tests for responsive pages, live chord fixtures, articles,
+  generated source drift and all three recording sizes.
   Its `compile` tag builds the static folder; its `browser` tag drives
   system Chrome through the built site at `/` and `/chord/`, including
-  history, mouse, kitty keys, resize and touch input. The framework's
-  `browser` tag checks WebTerminal; its Wasm compile tests use Node.
+  history, mouse, kitty keys, resize, touch and fixed 7 px cells. The
+  framework's `browser` tag checks WebTerminal; its Wasm compile tests use Node.
   These tags are skipped by default. CI's required `site` job runs the
   site's static, VM, build and browser checks and the framework browser
-  checks. Build output has no size budget; deployment is separate work.
+  checks. The site uses 12.5 px type on 16 px rows with -0.5 px letter
+  spacing at every width: 205x56 cells at 1440x900, 55x52 at 390x844 and
+  51x40 at 360x640. Box-line seams at fractional DPR 1.25 and 1.5 are
+  accepted; the wterm report is drafted, not posted. Build output has no
+  size budget; deployment is separate work.
 - A unit without a test that would fail without it is not finished.
 - Check the screen at 120x40 and at 80x24. For terminal cursor changes,
   check a physical window focused and unfocused in a supporting terminal;

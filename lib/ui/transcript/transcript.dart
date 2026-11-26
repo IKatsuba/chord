@@ -1139,11 +1139,7 @@ class _TranscriptState extends State<Transcript> {
         warning: Theme.of(context).warning,
         success: Theme.of(context).success,
       );
-      return store.entryAt(
-        widget.transcript,
-        index - prefixCount,
-        width: itemWidth,
-        expanded: expanded,
+      store.drawing = (
         copyCodeBlocks: widget.onCopyCodeBlock != null,
         runCodeBlocks: widget.onRunCodeBlock != null,
         shellStopKey: widget.shellStopKey,
@@ -1152,6 +1148,12 @@ class _TranscriptState extends State<Transcript> {
         agent: widget.agent,
         chordServer: widget.chordServer,
         agentColours: AgentColours.of(context),
+      );
+      return store.drawnEntryAt(
+        widget.transcript,
+        index - prefixCount,
+        width: itemWidth,
+        expanded: expanded,
       );
     }
 

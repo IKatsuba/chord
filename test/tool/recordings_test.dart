@@ -123,6 +123,31 @@ void main() {
     }
   });
 
+  test(
+    'a narrow pane waits on its own wording, the pictures on theirs',
+    () async {
+      const step = UntilShown('● permission', narrow: 'needs your permission');
+      expect(step.shownAt(120), '● permission');
+      expect(step.shownAt(80), 'needs your permission');
+      expect(const UntilShown('same').shownAt(80), 'same');
+      final waited = <String>[];
+      final pane = ShotPane(
+        type: (_) {},
+        send: (_) {},
+        until: (text) async => waited.add(text),
+        exited: () async {},
+        age: (_) {},
+        respawn: (_) {},
+        idle: (_) async {},
+        sample: () {},
+        label: (_) {},
+      );
+      await playSteps(const [step], pane, cols: 80);
+      await playSteps(const [step], pane);
+      expect(waited, ['needs your permission', '● permission']);
+    },
+  );
+
   test('a frame is taken after every step, before the next acts', () async {
     final calls = <String>[];
     final pane = ShotPane(

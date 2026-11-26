@@ -76,13 +76,20 @@ final class SendKeys extends Step {
   final List<String> keys;
 }
 
-/// A wait until the screen shows [text].
+/// A wait until the screen shows [text], or [narrow] in a pane narrower
+/// than the pictures', where chord words it differently.
 final class UntilShown extends Step {
-  /// Waits for [text].
-  const UntilShown(this.text);
+  /// Waits for [text], or [narrow] when given in a narrow pane.
+  const UntilShown(this.text, {this.narrow});
 
   /// What the screen comes to show.
   final String text;
+
+  /// What a narrower pane shows instead; [text] when null.
+  final String? narrow;
+
+  /// What a pane [cols] wide is waited on for.
+  String shownAt(int cols) => cols < columns ? narrow ?? text : text;
 }
 
 /// A wait of [ms] milliseconds.
@@ -184,7 +191,8 @@ final List<Shot> shots = [
     scenario: 'team',
     steps: [
       ...prompt('Hand issue 214 to the bugfix team'),
-      const UntilShown('● permission'),
+      // A narrow status line says who asks instead.
+      const UntilShown('● permission', narrow: 'needs your permission'),
     ],
   ),
   Shot(
@@ -837,9 +845,14 @@ class ShotPane {
   final void Function(String label) label;
 }
 
-/// Plays [steps] on [pane]: the screen taken before the first, after every
-/// step, and while each one waits, each step labelled before it acts.
-Future<void> playSteps(List<Step> steps, ShotPane pane) async {
+/// Plays [steps] on [pane], [cols] wide: the screen taken before the
+/// first, after every step, and while each one waits, each step labelled
+/// before it acts.
+Future<void> playSteps(
+  List<Step> steps,
+  ShotPane pane, {
+  int cols = columns,
+}) async {
   pane.sample();
   for (final step in steps) {
     if (stepLabel(step) case final label?) pane.label(label);
@@ -850,8 +863,8 @@ Future<void> playSteps(List<Step> steps, ShotPane pane) async {
       case SendKeys(:final keys):
         pane.send(keys);
         await pane.idle(const Duration(milliseconds: 300));
-      case UntilShown(:final text):
-        await pane.until(text);
+      case UntilShown():
+        await pane.until(step.shownAt(cols));
       case Exited():
         await pane.exited();
       case Aged(:final hours):
@@ -971,6 +984,7 @@ Future<String> capture(
         sample: sample,
         label: (label) => recording?.step(label),
       ),
+      cols: cols,
     );
     return colours();
   } finally {
@@ -998,6 +1012,7 @@ Future<void> main(List<String> names) async {
   final images = Directory(p.join(portDir, 'docs', 'images'))
     ..createSync(recursive: true);
   final browser = await browsers.puppeteer.launch(executablePath: chrome);
+  final failed = <String>[];
   try {
     final tab = await browser.newPage();
     await tab.setViewport(
@@ -1024,22 +1039,33 @@ Future<void> main(List<String> names) async {
       File(p.join(images.path, '${shot.name}.png')).writeAsBytesSync(png);
       stdout.writeln('docs/images/${shot.name}.png');
       if (shot.group == 'logo') continue;
-      // Played again at each size the site shows a recording at.
+      // Played again at each size the site shows a recording at. A size
+      // that fails is said at the end, and the rest still recorded.
       for (final size in recordingSizes) {
-        final recording = RecordingWriter(size.cols, size.rows);
-        await capture(
-          shot,
-          portDir,
-          cols: size.cols,
-          rows: size.rows,
-          recording: recording,
-        );
         final name = recordingName(shot.name, size);
+        final recording = RecordingWriter(size.cols, size.rows);
+        try {
+          await capture(
+            shot,
+            portDir,
+            cols: size.cols,
+            rows: size.rows,
+            recording: recording,
+          );
+        } on StateError catch (error) {
+          failed.add('$name: ${error.message.split('\n').first}');
+          continue;
+        }
         File(p.join(images.path, name)).writeAsStringSync(recording.toJson());
         stdout.writeln('docs/images/$name');
       }
     }
   } finally {
     await browser.close();
+  }
+  if (failed.isNotEmpty) {
+    stderr.writeln('screenshots: recordings that failed:');
+    failed.forEach(stderr.writeln);
+    exit(1);
   }
 }

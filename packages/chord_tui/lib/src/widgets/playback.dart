@@ -255,11 +255,11 @@ class _PlaybackState extends State<Playback> {
     final down = recording.rows > height;
     return Actions(
       bindings: [
-        Binding('space', 'Play or pause', _toggle),
-        Binding('right', 'Next step', controller.nextStep),
-        Binding('l', 'Next step', controller.nextStep),
-        Binding('left', 'Previous step', controller.previousStep),
-        Binding('h', 'Previous step', controller.previousStep),
+        Binding('space', 'Play/pause', _toggle),
+        Binding('right', 'Next', controller.nextStep),
+        Binding('l', 'Next', controller.nextStep),
+        Binding('left', 'Previous', controller.previousStep),
+        Binding('h', 'Previous', controller.previousStep),
         Binding('r', 'Restart', controller.restart),
         Binding('shift+right', 'Pan', () => _pan(1, 0), enabled: across),
         Binding('shift+left', 'Pan', () => _pan(-1, 0), enabled: across),

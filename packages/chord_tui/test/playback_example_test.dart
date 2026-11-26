@@ -24,7 +24,7 @@ void main() {
       await t.press('right');
       expect(t.screen, shows('All tests passed!'));
       expect(t.screen, shows('step 3 of 3 · all tests passed'));
-      expect(t.screen, shows('space Play or pause'));
+      expect(t.screen, shows('space Play/pause'));
     });
   }
 

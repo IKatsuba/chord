@@ -184,8 +184,7 @@ void main() {
       await t.pumpWidget(_withHelp(controller), size: size);
       expect(
         t.screen.lines.last,
-        'space Play or pause  right/l Next step  left/h Previous step  '
-        'r Restart',
+        'space Play/pause  right/l Next  left/h Previous  r Restart',
       );
       await t.press('shift+right');
       await t.press('shift+down');

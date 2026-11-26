@@ -84,6 +84,24 @@ less well.
 
 ## Recommendation
 
-See the handover. In short: A for the site's front (home, chord, gallery),
-with B's reading layout for the framework pages behind it. The shared
-widgets are display text, a scrollbar and buttons/links.
+A for the front of the site (home, chord, gallery, install), and B's
+sidebar-and-reading-column layout for chord_tui's framework pages behind it,
+both on A's dark palette. A reads as a website at first sight and still
+shows chord's own screens inside it. B is the right shape for reference text,
+and the current pages already hold that text. C is the most striking, but it
+reads poorly once there is more than a paragraph. Its display type and
+orange band could still serve A's hero if the owner wants it louder.
+
+The framework widgets this needs, which A and C share:
+
+- display text in block cells (a bitmap font in half or full blocks, with a
+  per-cell colour),
+- a `Scrollbar` for a `ScrollController`,
+- a focusable `Button` and a `Link`, each with Enter and an optional key.
+
+A page-level `ListView` of sections with anchors for the nav already exists
+(`jumpToAnchor`).
+
+Known mock shortcuts, not design: equal card heights are fixed body heights;
+the "window" title is drawn in the theme's dim border colour; the cells
+are 14 px on desktop (A and B), 17 px (C) and 12 px on the phone.

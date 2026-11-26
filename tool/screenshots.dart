@@ -277,8 +277,10 @@ final List<Shot> shots = [
     scenario: 'markdown',
     steps: [
       ...prompt('Walk me through landing a change'),
-      const UntilShown(r'built $bin'),
-      const UntilShown('context used'),
+      // Narrower, the command's line wraps before its echo.
+      const UntilShown(r'built $bin', narrow: 'dist/*/chord'),
+      // A phone's status says only "N% used".
+      const UntilShown('context used', narrow: 'used'),
     ],
   ),
   // The conversation so far goes on in a fork, picked at once, its row in
@@ -288,7 +290,7 @@ final List<Shot> shots = [
     scenario: 'edit',
     steps: [
       ...prompt('Greet people by name with a template literal'),
-      const UntilShown('context used'),
+      const UntilShown('context used', narrow: 'used'),
       ...prompt('/fork arrow-function'),
       const UntilShown('forked from main'),
     ],

@@ -21,14 +21,31 @@
     font-weight: 700;
     src: url("fonts/bold.woff2") format("woff2");
   }
-  html, body { margin: 0; height: 100%; background: #16171b; overflow: hidden; }
+  /* The palette's background and text, as site/lib/palette.dart has them,
+     so the strip a partial cell leaves matches the cells. */
+  html, body { margin: 0; height: 100%; background: #0d0e12; overflow: hidden; }
   #terminal {
     position: fixed;
     inset: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    --term-bg: #0d0e12;
+    --term-fg: #e7e7ea;
+    --term-font-size: 14px;
+    --term-row-height: 18px;
+    --term-line-height: 1.25;
     --term-font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
     /* wterm turns ligatures off; this keeps JetBrains Mono's code ligatures,
        which it keeps in calt, off too: one glyph per cell. */
     font-feature-settings: "calt" 0, "liga" 0;
+  }
+  /* Phones: a denser grid, so a 390 px window gets 54 columns. */
+  @media (max-width: 599.98px) {
+    #terminal {
+      --term-font-size: 12px;
+      --term-row-height: 15px;
+    }
   }
   /* A fixed grid, for captures: the element is the grid's size, so nothing
      of the page shows around it. */

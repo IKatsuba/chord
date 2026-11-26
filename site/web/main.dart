@@ -1,3 +1,4 @@
+import 'package:chord_site/palette.dart';
 import 'package:chord_site/router.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_site/web/browser_host.dart';
@@ -15,6 +16,7 @@ Future<void> main() async {
     await runApp(
       Site(host: host, gallery: siteGallery, recordings: _recordings),
       terminal: terminal,
+      theme: siteTheme(),
       exitProcess: false,
       handleSignals: false,
     );

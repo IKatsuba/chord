@@ -199,40 +199,46 @@ class _LivePlateState extends State<LivePlate> {
           Text('', style: cream),
           SizedBox(
             height: widget.rows,
-            child: Box(
-              background: palette.ink,
-              child: Focus(
-                canRequestFocus: false,
-                onKeyCapture: _capture,
-                // What the capture does, for the help row, over the shell's
-                // own Esc and Ctrl+Q: the inner ones shadow them.
-                child: Actions(
-                  bindings: [
-                    if (!widget.ownsEscape)
-                      Binding('esc', 'leave', _leave, id: '${siteKeys}leave'),
-                    for (final key in ['ctrl+q', 'ctrl+c'])
-                      Binding(
-                        key,
-                        widget.ownsEscape ? 'leave' : 'home',
-                        () {},
-                        id: widget.ownsEscape
-                            ? '${siteKeys}leave'
-                            : '${siteKeys}home',
-                      ),
-                  ],
-                  child: KeyHelpBoundary(
-                    taken: LivePlate.taken,
-                    // A key the entered example leaves goes no further than
-                    // the plate, save the page's scroll keys: the arrows go
-                    // to the example first and scroll the page otherwise.
-                    child: Focus(
-                      canRequestFocus: false,
-                      onKey: (event) =>
-                          _entered && !LivePlate._scrolls.contains(event.combo),
-                      child: FocusScope(
-                        node: _scope,
-                        child: LayoutBuilder(
-                          builder: (context, c) => widget.child(c),
+            // Entered, the room keeps the wheel: the example's own scrolling
+            // takes it, and the page under it does not move.
+            child: Listener(
+              absorbPointerSignal: _entered,
+              child: Box(
+                background: palette.ink,
+                child: Focus(
+                  canRequestFocus: false,
+                  onKeyCapture: _capture,
+                  // What the capture does, for the help row, over the shell's
+                  // own Esc and Ctrl+Q: the inner ones shadow them.
+                  child: Actions(
+                    bindings: [
+                      if (!widget.ownsEscape)
+                        Binding('esc', 'leave', _leave, id: '${siteKeys}leave'),
+                      for (final key in ['ctrl+q', 'ctrl+c'])
+                        Binding(
+                          key,
+                          widget.ownsEscape ? 'leave' : 'home',
+                          () {},
+                          id: widget.ownsEscape
+                              ? '${siteKeys}leave'
+                              : '${siteKeys}home',
+                        ),
+                    ],
+                    child: KeyHelpBoundary(
+                      taken: LivePlate.taken,
+                      // A key the entered example leaves goes no further than
+                      // the plate, save the page's scroll keys: the arrows go
+                      // to the example first and scroll the page otherwise.
+                      child: Focus(
+                        canRequestFocus: false,
+                        onKey: (event) =>
+                            _entered &&
+                            !LivePlate._scrolls.contains(event.combo),
+                        child: FocusScope(
+                          node: _scope,
+                          child: LayoutBuilder(
+                            builder: (context, c) => widget.child(c),
+                          ),
                         ),
                       ),
                     ),

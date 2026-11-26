@@ -457,6 +457,7 @@ class _SiteState extends State<Site> {
     ChordTuiRoute() => ChordTuiPage(
       gallery: _gallery,
       openPage: _openArticle,
+      openGallery: () => _open(const GalleryRoute()),
       openUrl: widget.host.openUrl,
       home: () => _open(const HomeRoute()),
     ),

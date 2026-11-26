@@ -32,6 +32,7 @@ Future<FakeHost> _open(WidgetTester t, String path, Size size) async {
 }
 
 void main() {
+  _cardTaps();
   test('the index names Overview and the nine, in the gallery\'s order', () {
     expect(articleNames(siteGallery), [
       'OVERVIEW',
@@ -202,5 +203,35 @@ void main() {
       'main',
       for (final e in siteGallery.entries) e.name,
     ]);
+  });
+}
+
+void _cardTaps() {
+  testWidgets('a tap on the Gallery, API docs and Source cards does what '
+      'their keys do', (t) async {
+    final host = FakeHost('/chord_tui');
+    await t.pumpWidget(
+      Site(host: host, gallery: siteGallery),
+      size: const Size(120, 40),
+    );
+    await t.pump();
+    await t.press('end');
+    Future<void> tap(String text) async {
+      final y = t.screen.lines.indexWhere((l) => l.contains(text));
+      expect(y, greaterThan(0), reason: text);
+      await t.mouse(
+        MouseEvent(
+          MouseEventKind.press,
+          position: Offset(t.screen.lines[y].indexOf(text), y),
+          button: MouseButton.primary,
+        ),
+      );
+    }
+
+    await tap('API DOCS ↗');
+    await tap('SOURCE ↗');
+    expect(host.opened, [apiDocsUrl, frameworkSourceUrl]);
+    await tap('GALLERY →');
+    expect(host.pushed, ['/chord_tui/gallery']);
   });
 }

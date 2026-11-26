@@ -30,6 +30,7 @@ Future<int> _seek(WidgetTester t, Pattern text) async {
 
 void main() {
   _backWhileEntered();
+  _reviewFixes();
   test('the index shows from 110 columns, the margin from 150', () {
     expect(articleIndexWidth, 110);
     expect(articleMarginWidth, 150);
@@ -215,4 +216,61 @@ void _backWhileEntered() {
     await t.press('1');
     expect(host.pushed, ['/chord']);
   });
+}
+
+void _reviewFixes() {
+  testWidgets('a draft in the text area survives the page list opening and '
+      'closing over it', (t) async {
+    final host = FakeHost('/chord_tui/text_area');
+    await t.pumpWidget(
+      Site(host: host, gallery: siteGallery),
+      size: const Size(80, 40),
+    );
+    await t.pump();
+    await t.press('tab');
+    await t.type('draft');
+    await t.press('esc');
+    await t.press('p');
+    expect(t.screen, shows('❯ 05  TEXT AREA'));
+    // The open list keeps the keys from the page under it.
+    await t.press(']');
+    expect(host.pushed, isEmpty);
+    await t.press('esc');
+    expect(t.screen, isNot(shows('❯ 05  TEXT AREA')));
+    await t.press('tab');
+    await t.type('ed');
+    expect(t.screen, shows('drafted'));
+  });
+
+  for (final entered in [false, true]) {
+    testWidgets(
+      'the wheel over the plate ${entered ? 'stays in the entered '
+                'example' : 'scrolls the page'}',
+      (t) async {
+        final host = FakeHost('/chord_tui/mouse');
+        await t.pumpWidget(
+          Site(host: host, gallery: siteGallery),
+          size: const Size(120, 40),
+        );
+        await t.pump();
+        if (entered) await t.press('tab');
+        final y = _row(t, 'Pointer events');
+        final before = t.screen.lines[4];
+        await t.mouse(
+          MouseEvent(
+            MouseEventKind.wheel,
+            position: Offset(60, y + 2),
+            scrollDelta: const Offset(0, 2),
+          ),
+        );
+        await t.pump();
+        if (entered) {
+          expect(t.screen.lines[4], before, reason: 'the page did not move');
+          expect(t.screen, shows('wheel'));
+        } else {
+          expect(t.screen.lines[4], isNot(before));
+        }
+      },
+    );
+  }
 }

@@ -228,6 +228,8 @@ class ArticlePage extends StatefulWidget {
   State<ArticlePage> createState() => _ArticlePageState();
 }
 
+final _quitKeys = {KeyCombo.parse('ctrl+q'), KeyCombo.parse('ctrl+c')};
+
 class _ArticlePageState extends State<ArticlePage> {
   final _scroll = ScrollController();
   late final _copies = CopyOwner(_scroll);
@@ -269,7 +271,19 @@ class _ArticlePageState extends State<ArticlePage> {
     if (to != null) Scrollable.ensureVisible(to, alignment: 0);
   }
 
+  // Where the focus was when the list opened, to go back to.
+  FocusNode? _beforeIndex;
+
+  void _closeIndex() {
+    if (!_indexOpen) return;
+    setState(() => _indexOpen = false);
+    final before = _beforeIndex;
+    _beforeIndex = null;
+    if (before != null && before.attached) before.requestFocus();
+  }
+
   void _openIndex() => setState(() {
+    _beforeIndex = context.owner.focusManager.primaryFocus;
     _indexOpen = true;
     _indexSelected = widget.page;
   });
@@ -350,25 +364,37 @@ class _ArticlePageState extends State<ArticlePage> {
               child: _bar(theme),
             ),
             Text('─' * (width - 1), style: theme.border, softWrap: false),
+            // The list opens over the article, which stays mounted with its
+            // live example's state.
             Expanded(
-              child: _indexOpen
-                  ? _indexList(theme, margin)
-                  : Scrollbar(
-                      controller: _scroll,
-                      thumbStyle: theme.dim,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: margin),
-                        child: Align(
-                          alignment: Alignment.topLeft,
-                          child: SizedBox(
-                            width: width - 1 - 2 * margin < articleMeasure
-                                ? width - 1 - 2 * margin
-                                : articleMeasure,
-                            child: scrolled,
-                          ),
+              child: Stack(
+                children: [
+                  Scrollbar(
+                    controller: _scroll,
+                    thumbStyle: theme.dim,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: margin),
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: SizedBox(
+                          width: width - 1 - 2 * margin < articleMeasure
+                              ? width - 1 - 2 * margin
+                              : articleMeasure,
+                          child: scrolled,
                         ),
                       ),
                     ),
+                  ),
+                  if (_indexOpen)
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: _indexList(theme, margin),
+                    ),
+                ],
+              ),
             ),
           ],
         );
@@ -539,37 +565,51 @@ class _ArticlePageState extends State<ArticlePage> {
 
   /// The folded index opened: every page, the marked one opened by Enter.
   Widget _indexList(ThemeData theme, int margin) {
-    void close() => setState(() => _indexOpen = false);
+    void close() => _closeIndex();
     void move(int step) => setState(
       () => _indexSelected = (_indexSelected + step).clamp(0, _pageCount - 1),
     );
-    return Actions(
-      bindings: [
-        Binding('up', 'move', () => move(-1), id: 'article:index-move'),
-        Binding('down', 'move', () => move(1), id: 'article:index-move'),
-        Binding('enter', 'open', () {
-          close();
-          _go(_indexSelected);
-        }),
-        Binding('esc', 'close', close, id: 'article:index-close'),
-        Binding('p', 'close', close, id: 'article:index-close'),
-      ],
-      child: Focus(
-        autofocus: true,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: margin - 1),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(''),
-              for (var i = 0; i < _pageCount; i++)
-                i == _indexSelected
-                    ? _indexRow(theme, i, marked: true)
-                    : Padding(
-                        padding: const EdgeInsets.only(left: 2),
-                        child: _indexRow(theme, i),
-                      ),
-            ],
+    // The list holds the keys while open: what it leaves reaches nothing of
+    // the article under it, save the shell's quits.
+    return Focus(
+      canRequestFocus: false,
+      onKey: (event) => !_quitKeys.contains(event.combo),
+      child: Actions(
+        bindings: [
+          Binding('up', 'move', () => move(-1), id: 'article:index-move'),
+          Binding('down', 'move', () => move(1), id: 'article:index-move'),
+          Binding('enter', 'open', () {
+            close();
+            _go(_indexSelected);
+          }),
+          Binding('esc', 'close', close, id: 'article:index-close'),
+          Binding('p', 'close', close, id: 'article:index-close'),
+        ],
+        child: Focus(
+          autofocus: true,
+          child: Listener(
+            behavior: HitTestBehavior.opaque,
+            absorbPointerSignal: true,
+            onPointerSignal: (_) {},
+            child: Box(
+              background: Style(bg: SiteColors.ink),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: margin - 1),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(''),
+                    for (var i = 0; i < _pageCount; i++)
+                      i == _indexSelected
+                          ? _indexRow(theme, i, marked: true)
+                          : Padding(
+                              padding: const EdgeInsets.only(left: 2),
+                              child: _indexRow(theme, i),
+                            ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),

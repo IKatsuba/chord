@@ -22,9 +22,13 @@ class ChordTuiPage extends StatefulWidget {
     super.key,
     required this.gallery,
     required this.openPage,
+    required this.openGallery,
     required this.openUrl,
     required this.home,
   });
+
+  /// Opens the gallery.
+  final void Function() openGallery;
 
   /// The examples, README's among them.
   final Gallery gallery;
@@ -131,31 +135,48 @@ class _ChordTuiPageState extends State<ChordTuiPage> {
   Widget _cards(ThemeData theme, int width) {
     final bold = theme.text.merge(Style.bold);
     final key = theme.accent.merge(Style.bold);
-    Widget card(String title, String key_, String text, {Widget? body}) =>
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text.rich(
-              TextSpan(
-                title,
-                style: bold,
-                children: [
-                  if (key_.isNotEmpty) TextSpan('  $key_', style: key),
-                ],
-              ),
-              softWrap: false,
+    // A tap does what the card's key does.
+    Widget card(
+      String title,
+      String key_,
+      String text, {
+      Widget? body,
+      void Function()? onTap,
+    }) => Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: onTap == null
+          ? null
+          : (event) {
+              if (event.button == MouseButton.primary) onTap();
+            },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text.rich(
+            TextSpan(
+              title,
+              style: bold,
+              children: [if (key_.isNotEmpty) TextSpan('  $key_', style: key)],
             ),
-            LayoutBuilder(
-              builder: (context, c) =>
-                  Text('─' * c.maxWidth, style: theme.border, softWrap: false),
-            ),
-            ?body,
-            Text(text, style: theme.dim),
-          ],
-        );
+            softWrap: false,
+          ),
+          LayoutBuilder(
+            builder: (context, c) =>
+                Text('─' * c.maxWidth, style: theme.border, softWrap: false),
+          ),
+          ?body,
+          Text(text, style: theme.dim),
+        ],
+      ),
+    );
     final cards = [
-      card('GALLERY →', '3', 'Nine examples, running here.'),
+      card(
+        'GALLERY →',
+        '3',
+        'Nine examples, running here.',
+        onTap: widget.openGallery,
+      ),
       card(
         'INSTALL',
         '',
@@ -165,8 +186,18 @@ class _ChordTuiPageState extends State<ChordTuiPage> {
           label: Text(pubAddCommand, style: theme.accent, softWrap: false),
         ),
       ),
-      card('API DOCS ↗', 'd', "The framework's documentation on pub.dev."),
-      card('SOURCE ↗', 's', 'packages/chord_tui on GitHub.'),
+      card(
+        'API DOCS ↗',
+        'd',
+        "The framework's documentation on pub.dev.",
+        onTap: () => widget.openUrl(apiDocsUrl),
+      ),
+      card(
+        'SOURCE ↗',
+        's',
+        'packages/chord_tui on GitHub.',
+        onTap: () => widget.openUrl(frameworkSourceUrl),
+      ),
     ];
     final perRow = width < narrowWidth - 4 ? 1 : 2;
     const gap = 4;

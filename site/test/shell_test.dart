@@ -120,12 +120,13 @@ void main() {
         expect(t.screen.lines.last, isNot(contains('esc close')));
       });
 
-      testWidgets('on an example page the help row ends with f1 keys, ? '
-          'being text there', (t) async {
+      testWidgets('inside an entered example the help row ends with f1 '
+          'keys, ? being text there', (t) async {
         await t.pumpWidget(
           Site(host: FakeHost('/chord_tui/text_area'), gallery: siteGallery),
           size: size,
         );
+        await t.press('tab');
         expect(t.screen.lines.last, endsWith('f1 keys'));
         expect(t.screen.lines.last, isNot(contains('? keys')));
       });

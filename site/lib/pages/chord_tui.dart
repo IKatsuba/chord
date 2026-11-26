@@ -1,98 +1,191 @@
 import 'package:chord_tui/chord_tui.dart';
 
-import '../router.dart';
-import '../site.dart' show siteKeys;
-import 'example_frame.dart';
+import '../article.dart';
+import '../gallery.dart';
+import '../giant.dart';
+import '../live_plate.dart';
+import '../site.dart' show narrowWidth, panelOnly;
+import '../sources.g.dart';
+import 'framework_text.dart';
 
-/// chord_tui: what it is, README's example running, and the way to the
-/// gallery.
-class ChordTuiPage extends StatelessWidget {
-  /// The page with [readme] running, opening the gallery through [open].
-  const ChordTuiPage(this.readme, this.open, {super.key});
+/// The pages chord_tui's index lists, in caps: Overview, then [gallery]'s.
+List<String> articleNames(Gallery gallery) => [
+  'OVERVIEW',
+  for (final e in gallery.entries) e.title.toUpperCase(),
+];
 
-  /// Builds README's example.
-  final Widget Function() readme;
+/// chord_tui's overview: what it is, README's example live, testing, and
+/// where next.
+class ChordTuiPage extends StatefulWidget {
+  /// The overview, with [gallery]'s README example live.
+  const ChordTuiPage({
+    super.key,
+    required this.gallery,
+    required this.openPage,
+    required this.openUrl,
+    required this.home,
+  });
 
-  /// Opens a route.
-  final void Function(SiteRoute route) open;
+  /// The examples, README's among them.
+  final Gallery gallery;
+
+  /// Opens chord_tui's page [page]: 0 this one, then the examples.
+  final void Function(int page) openPage;
+
+  /// Opens a page outside the site.
+  final void Function(String url) openUrl;
+
+  /// Goes home.
+  final void Function() home;
+
+  @override
+  State<ChordTuiPage> createState() => _ChordTuiPageState();
+}
+
+class _ChordTuiPageState extends State<ChordTuiPage> {
+  final _live = LivePlateController();
+
+  @override
+  void dispose() {
+    _live.dispose();
+    super.dispose();
+  }
+
+  static const _docsId = '${panelOnly}overview:docs';
+  static const _sourceId = '${panelOnly}overview:source';
 
   @override
   Widget build(BuildContext context) {
-    void gallery() => open(const GalleryRoute());
-    // No menu here: a menu would hold the focus, and README's example needs
-    // its keys. Enter and a tap open the gallery from the page. The keys are
-    // bound in the build, not the layout, so the site's help row, built
-    // before the layout, has them from the first frame.
-    return Actions(
+    final theme = Theme.of(context);
+    final bold = theme.text.merge(Style.bold);
+    return ArticlePage(
+      pages: (names: articleNames(widget.gallery), open: widget.openPage),
+      page: 0,
       bindings: [
-        Binding('enter', 'gallery', gallery, id: '${siteKeys}gallery'),
+        Binding('tab', 'enter example', _live.enter, id: 'article:enter'),
+        Binding('d', 'API docs', () => widget.openUrl(apiDocsUrl), id: _docsId),
+        Binding(
+          's',
+          'source',
+          () => widget.openUrl(frameworkSourceUrl),
+          id: _sourceId,
+        ),
       ],
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 100;
-          final theme = Theme.of(context);
-          return Padding(
-            padding: const EdgeInsets.only(top: 1),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 2),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'The Flutter way, for the terminal: a Dart framework for '
-                        'rich terminal interfaces.',
-                      ),
-                      if (wide)
-                        Text(
-                          'Widgets, state, layout in cells, rich text and keyboard '
-                          'actions, with a headless tester. Written from scratch.',
-                          style: Theme.of(context).dim,
-                        ),
-                      Text(''),
-                      Listener(
-                        behavior: HitTestBehavior.opaque,
-                        onPointerDown: (_) => gallery(),
-                        child: Text.rich(
-                          TextSpan(
-                            '',
-                            children: [
-                              TextSpan(
-                                'enter ',
-                                style: theme.text.merge(Style.bold),
-                              ),
-                              TextSpan('Gallery', style: theme.link),
-                              TextSpan(
-                                wide
-                                    ? "    the framework's examples, running here"
-                                    : '    examples, running here',
-                                style: theme.dim,
-                              ),
-                            ],
-                          ),
-                          softWrap: false,
-                        ),
-                      ),
-                      Text(''),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: ExampleFrame(
-                    title: 'example/main.dart',
-                    caption: "README's example: ctrl+o opens the fold",
-                    home: () => open(const HomeRoute()),
-                    child: (_) => readme(),
-                  ),
-                ),
-              ],
+      heading: [
+        const GiantWord('TUI'),
+        Text(''),
+        Text(overviewLede, style: bold),
+      ],
+      sections: [
+        (
+          head: 'What it is',
+          children: [
+            for (final (i, p) in overviewWhat.indexed) ...[
+              if (i > 0) Text(''),
+              Text(p),
+            ],
+          ],
+        ),
+        (
+          head: 'The example',
+          children: [
+            Text(overviewExample),
+            Text(''),
+            LivePlate(
+              controller: _live,
+              figure: 1,
+              title: "README's example",
+              rows: 8,
+              home: widget.home,
+              child: (_) => widget.gallery.readme(),
             ),
-          );
-        },
+            Text(''),
+            CodeBlock(
+              label: 'example/main.dart',
+              source: exampleSources['main']!,
+            ),
+          ],
+        ),
+        (
+          head: 'Testing',
+          children: [
+            Text(overviewTesting),
+            Text(''),
+            const CodeBlock(
+              label: 'test/dialog_test.dart',
+              source: testingSource,
+            ),
+          ],
+        ),
+        (
+          head: 'Where next',
+          children: [
+            LayoutBuilder(builder: (context, c) => _cards(theme, c.maxWidth)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// The four ways on, two to a row (one on the phone), 4 apart.
+  Widget _cards(ThemeData theme, int width) {
+    final bold = theme.text.merge(Style.bold);
+    final key = theme.accent.merge(Style.bold);
+    Widget card(String title, String key_, String text, {Widget? body}) =>
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text.rich(
+              TextSpan(
+                title,
+                style: bold,
+                children: [
+                  if (key_.isNotEmpty) TextSpan('  $key_', style: key),
+                ],
+              ),
+              softWrap: false,
+            ),
+            LayoutBuilder(
+              builder: (context, c) =>
+                  Text('─' * c.maxWidth, style: theme.border, softWrap: false),
+            ),
+            ?body,
+            Text(text, style: theme.dim),
+          ],
+        );
+    final cards = [
+      card('GALLERY →', '3', 'Nine examples, running here.'),
+      card(
+        'INSTALL',
+        '',
+        'Add it to a Dart package.',
+        body: CopyHint(
+          text: pubAddCommand,
+          label: Text(pubAddCommand, style: theme.accent, softWrap: false),
+        ),
       ),
+      card('API DOCS ↗', 'd', "The framework's documentation on pub.dev."),
+      card('SOURCE ↗', 's', 'packages/chord_tui on GitHub.'),
+    ];
+    final perRow = width < narrowWidth - 4 ? 1 : 2;
+    const gap = 4;
+    final cell = (width - gap * (perRow - 1)) ~/ perRow;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var r = 0; r * perRow < cards.length; r++) ...[
+          if (r > 0) ...[Text(''), Text('')],
+          Row(
+            spacing: gap,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var j = 0; j < perRow && r * perRow + j < cards.length; j++)
+                SizedBox(width: cell, child: cards[r * perRow + j]),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }

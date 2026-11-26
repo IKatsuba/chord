@@ -482,6 +482,9 @@ site/lib/router.dart       History API paths, parents and not-found routes
 site/lib/site.dart         page shell, global keys and navigation
 site/lib/pages/            home, chord, recordings, framework and install
 site/lib/keys_panel.dart   modal shortcuts panel
+site/lib/article.dart      chord_tui pages: index, article, margin and pager
+site/lib/live_plate.dart   live examples entered by Tab, left by Esc
+site/lib/sources.g.dart    generated example code the pages show
 site/lib/key_row.dart      tappable keys for narrow windows
 site/lib/web/browser_host.dart browser history and recording fetches
 site/web/main.dart         Wasm entrypoint and page-lifetime WebTerminal

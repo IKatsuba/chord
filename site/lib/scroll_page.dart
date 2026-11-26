@@ -41,6 +41,23 @@ class ScrollPage extends StatefulWidget {
   State<ScrollPage> createState() => _ScrollPageState();
 }
 
+/// A page's scroll keys on [scroll]: ↑↓ scroll in the help row, and the
+/// page and end keys, which the panel lists.
+List<Binding> pageScrollBindings(ScrollController scroll) => [
+  for (final b in scrollBindings(
+    scroll,
+    keys: const ScrollKeys(lineUp: ['up'], lineDown: ['down']),
+  ))
+    b.id == 'scroll:lineUp' || b.id == 'scroll:lineDown'
+        ? Binding('${b.chord}', 'scroll', b.onInvoke, id: 'page:scroll')
+        : Binding(
+            '${b.chord}',
+            b.description,
+            b.onInvoke,
+            id: '$panelOnly${b.id}',
+          ),
+];
+
 class _ScrollPageState extends State<ScrollPage> {
   ScrollController? _own;
   ScrollController get _scroll =>
@@ -57,20 +74,7 @@ class _ScrollPageState extends State<ScrollPage> {
     builder: (context, constraints) {
       final margin = constraints.maxWidth < narrowWidth ? 2 : 4;
       return Actions(
-        bindings: [
-          for (final b in scrollBindings(
-            _scroll,
-            keys: const ScrollKeys(lineUp: ['up'], lineDown: ['down']),
-          ))
-            b.id == 'scroll:lineUp' || b.id == 'scroll:lineDown'
-                ? Binding('${b.chord}', 'scroll', b.onInvoke, id: 'page:scroll')
-                : Binding(
-                    '${b.chord}',
-                    b.description,
-                    b.onInvoke,
-                    id: '$panelOnly${b.id}',
-                  ),
-        ],
+        bindings: pageScrollBindings(_scroll),
         child: Actions(
           bindings: widget.bindings,
           child: Focus(

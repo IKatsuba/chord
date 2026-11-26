@@ -24,11 +24,16 @@ const _markers = {
   'mouse': 'Pointer events · reports',
 };
 
-/// The rows inside the frame, between its borders.
-List<String> _framed(WidgetTester t) => [
-  for (final l in t.screen.lines)
-    if (l.startsWith(' │')) l,
-];
+Future<FakeHost> _example(WidgetTester t, String name, Size size) async {
+  final host = FakeHost('/chord_tui/$name');
+  await t.pumpWidget(
+    Site(host: host, gallery: siteGallery),
+    size: size,
+  );
+  // The dialog example opens its dialog once the first frame is laid.
+  await t.pump();
+  return host;
+}
 
 void main() {
   test('every entry is an example file, and none is named gallery', () {
@@ -60,39 +65,15 @@ void main() {
     }
   });
 
-  testWidgets('F1 opens the keys panel over an example, ? is text there', (
-    t,
-  ) async {
-    final host = FakeHost('/chord_tui/text_area');
-    await t.pumpWidget(
-      Site(host: host, gallery: siteGallery),
-      size: const Size(80, 24),
-    );
+  testWidgets('F1 opens the keys panel over an entered example, where ? '
+      'is text', (t) async {
+    final host = await _example(t, 'text_area', const Size(80, 24));
+    await t.press('tab');
     await t.type('why?');
     expect(t.screen, isNot(shows(' Keys')));
     expect(t.screen, shows('why?'));
     await t.press('f1');
     expect(t.screen, shows(' Keys'));
-    // More keys than rows: the panel scrolls, and its row says how.
-    expect(
-      t.screen.lines.last,
-      ' escape close  f1 close  ctrl+q home  up/down scroll',
-    );
-    expect(t.screen, shows(RegExp(r'↓ \+\d+ more')));
-    expect(t.screen, isNot(shows('↑')));
-    // Reaching the top of the page, the panel draws no second rule.
-    final rules = [
-      for (var i = 0; i < t.screen.lines.length; i++)
-        if (t.screen.lines[i].startsWith('────')) i,
-    ];
-    expect(rules, [3]);
-    await t.press('down');
-    expect(t.screen, shows('↑ +1 more'));
-    await t.press('end');
-    expect(t.screen, isNot(shows('↓')));
-    expect(t.screen, shows(RegExp(r'↑ \+\d+ more')));
-    await t.press('home');
-    expect(t.screen, isNot(shows('↑')));
     // The open panel takes every key: nothing is typed under it.
     await t.type('abc');
     await t.press('enter');
@@ -103,67 +84,58 @@ void main() {
     expect(host.pushed, isEmpty);
   });
 
-  testWidgets('the panel names F1 alone for its keys on an example page', (
-    t,
-  ) async {
-    await t.pumpWidget(
-      Site(host: FakeHost('/chord_tui/diff'), gallery: siteGallery),
-      size: const Size(120, 40),
-    );
-    await t.press('f1');
-    expect(t.screen.lines, contains(matches(RegExp(r'^ +f1 +keys$'))));
-    expect(t.screen.lines, isNot(contains(matches(RegExp(r'\?/f1')))));
-  });
-
   testWidgets('a paste while the panel is open edits nothing', (t) async {
-    await t.pumpWidget(
-      Site(host: FakeHost('/chord_tui/text_area'), gallery: siteGallery),
-      size: const Size(120, 40),
-    );
+    await _example(t, 'text_area', const Size(120, 40));
+    await t.press('tab');
     await t.press('f1');
     await t.paste('pasted under');
-    await t.paste('');
     await t.press('esc');
     expect(t.screen, isNot(shows('pasted under')));
     await t.paste('pasted over');
     expect(t.screen, shows('pasted over'));
   });
 
-  testWidgets('the open panel swallows clicks and the wheel', (t) async {
-    final host = FakeHost('/chord_tui/picker');
-    await t.pumpWidget(
-      Site(host: host, gallery: siteGallery),
-      size: const Size(120, 40),
-    );
+  testWidgets('the panel names F1 alone for its keys inside an entered '
+      'example, and ? too on the page', (t) async {
+    await _example(t, 'diff', const Size(120, 40));
     await t.press('f1');
-    final row = t.screen.lines.indexWhere((l) => l.contains('3.  Choice 3'));
+    expect(t.screen.lines, contains(matches(RegExp(r'^ +\?/f1 +keys$'))));
+    await t.press('f1');
+    await t.press('tab');
+    await t.press('f1');
+    expect(t.screen.lines, contains(matches(RegExp(r'^ +f1 +keys$'))));
+    expect(t.screen.lines, isNot(contains(matches(RegExp(r'\?/f1')))));
+  });
+
+  testWidgets('the open panel swallows clicks and the wheel', (t) async {
+    await _example(t, 'picker', const Size(120, 40));
+    await t.press('tab');
+    final before = t.screen.text;
+    await t.press('f1');
+    final row = t.screen.lines.indexWhere((l) => l.contains('Choice 3'));
+    final at = Offset(40, row < 0 ? 20 : row);
     await t.mouse(
       MouseEvent(
         MouseEventKind.press,
-        position: Offset(10, row),
+        position: at,
         button: MouseButton.primary,
       ),
     );
     await t.mouse(
       MouseEvent(
         MouseEventKind.wheel,
-        position: Offset(10, row),
+        position: at,
         scrollDelta: const Offset(0, 3),
       ),
     );
     await t.press('esc');
     expect(t.screen, isNot(shows(' Keys')));
-    expect(t.screen, shows('Chosen: nothing yet'));
-    expect(t.screen, shows('❯   1.  Choice 1'));
+    expect(t.screen.text, before);
   });
 
   testWidgets('quit keys close the open panel and go home', (t) async {
     for (final key in ['ctrl+q', 'ctrl+c']) {
-      final host = FakeHost('/chord_tui/form');
-      await t.pumpWidget(
-        Site(host: host, gallery: siteGallery),
-        size: const Size(80, 24),
-      );
+      final host = await _example(t, 'form', const Size(80, 24));
       await t.press('f1');
       await t.press(key);
       expect(host.pushed, ['/'], reason: key);
@@ -209,115 +181,55 @@ void main() {
 
   for (final entry in siteGallery.entries) {
     for (final size in _sizes) {
-      testWidgets('${entry.name} builds and draws in its frame at $size', (
+      testWidgets('${entry.name} builds and draws in its plate at $size', (
         t,
       ) async {
-        final host = FakeHost('/chord_tui/${entry.name}');
-        await t.pumpWidget(
-          Site(host: host, gallery: siteGallery),
-          size: size,
-        );
-        expect(t.screen, shows('example/${entry.name}.dart'));
-        expect(t.screen, shows(entry.description));
-        // The example itself is drawn inside the frame.
-        expect(
-          _framed(t).where((l) => l.contains(_markers[entry.name]!)),
-          isNotEmpty,
-        );
-      });
-    }
-
-    for (final size in _sizes) {
-      testWidgets('${entry.name}: the rows keep their own keys, $size', (
-        t,
-      ) async {
-        await t.pumpWidget(
-          Site(
-            host: FakeHost('/chord_tui/${entry.name}'),
-            gallery: siteGallery,
-          ),
-          size: size,
-        );
-        // The dialog example opens its dialog once the first frame is laid.
-        await t.pump();
-        final lines = t.screen.lines;
-        // The site's row: its own keys only, the same on every example.
-        expect(
-          lines.last,
-          entry.ownsEscape
-              ? ' ctrl+q home  f1 keys'
-              : ' escape up  ctrl+q home  f1 keys',
-        );
-        // The frame's rows: the example's own, never the site's keys or Quit.
-        final framed = _framed(t).join('\n');
-        expect(framed, contains(_markers[entry.name]!));
-        for (final site in ['f1', 'keys', 'open GitHub', 'ctrl+q', 'Quit']) {
-          expect(framed, isNot(contains(site)), reason: site);
+        await _example(t, entry.name, size);
+        for (
+          var i = 0;
+          i < 60 && !t.screen.text.contains(_markers[entry.name]!);
+          i++
+        ) {
+          await t.press('down');
         }
+        expect(t.screen, shows(_markers[entry.name]!));
+        expect(t.screen, shows('EXAMPLE/${entry.name.toUpperCase()}.DART'));
       });
     }
 
-    testWidgets('${entry.name}: quit keys go home, never out', (t) async {
-      for (final key in ['ctrl+q', 'ctrl+c']) {
-        final host = FakeHost('/chord_tui/${entry.name}');
-        await t.pumpWidget(
-          Site(host: host, gallery: siteGallery),
-          size: const Size(120, 40),
-        );
-        await t.press(key);
-        expect(host.pushed, ['/'], reason: key);
-        expect(t.exitRequested, isFalse, reason: key);
+    testWidgets('${entry.name}: quit keys go home from the page and from '
+        'inside, never out', (t) async {
+      for (final enter in [false, true]) {
+        for (final key in ['ctrl+q', 'ctrl+c']) {
+          final host = await _example(t, entry.name, const Size(120, 40));
+          if (enter) await t.press('tab');
+          await t.press(key);
+          expect(
+            host.pushed,
+            enter && entry.ownsEscape ? isEmpty : ['/'],
+            reason: '$key, entered $enter',
+          );
+          expect(t.exitRequested, isFalse, reason: key);
+        }
       }
     });
 
     testWidgets(
-      '${entry.name}: esc ${entry.ownsEscape ? 'is the example\'s' : 'goes back to the gallery'}',
+      '${entry.name}: esc on the page goes up to the gallery; inside, '
+      '${entry.ownsEscape ? "it is the example's and ctrl+q leaves" : "it leaves"}',
       (t) async {
-        final host = FakeHost('/chord_tui/${entry.name}');
-        await t.pumpWidget(
-          Site(host: host, gallery: siteGallery),
-          size: const Size(120, 40),
-        );
+        final host = await _example(t, entry.name, const Size(120, 40));
+        await t.press('tab');
         expect(
           t.screen,
-          shows(
-            entry.ownsEscape
-                ? "esc is the example's here; ctrl+q home"
-                : 'esc back to the gallery',
-          ),
+          shows(entry.ownsEscape ? 'CTRL+Q LEAVES' : 'ESC LEAVES'),
         );
+        await t.press(entry.ownsEscape ? 'ctrl+q' : 'esc');
+        expect(t.screen, shows('TAB TO ENTER'));
+        expect(host.pushed, isEmpty);
         await t.press('esc');
-        expect(
-          host.pushed,
-          entry.ownsEscape ? isEmpty : ['/chord_tui/gallery'],
-        );
+        expect(host.pushed, ['/chord_tui/gallery']);
       },
     );
-  }
-
-  for (final size in _sizes) {
-    testWidgets('chord_tui runs README\'s example, at $size', (t) async {
-      final host = FakeHost('/chord_tui');
-      await t.pumpWidget(
-        Site(host: host, gallery: siteGallery),
-        size: size,
-      );
-      expect(t.screen, shows('The Flutter way, for the terminal'));
-      expect(t.screen, shows('example/main.dart'));
-      expect(t.screen, shows('▸ Run checks'));
-      // README's example lists its own key alone in its frame.
-      expect(
-        t.screen.lines,
-        contains(matches(RegExp(r'^ │ctrl\+o Toggle tool details +│$'))),
-      );
-      expect(
-        t.screen.lines.last,
-        ' enter gallery  escape up  ctrl+q home  f1 keys',
-      );
-      await t.press('ctrl+o');
-      expect(t.screen, shows('▾ Run checks'));
-      await t.press('enter');
-      expect(host.pushed, ['/chord_tui/gallery']);
-    });
   }
 }

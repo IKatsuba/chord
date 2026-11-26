@@ -49,6 +49,9 @@ class SitePalette extends ThemeExtension<SitePalette> {
 
   /// Code blocks and previews.
   Style get raised => Style(bg: SiteColors.raised);
+
+  /// The page's own ground, where a live example draws inside a plate.
+  Style get ink => Style(bg: SiteColors.ink);
 }
 
 /// The site's theme: chord_tui's dark theme in direction C's colours. Text

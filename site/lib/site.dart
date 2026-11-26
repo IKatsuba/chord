@@ -6,6 +6,7 @@ import 'gallery.dart';
 import 'host.dart';
 import 'key_row.dart';
 import 'keys_panel.dart';
+import 'live_plate.dart';
 import 'nav.dart';
 import 'palette.dart';
 import 'pages/chord.dart';
@@ -86,6 +87,7 @@ class _SiteState extends State<Site> {
   @override
   void initState() {
     super.initState();
+    _live.addListener(_liveChanged);
     _route = _router.parse(widget.host.initialPath);
     widget.host.show(_route);
     _pops = widget.host.pops.listen((path) {
@@ -100,6 +102,7 @@ class _SiteState extends State<Site> {
 
   @override
   void dispose() {
+    _live.dispose();
     _pops?.cancel();
     super.dispose();
   }
@@ -115,7 +118,20 @@ class _SiteState extends State<Site> {
     });
   }
 
-  bool get _embedding => _route is ExampleRoute || _route is ChordTuiRoute;
+  // Whether a live plate holds the keys: the shell's letters and digits
+  // step aside for the example then.
+  final _live = ValueNotifier(false);
+
+  bool get _embedding => _live.value;
+
+  void _liveChanged() => setState(() {});
+
+  // chord_tui's page [page]: the overview, then the examples in order.
+  void _openArticle(int page) => _open(
+    page == 0
+        ? const ChordTuiRoute()
+        : ExampleRoute(_gallery.entries[page - 1].name),
+  );
 
   // The phone's menu: the four sections and GitHub, over the page. It holds
   // the focus while open, so its bindings are the ones in scope and the
@@ -314,7 +330,10 @@ class _SiteState extends State<Site> {
                       width: width,
                       child: Stack(
                         children: [
-                          _page(width, pageRows),
+                          LiveScope(
+                            entered: _live,
+                            child: _page(width, pageRows),
+                          ),
                           // The open panel sits at the bottom of the page, and stops
                           // clicks and the wheel short of it.
                           if (_menuOpen)
@@ -435,11 +454,20 @@ class _SiteState extends State<Site> {
       cols: width,
       rows: rows,
     ),
-    ChordTuiRoute() => ChordTuiPage(_gallery.readme, _open),
+    ChordTuiRoute() => ChordTuiPage(
+      gallery: _gallery,
+      openPage: _openArticle,
+      openUrl: widget.host.openUrl,
+      home: () => _open(const HomeRoute()),
+    ),
     GalleryRoute() => GalleryPage(_gallery, _open),
     ExampleRoute(:final name) => ExamplePage(
-      _gallery[name]!,
-      () => _open(const HomeRoute()),
+      key: ValueKey(name),
+      gallery: _gallery,
+      entry: _gallery[name]!,
+      openPage: _openArticle,
+      openUrl: widget.host.openUrl,
+      home: () => _open(const HomeRoute()),
     ),
     InstallRoute() => const InstallPage(),
     NotFoundRoute(:final path) => NotFoundPage(

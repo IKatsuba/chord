@@ -504,9 +504,11 @@ class _HelpRow extends StatelessWidget {
         if (embedding ? !id.startsWith(siteKeys) : id == _homeKeysId) {
           continue;
         }
+        // A phone has room for Esc and the panel's key: ?, or F1 where ? is
+        // an example's text.
         if (narrow &&
             !(group.chords.first.toString() == 'escape' ||
-                group.chords.first.toString() == '?')) {
+                id == '${siteKeys}keys')) {
           continue;
         }
         // Ctrl+C is home too, and F1 keys where ? is: the row names the one

@@ -53,7 +53,9 @@ void main() {
       size: const Size(43, 37),
     );
     final lines = t.screen.lines;
-    expect(lines[0], matches(RegExp(r'^ ◆ chord +☰ menu m$')));
+    // Two columns in from each edge.
+    expect(lines[0], matches(RegExp(r'^  ◆ chord +☰ menu m$')));
+    expect(t.screen.charAt(40, 0), 'm');
     expect(lines[0], isNot(contains('GitHub')));
     expect(lines[1], '─' * 43);
     expect(lines[35], startsWith('  esc   tab   ←   ↑   ↓   →   enter'));

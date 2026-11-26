@@ -101,7 +101,7 @@ class SiteNav extends StatelessWidget {
       final key = Actions.maybeBindingOf(context, menuAction)?.chord;
       row = Row(
         children: [
-          Text(' '),
+          Text('  '),
           mark,
           const Spacer(),
           _tap(
@@ -117,7 +117,7 @@ class SiteNav extends StatelessWidget {
               softWrap: false,
             ),
           ),
-          Text(' '),
+          Text('  '),
         ],
       );
     } else {

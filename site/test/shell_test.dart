@@ -5,6 +5,7 @@ import 'package:chord_tui/chord_tui.dart';
 import 'package:chord_tui/testing.dart';
 import 'package:test/test.dart';
 
+import '../web/gallery.dart';
 import 'fake_host.dart';
 
 MouseEvent _at(MouseEventKind kind, int x, int y) =>
@@ -101,6 +102,16 @@ void main() {
         expect(t.screen, isNot(shows('❯ 1 chord')));
         expect(host.pushed, isEmpty);
         expect(t.screen.lines.last, ' escape up  ? keys');
+      });
+
+      testWidgets('on an example page the help row ends with f1 keys, ? '
+          'being text there', (t) async {
+        await t.pumpWidget(
+          Site(host: FakeHost('/chord_tui/text_area'), gallery: siteGallery),
+          size: size,
+        );
+        expect(t.screen.lines.last, endsWith('f1 keys'));
+        expect(t.screen.lines.last, isNot(contains('? keys')));
       });
 
       testWidgets('m closes it again', (t) async {

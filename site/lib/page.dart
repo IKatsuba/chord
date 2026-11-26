@@ -119,3 +119,37 @@ class _SitePageState extends State<SitePage> {
     },
   );
 }
+
+/// The measure of C's poster pages: home, chord, a recording, the gallery,
+/// install and not found run the full width inside their margins.
+const posterMeasure = 1 << 20;
+
+/// The widest a running paragraph on a poster page gets, in columns.
+const paragraphMeasure = 90;
+
+/// A running paragraph on a poster page: [text] in [style], wrapping at
+/// [paragraphMeasure] columns or its room, whichever is narrower.
+class Paragraph extends StatelessWidget {
+  /// A paragraph of [text].
+  const Paragraph(this.text, {super.key, this.style});
+
+  /// What it says.
+  final String text;
+
+  /// Its style; the text's when null.
+  final Style? style;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    // Loosened first: a list item's tight width would override the box.
+    builder: (context, constraints) => Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: constraints.maxWidth < paragraphMeasure
+            ? constraints.maxWidth
+            : paragraphMeasure,
+        child: Text(text, style: style),
+      ),
+    ),
+  );
+}

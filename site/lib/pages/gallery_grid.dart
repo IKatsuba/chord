@@ -1,17 +1,19 @@
 import 'package:chord_tui/chord_tui.dart';
 
 import '../gallery.dart';
+import '../giant.dart';
 import '../grid.dart';
 import '../page.dart';
 import '../palette.dart';
 import '../router.dart';
 import '../site.dart' show narrowWidth;
 
-/// The gallery: a header, then the examples as cards, three to a row from
-/// 120 columns, two from 60, one on a phone. The arrows move the selection, Enter runs it, a digit or a
-/// tap runs that card.
+/// The gallery, in C: `03 / THE GALLERY`, the giant word and the lede, then
+/// the examples as numbered cells, three to a row from 120 columns, two
+/// from 60, one on a phone. The arrows move the selection, Enter runs it, a
+/// digit or a tap runs that cell.
 class GalleryPage extends StatefulWidget {
-  /// [gallery]'s cards, running an example through [open].
+  /// [gallery]'s cells, running an example through [open].
   const GalleryPage(this.gallery, this.open, {super.key});
 
   /// The examples.
@@ -24,13 +26,22 @@ class GalleryPage extends StatefulWidget {
   State<GalleryPage> createState() => _GalleryPageState();
 }
 
+/// Columns between cells.
+const cellGap = 6;
+
 class _GalleryPageState extends State<GalleryPage> {
   final _scroll = ScrollController();
   var _selected = 0;
   var _columns = 3;
 
-  // The list items before the first row of cards: the header's rows.
-  static const _headerItems = 7;
+  // The list items before the first row of cells: the header's.
+  static const _headerItems = 6;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   List<GalleryEntry> get _entries => widget.gallery.entries;
 
@@ -44,28 +55,25 @@ class _GalleryPageState extends State<GalleryPage> {
       step: step,
     );
     if (to != _selected) setState(() => _selected = to);
-    // Even a step that stays put brings its card back into sight.
-    _reveal(fromAbove: step != GridStep.up);
+    // Even a step that stays put brings its cell back into sight.
+    _reveal();
   }
 
-  // Each row of cards is an item, then a blank one: keep the selected row in
-  // sight, from the row before it when coming down onto it.
-  void _reveal({bool fromAbove = true}) {
+  // Each row of cells is an item, then its gap: keep the selected row whole
+  // in sight.
+  void _reveal() {
     if (!mounted) return;
-    final item = _headerItems + 2 * (_selected ~/ _columns);
-    if (item < _scroll.firstVisible || item >= _scroll.lastVisible) {
-      _scroll.jumpToAnchor(ListAnchor(fromAbove ? item - 1 : item, 0));
-    }
+    revealItem(_scroll, _headerItems + 2 * (_selected ~/ _columns));
   }
 
-  // The columns the last layout had: a change moves the selected card's
+  // The columns the last layout had: a change moves the selected cell's
   // row, which is brought back into sight once the new layout is done.
   var _laidColumns = 0;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      // One card below 60 columns, two below 120, three from there.
+      // One cell below 60 columns, two below 120, three from there.
       _columns = constraints.maxWidth < narrowWidth
           ? 1
           : constraints.maxWidth < 120
@@ -75,7 +83,6 @@ class _GalleryPageState extends State<GalleryPage> {
         if (_laidColumns != 0) context.owner.afterLayout(_reveal);
         _laidColumns = _columns;
       }
-      final theme = Theme.of(context);
       final entries = _entries;
       final rows = [
         for (var r = 0; r * _columns < entries.length; r++)
@@ -89,7 +96,7 @@ class _GalleryPageState extends State<GalleryPage> {
           ],
       ];
       return SitePage(
-        measure: wideMeasure,
+        measure: posterMeasure,
         controller: _scroll,
         bindings: [
           for (final (key, step) in const [
@@ -109,42 +116,28 @@ class _GalleryPageState extends State<GalleryPage> {
             Binding('$n', 'open', () => _run(n - 1), id: 'gallery:open'),
         ],
         sections: [
-          Text.rich(
-            TextSpan(
-              '',
-              children: [
-                TextSpan('Home', style: theme.dim),
-                TextSpan(' › ', style: theme.dim),
-                TextSpan('Gallery', style: theme.text),
-              ],
-            ),
-            softWrap: false,
-          ),
           Text(''),
-          Text('GALLERY', style: theme.accent.merge(Style.bold)),
-          Text(
-            'The framework, running in your browser.',
-            style: theme.text.merge(Style.bold),
-          ),
+          const Kicker(3, 'THE GALLERY'),
+          const GiantWord('GALLERY'),
           Text(''),
-          Text(
+          const Paragraph(
             "Nine of chord_tui's examples, compiled to WebAssembly with this "
             'page. Pick one with the arrows or its number; Enter runs it, Esc '
             'comes back.',
-            style: theme.dim,
           ),
           Text(''),
           for (final row in rows) ...[
             LayoutBuilder(
               builder: (context, c) {
-                // The columns left over go one each to the first cards, so a
-                // row ends at the measure's right edge, as the text does.
-                final room = c.maxWidth - 2 * (_columns - 1);
+                // Leftover columns go one each to the first cells, so a row
+                // ends at the margin.
+                final room = c.maxWidth - cellGap * (_columns - 1);
                 return Row(
-                  spacing: 2,
+                  spacing: cellGap,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (final (j, i) in row.indexed)
-                      _Card(
+                      _Cell(
                         number: i + 1,
                         entry: entries[i],
                         selected: i == _selected,
@@ -155,7 +148,7 @@ class _GalleryPageState extends State<GalleryPage> {
                 );
               },
             ),
-            Text(''),
+            const SizedBox(height: 2),
           ],
         ],
       );
@@ -163,9 +156,10 @@ class _GalleryPageState extends State<GalleryPage> {
   );
 }
 
-/// One example's card: number and name, a still preview, what it shows.
-class _Card extends StatelessWidget {
-  const _Card({
+/// One example's cell: an orange numeral, the caps name over a rule, the
+/// still preview on raised, and what it shows.
+class _Cell extends StatelessWidget {
+  const _Cell({
     required this.number,
     required this.entry,
     required this.selected,
@@ -184,40 +178,48 @@ class _Card extends StatelessWidget {
     final theme = Theme.of(context);
     final raised =
         (theme.extension<SitePalette>() ?? const SitePalette()).raised;
+    final orange = theme.accent.merge(Style.bold);
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) {
         if (event.button == MouseButton.primary) onTap();
       },
-      child: Box(
-        border: Border.rounded.withStyle(
-          selected ? theme.accent : theme.border,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+      child: SizedBox(
         width: width,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            DisplayText(
+              number.toString().padLeft(2, '0'),
+              size: DisplaySize.numeral,
+              style: theme.accent,
+            ),
+            Text(''),
             Row(
               children: [
-                Text('$number  ', style: theme.dim, softWrap: false),
                 Text(
-                  entry.title,
-                  style: (selected ? theme.accent : theme.text).merge(
-                    Style.bold,
-                  ),
+                  entry.title.toUpperCase(),
+                  // Selected: ink on orange.
+                  style: selected
+                      ? theme.accent.merge(
+                          const Style(bold: true, inverse: true),
+                        )
+                      : theme.text.merge(Style.bold),
                   softWrap: false,
                 ),
                 const Spacer(),
-                if (selected) Text('⏎ run', style: theme.accent),
+                if (selected) Text('⏎ RUN', style: orange, softWrap: false),
               ],
             ),
-            Text(''),
+            Text(
+              '─' * width,
+              style: selected ? theme.accent : theme.border,
+              softWrap: false,
+            ),
             Box(
               background: raised,
-              // The card's whole inner width, so a row's strips line up.
-              width: width - 6,
+              width: width,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

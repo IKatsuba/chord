@@ -1,3 +1,6 @@
+import 'package:chord_site/giant.dart';
+import 'package:chord_site/page.dart';
+import 'package:chord_site/pages/gallery_grid.dart' show cellGap;
 import 'package:chord_site/palette.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_tui/chord_tui.dart';
@@ -21,9 +24,8 @@ Future<FakeHost> gallery(WidgetTester t, Size size) async {
   return host;
 }
 
-/// Where [text] starts on the screen.
+/// Where [text] starts on the screen, below the nav's four rows.
 (int, int) find(WidgetTester t, String text) {
-  // Below the nav's four rows, whose caps would match first.
   for (final (y, line) in t.screen.lines.indexed.skip(4)) {
     final x = line.indexOf(text);
     if (x >= 0) return (x, y);
@@ -31,70 +33,85 @@ Future<FakeHost> gallery(WidgetTester t, Size size) async {
   throw StateError('"$text" is not on the screen:\n${t.screen.text}');
 }
 
+/// The line holding `⏎ RUN`, the selected cell's name row.
+String selected(WidgetTester t) =>
+    t.screen.lines.firstWhere((l) => l.contains('⏎ RUN'));
+
 MouseEvent at(MouseEventKind kind, int x, int y) =>
     MouseEvent(kind, position: Offset(x, y), button: MouseButton.primary);
 
 void main() {
-  for (final size in const [Size(171, 50), Size(120, 40), Size(80, 24)]) {
+  final selectedName = theme.accent.merge(
+    const Style(bold: true, inverse: true),
+  );
+
+  // 80x60 rather than 80x24: there the split giant word puts the first row
+  // of cells below the fold.
+  for (final size in const [Size(192, 56), Size(120, 40), Size(80, 60)]) {
     group('at $size', () {
-      testWidgets('the header, then the cards, the first selected', (t) async {
+      testWidgets('the kicker, the giant word and the lede, then numbered '
+          'cells, the first selected', (t) async {
         await gallery(t, size);
-        expect(t.screen, shows('Home › Gallery'));
-        final (gx, gy) = find(t, 'GALLERY');
-        expect(t.screen.styleAt(gx, gy), theme.accent.merge(Style.bold));
-        expect(t.screen, shows('The framework, running in your browser.'));
-        final (dx, dy) = find(t, '1  Demo');
-        final (mx, my) = find(t, '2  Markdown');
-        expect(my, dy, reason: 'one row');
-        // Three to a row from 120 columns, two below.
-        expect(t.screen.lines[dy].contains('3  Picker'), size.width >= 120);
-        expect(t.screen.lines[dy], contains('⏎ run'));
-        // The selected card's frame and name are mint, the next one's not.
-        expect(t.screen.styleAt(dx - 3, dy - 2), theme.accent);
-        expect(t.screen.styleAt(dx + 3, dy), theme.accent.merge(Style.bold));
-        expect(t.screen.styleAt(mx - 3, my - 2), theme.border);
-        expect(t.screen.styleAt(mx, my), theme.dim, reason: 'the number');
-        expect(t.screen.styleAt(mx + 3, my), theme.text.merge(Style.bold));
+        final (kx, ky) = find(t, '03 / THE GALLERY');
+        expect(kx, 4, reason: 'a 4-column margin');
+        expect(t.screen.styleAt(kx, ky), theme.accent.merge(Style.bold));
+        expect(t.screen.lines[ky + 1], contains('██'), reason: 'giant');
+        expect(t.screen, shows("Nine of chord_tui's examples"));
+        final (dx, dy) = find(t, 'DEMO');
+        expect(t.screen.styleAt(dx, dy), selectedName);
+        expect(t.screen.lines[dy], contains('⏎ RUN'));
+        expect(t.screen.styleAt(dx, dy + 1), theme.accent, reason: 'rule');
+        final (mx, my) = find(t, 'MARKDOWN');
+        expect(my, dy, reason: 'the same row');
+        expect(t.screen.styleAt(mx, my), theme.text.merge(Style.bold));
+        expect(t.screen.styleAt(mx, my + 1), theme.border);
+        // The orange numeral sits five rows over the name.
+        expect(t.screen.lines[dy - 5].substring(dx, dx + 10), contains('▄'));
+        expect(t.screen.styleAt(dx + 2, dy - 5), theme.accent);
       });
 
       testWidgets('arrows move the selection; Enter runs it', (t) async {
         final host = await gallery(t, size);
         await t.press('right');
-        expect(t.screen.lines[find(t, '2  Markdown').$2], contains('⏎ run'));
+        expect(selected(t), contains('MARKDOWN'));
         await t.press('down');
-        // Down from the second card: the fifth, three to a row; the fourth,
-        // two to a row.
-        final below = size.width >= 120 ? '5  Text area' : '4  Form';
-        expect(find(t, '⏎ run').$2, find(t, below).$2);
+        final below = size.width >= 120 ? 'TEXT AREA' : 'FORM';
+        expect(selected(t), contains(below));
         await t.press('enter');
         expect(host.pushed, [
           size.width >= 120 ? '/chord_tui/text_area' : '/chord_tui/form',
         ]);
       });
 
-      testWidgets('a digit runs its card', (t) async {
+      testWidgets('a digit runs its cell', (t) async {
         final host = await gallery(t, size);
         await t.press('6');
         expect(host.pushed, ['/chord_tui/diff']);
       });
 
-      testWidgets('a tap runs the card tapped', (t) async {
+      testWidgets('a tap runs the cell tapped', (t) async {
         final host = await gallery(t, size);
-        final (x, y) = find(t, '2  Markdown');
+        final (x, y) = find(t, 'MARKDOWN');
         await t.mouse(at(MouseEventKind.press, x, y + 3));
         expect(host.pushed, ['/chord_tui/markdown']);
+      });
+
+      testWidgets('a row of cells ends at the right margin, cells $cellGap '
+          'apart', (t) async {
+        await gallery(t, size);
+        final (dx, dy) = find(t, 'DEMO');
+        final rule = t.screen.lines[dy + 1];
+        final end = size.width - 1 - 4; // the scrollbar, then the margin
+        expect(rule.replaceAll('┃', '').trimRight().length, end);
+        if (size.width >= 60) {
+          final first = rule.indexOf(' ', dx);
+          expect(rule.substring(first, first + cellGap), ' ' * cellGap);
+        }
       });
     });
   }
 
-  testWidgets('two to a row at 80 columns', (t) async {
-    await gallery(t, const Size(80, 60));
-    final (_, y) = find(t, '1  Demo');
-    expect(t.screen.lines[y], contains('2  Markdown'));
-    expect(t.screen.lines[y], isNot(contains('3  Picker')));
-  });
-
-  test('no preview line is wider than the 26 cells a card has at 80 '
+  test('no preview line is wider than the 26 cells a cell has at 80 '
       'columns', () {
     for (final entry in siteGallery.entries) {
       expect(entry.preview, hasLength(4), reason: entry.name);
@@ -104,98 +121,33 @@ void main() {
     }
   });
 
-  testWidgets('every preview shows whole at 80x60', (t) async {
-    await gallery(t, const Size(80, 60));
-    await t.press('end');
-    expect(t.screen, shows('12  + store = Records();'));
-  });
-
-  for (final size in const [Size(171, 50), Size(80, 60), Size(54, 56)]) {
-    testWidgets('every preview strip fills its card'
-        's inner width at $size', (t) async {
-      await gallery(t, size);
-      final (x, y) = find(t, '1  Demo');
-      final strip = y + 2; // the preview's first row
-      // From the padding's end to the right padding: raised all along.
-      var right = x;
-      while (t.screen.charAt(right, y - 2) != '╮') {
-        right++;
-      }
-      for (var cx = x; cx <= right - 3; cx++) {
-        expect(
-          t.screen.styleAt(cx, strip).bg,
-          SiteColors.raised,
-          reason: '$cx',
-        );
-      }
-      expect(t.screen.styleAt(right - 2, strip).bg, isNot(SiteColors.raised));
-    });
-  }
-
-  for (final size in const [Size(171, 50), Size(120, 40), Size(80, 24)]) {
-    testWidgets('a row of cards ends where the header text may, at $size', (
-      t,
-    ) async {
-      await gallery(t, size);
-      final (x, y) = find(t, '1  Demo');
-      final top = t.screen.lines[y - 2];
-      // The measure's right edge: the content's left edge plus its width.
-      final left = x - 3;
-      final content = ((size.width - 1 - 8).clamp(1, 136));
-      expect(top.lastIndexOf('╮'), left + content - 1);
-      final lede = t.screen.lines.firstWhere((l) => l.contains('Nine of'));
-      expect(
-        lede.replaceAll('┃', '').trimRight().length,
-        lessThanOrEqualTo(left + content),
-      );
-    });
-  }
-
-  for (final (from, to) in const [
-    (Size(171, 50), Size(54, 56)),
-    (Size(171, 50), Size(80, 24)),
-    (Size(54, 56), Size(171, 50)),
-    (Size(80, 24), Size(171, 50)),
-  ]) {
-    testWidgets('the selected card stays in sight from $from to $to, and '
-        'Enter runs it', (t) async {
-      final host = await gallery(t, from);
-      // Select Mouse, the last card, with the arrows.
-      for (var n = 0; n < 8; n++) {
-        await t.press('right');
-        await t.press('down');
-      }
-      expect(t.screen.lines[find(t, '⏎ run').$2], contains('9  Mouse'));
-      await t.resize(to);
-      await t.pump();
-      expect(t.screen, shows('⏎ run'));
-      expect(t.screen.lines[find(t, '⏎ run').$2], contains('9  Mouse'));
-      await t.press('down');
-      expect(t.screen.lines[find(t, '⏎ run').$2], contains('9  Mouse'));
-      await t.press('enter');
-      expect(host.pushed, ['/chord_tui/mouse']);
-    });
-  }
-
-  testWidgets('a card is 13 rows: frame, padding, name, preview, '
-      'description', (t) async {
-    await gallery(t, const Size(171, 50));
-    final (x, y) = find(t, '1  Demo');
-    final top = y - 2, bottom = top + 12;
-    expect(t.screen.charAt(x - 3, top), '╭');
-    expect(t.screen.charAt(x - 3, bottom), '╰');
+  testWidgets('a cell is its numeral, a blank, the name, the rule, the '
+      'preview, a blank and two rows of what it shows', (t) async {
+    await gallery(t, const Size(192, 56));
+    final (x, y) = find(t, 'DEMO');
+    expect(
+      t.screen.lines[y - 1].replaceAll('┃', '').trim(),
+      '',
+      reason: 'blank under the numeral',
+    );
     expect(t.screen.lines[y + 2].substring(x), startsWith(' ┌ left ─┐'));
+    expect(t.screen.lines[y + 6].replaceAll('┃', '').trim(), '');
     expect(
       t.screen.lines[y + 7],
-      contains('The framework tour: layout, focus and'),
+      contains('The framework tour: layout, focus and keys.'),
     );
   });
 
-  testWidgets('a preview sits on the raised colour; █ is a cursor cell; '
-      'diff lines take the diff colours', (t) async {
-    await gallery(t, const Size(171, 50));
+  testWidgets('a preview fills the cell on raised; █ is a cursor cell; diff '
+      'lines take the diff colours', (t) async {
+    await gallery(t, const Size(192, 56));
+    final (dx, dy) = find(t, 'DEMO');
+    final rule = t.screen.lines[dy + 1];
+    final width = rule.indexOf(' ', dx) - dx;
+    for (var cx = dx; cx < dx + width; cx++) {
+      expect(t.screen.styleAt(cx, dy + 2).bg, SiteColors.raised, reason: '$cx');
+    }
     final (px, py) = find(t, '› clau');
-    expect(t.screen.styleAt(px, py).bg, SiteColors.raised);
     expect(t.screen.charAt(px + 6, py), ' ');
     expect(
       t.screen.styleAt(px + 6, py),
@@ -207,38 +159,74 @@ void main() {
     expect(t.screen.styleAt(ax + 4, ay).fg, theme.diff.added.fg);
   });
 
-  testWidgets('moving down at 80x24 keeps the selected row in sight', (
-    t,
-  ) async {
-    await gallery(t, const Size(80, 24));
-    await t.press('down');
-    await t.press('down');
-    expect(t.screen, shows('⏎ run'));
-    expect(t.screen.lines[find(t, '⏎ run').$2], contains('5  Text area'));
-    await t.press('up');
-    await t.press('up');
-    expect(t.screen.lines[find(t, '⏎ run').$2], contains('1  Demo'));
-  });
-
   for (final size in const [Size(54, 56), Size(43, 37)]) {
-    testWidgets('a phone has one card to a row at $size', (t) async {
+    testWidgets('a phone has one cell to a row, a 2-column margin and the '
+        'word split, at $size', (t) async {
       final host = await gallery(t, size);
-      final (_, y) = find(t, '1  Demo');
-      expect(t.screen.lines[y], isNot(contains('Markdown')));
+      final (kx, _) = find(t, '03 / THE GALLERY');
+      expect(kx, 2);
+      expect(giantLayout('GALLERY', size.width - 1 - 4).lines, [
+        'GALL',
+        'ERY.',
+      ]);
+      expect(selected(t), isNot(contains('MARKDOWN')));
       await t.press('down');
-      expect(t.screen.lines[find(t, '⏎ run').$2], contains('2  Markdown'));
+      await t.pump();
+      expect(selected(t), contains('MARKDOWN'));
       await t.press('enter');
       expect(host.pushed, ['/chord_tui/markdown']);
     });
   }
 
-  testWidgets('the help row says the grid\'s keys and ↑↓ is theirs', (t) async {
-    await gallery(t, const Size(171, 50));
+  for (final (from, to) in const [
+    (Size(192, 56), Size(54, 56)),
+    (Size(192, 56), Size(80, 24)),
+    (Size(54, 56), Size(192, 56)),
+    (Size(80, 24), Size(192, 56)),
+  ]) {
+    testWidgets('the selected cell stays in sight from $from to $to, and '
+        'Enter runs it', (t) async {
+      final host = await gallery(t, from);
+      for (var n = 0; n < 8; n++) {
+        await t.press('right');
+        await t.press('down');
+      }
+      await t.pump();
+      expect(selected(t), contains('MOUSE'));
+      await t.resize(to);
+      await t.pump();
+      expect(selected(t), contains('MOUSE'));
+      await t.press('enter');
+      expect(host.pushed, ['/chord_tui/mouse']);
+    });
+  }
+
+  testWidgets('moving down at 80x24 keeps the selected row whole in sight', (
+    t,
+  ) async {
+    await gallery(t, const Size(80, 24));
+    await t.press('down');
+    await t.press('down');
+    await t.pump();
+    // Two to a row: Demo, Form, Text area.
+    expect(selected(t), contains('TEXT AREA'));
+    await t.press('up');
+    await t.press('up');
+    await t.pump();
+    expect(selected(t), contains('DEMO'));
+  });
+
+  testWidgets('the help row says the grid\'s keys', (t) async {
+    await gallery(t, const Size(192, 56));
     final help = t.screen.lines.last;
     expect(help, contains('move'));
     expect(help, contains('enter run'));
     expect(help, contains('1–9 open'));
-    expect(help, isNot(contains('Scroll up a page')));
     expect(help, isNot(contains('scroll')));
+  });
+
+  test('the poster measure runs the page to its margins', () {
+    expect(pageContentWidth(192, measure: posterMeasure), 192 - 1 - 8);
+    expect(pageContentWidth(52, measure: posterMeasure), 52 - 1 - 4);
   });
 }

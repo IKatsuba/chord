@@ -190,14 +190,18 @@ void main() {
       Site(host: host, gallery: siteGallery),
       size: const Size(120, 40),
     );
-    // Every card, the page scrolled to its end for the last row.
-    for (final entry in siteGallery.entries.take(6)) {
-      expect(t.screen, shows(entry.title));
+    // Every cell, by its caps name, as the page scrolls a page at a time.
+    final seen = <String>{};
+    for (var n = 0; n < 8; n++) {
+      for (final entry in siteGallery.entries) {
+        if (t.screen.text.contains(entry.title.toUpperCase())) {
+          seen.add(entry.name);
+        }
+      }
+      await t.press('pagedown');
     }
-    await t.press('end');
-    for (final entry in siteGallery.entries.skip(6)) {
-      expect(t.screen, shows(entry.title));
-    }
+    expect(seen, {for (final e in siteGallery.entries) e.name});
+    await t.press('home');
     await t.press('2');
     expect(host.pushed, ['/chord_tui/markdown']);
     expect(host.titles.last, 'markdown · chord_tui');

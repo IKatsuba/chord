@@ -171,18 +171,17 @@ void main() {
           size: size,
         );
         String selected() =>
-            t.screen.lines.firstWhere((l) => l.contains('⏎ run'));
-        expect(selected(), contains('1  Demo'));
+            t.screen.lines.firstWhere((l) => l.contains('⏎ RUN'));
+        // Demo starts selected, below the fold at 80x24: the down step
+        // below shows where the selection was.
         await t.press('m');
         await t.press('right');
         await t.press('esc');
-        expect(selected(), contains('1  Demo'));
         await t.press('down');
-        // Down from Demo: Picker two to a row, Markdown one to a row.
-        expect(
-          selected(),
-          contains(size.width < 60 ? '2  Markdown' : '3  Picker'),
-        );
+        await t.pump();
+        // Down from Demo: Picker two to a row, Markdown one to a row; a
+        // right the menu let through would have started from Markdown.
+        expect(selected(), contains(size.width < 60 ? 'MARKDOWN' : 'PICKER'));
       });
 
       testWidgets('m closes it again', (t) async {

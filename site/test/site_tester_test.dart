@@ -76,23 +76,21 @@ void main() {
       expect(t.screen.text, 'removed');
     });
 
-    testWidgets('resize preserves menu selection and the mobile row', (
-      t,
-    ) async {
+    testWidgets('resize preserves home routes and the mobile row', (t) async {
       final host = FakeHost();
       addTearDown(host.popped.close);
       await t.pumpWidget(Site(host: host), size: const Size(120, 40));
       await t.press('down');
       await t.resize(const Size(43, 37));
-      expect(t.screen, shows('❯ 2. chord_tui'));
+      expect(t.screen.lines.last, contains('? keys'));
       expect(t.screen.lines[35], contains('esc'));
       await t.resize(const Size(80, 24));
-      expect(t.screen, shows('❯ 2. chord_tui'));
+      expect(t.screen.lines.last, contains('i install'));
       expect(t.screen.lines[1], isNot(contains('GITHUB')));
       await t.resize(const Size(120, 40));
       expect(t.screen.lines[1], contains('GITHUB ↗ g'));
-      expect(t.screen, shows('❯ 2. chord_tui'));
-      await t.press('enter');
+      expect(t.screen.lines.last, contains('w watch'));
+      await t.press('2');
       expect(host.pushed, ['/chord_tui']);
     });
 

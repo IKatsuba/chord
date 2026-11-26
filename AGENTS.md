@@ -173,6 +173,8 @@ dart test test/session/replay_legacy_plan_tester_test.dart
 dart test test/ui/app/starting_commands_window_test.dart
 dart test test/ui/app/chord_cursor_window_test.dart
 dart test test/ui/app/prompt_selection_window_test.dart
+dart test test/ui/app/code_click_session_window_test.dart \
+  test/ui/app/code_click_session_window_tester_test.dart
 dart test test/ui/app/textarea_held_window_test.dart
 dart test test/ui/dialogs/plan_box_held_fake_test.dart
 dart test test/session/opening_meta_test.dart
@@ -636,6 +638,8 @@ test/ui/app/  keys, commands, settings, copy and fake window
 test/ui/app/starting_commands_window_test.dart startup commands
 test/ui/app/chord_cursor_window_test.dart pending-chord cursor
 test/ui/app/prompt_selection_window_test.dart select-all, undo and redo
+test/ui/app/code_click_session_window_test.dart session code copy/run clicks
+test/ui/app/code_click_session_window_tester_test.dart code click lifecycle
 test/ui/app/textarea_held_window_test.dart editor key reach and line edges
 test/ui/app/cmd_history_window_tester_test.dart command-arrow prompt history
 test/ui/app/prompt_press_tester_test.dart prompt press boundaries

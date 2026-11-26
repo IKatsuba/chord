@@ -1845,17 +1845,11 @@ class _TranscriptWindowState extends State<TranscriptWindow> {
     if (size == null || app.closing) return null;
     _sources.retain(app.transcript.entries);
     final width = (size.width - 2).clamp(0, unbounded);
-    SelectionSource sourceAt(int index) => _sources.entryAt(
+    SelectionSource sourceAt(int index) => _sources.drawnEntryAt(
       app.transcript,
       index,
       width: width,
       expanded: app.expanded,
-      copyCodeBlocks: true,
-      runCodeBlocks: true,
-      shellStopKey: _key('chat:cancel'),
-      expandKey: _key('app:toggleTranscript'),
-      paths: _paths,
-      agent: _frontRuntime,
     );
     final listed = code_pick.listedBlocks(app.transcript.entries, sourceAt);
     return code_pick.pickableBlocks(
@@ -1927,17 +1921,11 @@ class _TranscriptWindowState extends State<TranscriptWindow> {
     final index = _sources.indexOfCodeBlock(id);
     if (index == null) return null;
     return _sources
-        .entryAt(
+        .drawnEntryAt(
           app.transcript,
           index,
           width: (size.width - 2).clamp(0, unbounded),
           expanded: app.expanded,
-          copyCodeBlocks: true,
-          runCodeBlocks: true,
-          shellStopKey: _key('chat:cancel'),
-          expandKey: _key('app:toggleTranscript'),
-          paths: _paths,
-          agent: _frontRuntime,
         )
         .codeBlocks
         .where((block) => block.id == id)

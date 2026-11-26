@@ -31,6 +31,19 @@ import '../dialogs/permission.dart' show permissionOutcome;
 /// theme's, which the rows' selectable text carries.
 typedef SettingsStyles = ({Style warning, Style success});
 
+/// The options a transcript draws its entries with, beside width and
+/// expansion.
+typedef EntryDrawing = ({
+  bool copyCodeBlocks,
+  bool runCodeBlocks,
+  String? shellStopKey,
+  String? expandKey,
+  PathView? paths,
+  String? agent,
+  String? chordServer,
+  Map<String, Color> agentColours,
+});
+
 /// Current domain snapshots for the transcript's lazy selection provider.
 class TranscriptSources {
   TranscriptSources(this.namespace);
@@ -43,6 +56,41 @@ class TranscriptSources {
   /// transcript sets as it draws: kept here, so every reader of an entry,
   /// the code picker's too, asks for the same revision of it.
   SettingsStyles settingsStyles = (warning: Style.plain, success: Style.plain);
+
+  /// What the transcript last drew its entries with, which it sets as it
+  /// draws: [drawnEntryAt] reads them, so a lazy reader asks for the
+  /// revision on screen, and a click's block matches the catalog's.
+  EntryDrawing drawing = const (
+    copyCodeBlocks: false,
+    runCodeBlocks: false,
+    shellStopKey: null,
+    expandKey: 'ctrl+o',
+    paths: null,
+    agent: null,
+    chordServer: null,
+    agentColours: {},
+  );
+
+  /// [entryAt] with the options the transcript last drew with.
+  SelectionSource drawnEntryAt(
+    model.Transcript transcript,
+    int index, {
+    required int width,
+    bool expanded = false,
+  }) => entryAt(
+    transcript,
+    index,
+    width: width,
+    expanded: expanded,
+    copyCodeBlocks: drawing.copyCodeBlocks,
+    runCodeBlocks: drawing.runCodeBlocks,
+    shellStopKey: drawing.shellStopKey,
+    expandKey: drawing.expandKey,
+    paths: drawing.paths,
+    agent: drawing.agent,
+    chordServer: drawing.chordServer,
+    agentColours: drawing.agentColours,
+  );
 
   /// Number of current roots retained; removed entries leave no cache history.
   int get cachedEntryCount => _entries.length;

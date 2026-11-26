@@ -31,6 +31,7 @@ class FilledButton extends _Button {
     super.autofocus,
     super.showShortcut,
     super.canRequestFocus,
+    super.dense,
   }) : super(filled: true);
 }
 
@@ -48,6 +49,7 @@ class OutlinedButton extends _Button {
     super.autofocus,
     super.showShortcut,
     super.canRequestFocus,
+    super.dense,
   }) : super(filled: false);
 }
 
@@ -61,6 +63,7 @@ abstract class _Button extends StatefulWidget {
     this.autofocus = false,
     this.showShortcut = true,
     this.canRequestFocus = true,
+    this.dense = false,
     required this.filled,
   }) : assert(
          onPressed == null || action == null,
@@ -91,6 +94,10 @@ abstract class _Button extends StatefulWidget {
   /// for a button in a list, where the page holds the focus. Its action's
   /// key, a click and the key row work either way.
   final bool canRequestFocus;
+
+  /// Whether the face is one row with the action's key inside it, after
+  /// two spaces (`INSTALL  I`), and no key row under it.
+  final bool dense;
 
   final bool filled;
 
@@ -156,11 +163,20 @@ class _ButtonState extends State<_Button> {
     final press = _press = _onPress(binding);
     final enabled = press != null;
     final focused = enabled && widget.canRequestFocus && _node.hasFocus;
-    final face = widget.filled
+    final shortcut = widget.action != null && widget.showShortcut
+        ? binding?.chord
+        : null;
+    final face = widget.dense
+        ? _denseFace(
+            theme,
+            '${shortcut ?? ''}',
+            enabled: enabled,
+            focused: focused,
+          )
+        : widget.filled
         ? _filledFace(theme, enabled: enabled, focused: focused)
         : _outlinedFace(theme, enabled: enabled, focused: focused);
-    final keyRow =
-        widget.action != null && widget.showShortcut && binding != null
+    final keyRow = !widget.dense && shortcut != null && binding != null
         ? Text.rich(
             TextSpan(
               '',
@@ -233,6 +249,47 @@ class _ButtonState extends State<_Button> {
         autofocus: widget.autofocus && enabled,
         canRequestFocus: enabled,
         child: body,
+      ),
+    );
+  }
+
+  // One row: a cell of padding, the label, two spaces and the key, and a
+  // cell of padding, on the accent (filled) or the border's colour.
+  Widget _denseFace(
+    ThemeData theme,
+    String key, {
+    required bool enabled,
+    required bool focused,
+  }) {
+    final Style face, label, keyStyle;
+    if (widget.filled) {
+      final role = !enabled
+          ? theme.dim
+          : focused
+          ? theme.focus
+          : theme.accent;
+      face = role.merge(const Style(bold: true, inverse: true));
+      label = face;
+      keyStyle = face;
+    } else {
+      face = Style(bg: theme.border.fg);
+      label = face.merge((enabled ? theme.text : theme.dim).merge(Style.bold));
+      keyStyle = face.merge(
+        (enabled ? theme.accent : theme.dim).merge(Style.bold),
+      );
+    }
+    return DecoratedBox(
+      background: face,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(' ', style: face),
+          DefaultTextStyle(
+            style: focused ? label.merge(Style.underline) : label,
+            child: widget.child,
+          ),
+          Text(key.isEmpty ? ' ' : '  $key ', style: keyStyle),
+        ],
       ),
     );
   }

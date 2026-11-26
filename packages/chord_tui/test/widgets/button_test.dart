@@ -438,6 +438,88 @@ void main() {
     expect(t.screen.styleAt(0, 0), face, reason: 'never drawn focused');
   });
 
+  for (final size in const [Size(120, 40), Size(80, 24)]) {
+    group('dense at $size', () {
+      testWidgets('a dense FilledButton is one row with its key inside, and '
+          'no key row', (t) async {
+        var pressed = 0;
+        await t.pumpWidget(
+          Actions(
+            bindings: [Binding('i', 'Install', () => pressed++, id: 'i')],
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: FilledButton(
+                action: 'i',
+                dense: true,
+                child: Text('INSTALL'),
+              ),
+            ),
+          ),
+          size: size,
+        );
+        expect(t.screen.lines[0], ' INSTALL  i');
+        expect(t.screen.lines[1], '');
+        for (final x in [0, 1, 9, 10, 11]) {
+          expect(t.screen.styleAt(x, 0), face, reason: 'column $x');
+        }
+        await t.press('i');
+        expect(pressed, 1);
+      });
+
+      testWidgets('a dense OutlinedButton puts its label on the border'
+          's '
+          'colour and its key in the accent', (t) async {
+        await t.pumpWidget(
+          Keymap(
+            data: KeymapData({
+              'w': [Chord.parse('ctrl+w')],
+            }),
+            child: Actions(
+              bindings: [Binding('w', 'Watch', () {}, id: 'w')],
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: OutlinedButton(
+                  action: 'w',
+                  dense: true,
+                  child: Text('WATCH IT RUN'),
+                ),
+              ),
+            ),
+          ),
+          size: size,
+        );
+        expect(t.screen.lines[0], ' WATCH IT RUN  ctrl+w');
+        final bg = Style(bg: dark.border.fg);
+        expect(t.screen.styleAt(0, 0), bg);
+        expect(t.screen.styleAt(1, 0), bg.merge(dark.text.merge(Style.bold)));
+        expect(
+          t.screen.styleAt(15, 0),
+          bg.merge(dark.accent.merge(Style.bold)),
+        );
+        expect(t.screen.lines[1], '');
+      });
+
+      testWidgets('focus underlines a dense label; without an action there '
+          'is no key', (t) async {
+        await t.pumpWidget(
+          Align(
+            alignment: Alignment.topLeft,
+            child: FilledButton(
+              autofocus: true,
+              dense: true,
+              onPressed: () {},
+              child: Text('SAVE'),
+            ),
+          ),
+          size: size,
+        );
+        expect(t.screen.lines[0], ' SAVE');
+        expect(t.screen.styleAt(1, 0).isUnderline, isTrue);
+        expect(t.screen.styleAt(0, 0).isUnderline, isFalse);
+      });
+    });
+  }
+
   test('onPressed and action together assert', () {
     expect(
       () => FilledButton(onPressed: () {}, action: 'x', child: Text('x')),

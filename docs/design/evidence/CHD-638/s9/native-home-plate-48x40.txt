@@ -1,0 +1,40 @@
+
+  CHORD / CHORD_TUI                     MENU m
+
+────────────────────────────────────────────────
+  ▀▀     ? for shortcuts · /help             ›
+                                             ›
+  › Greet people by name with a template lite›
+                                             ›
+  ⏺ Edit(src/greeting.ts)                    ›
+    ⎿  Updated src/greeting.ts with 2 additio›
+       and 1 removal                         ›
+       1 + /** Greets someone by name. */    ›
+       2   export function greet(name:       ›
+           string): string {                 ›
+       2 -   return "hello " + name;         ›
+       3 +   return `hello, ${name}`;        ›
+       4   }                                 ›
+                                             ›
+  ⏺ Edited.                                  ›
+                                             ›
+                                             ›
+                                             ›
+                                             ›
+                                             ›
+                                             ›
+                                             ›
+                                             ›
+                                             ›
+                                             › ┃
+ ╭───────────────────────────────────────────› ┃
+ │ ›                                         › ┃
+ ╰───────────────────────────────────────────› ┃
+   ? for shortcuts   Claude Opus 5.5 · ~1% us› ┃
+                                               ┃
+                                               ┃
+  ───────────────────────────────────────────  ┃
+  MIT  ·  MADE WITH CHORD_TUI  ·  DRAWN BY WT  ┃
+                                               ┃
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ ? keys

@@ -31,6 +31,7 @@ class RenderSingleChildScrollView extends RenderBox
   void Function()? onLayout;
 
   ScrollController _controller;
+  bool _laidOut = false;
 
   /// The controller that says where the view is.
   ScrollController get controller => _controller;
@@ -68,14 +69,22 @@ class RenderSingleChildScrollView extends RenderBox
       );
     }
     // A page never follows its end: a controller that would starts at the
-    // top.
+    // top, and a step to the end later stays there as the content grows.
     var next = reduceMeasured(
       _controller.state,
       content: contentRows,
       view: size.height,
       follow: Follow.none,
     );
-    if (next.following) next = reduceJump(next, 0, Follow.none);
+    if (next.following) {
+      next = ScrollState(
+        content: next.content,
+        view: next.view,
+        top: _laidOut ? next.bottomTop : 0,
+        held: next.held,
+      );
+    }
+    _laidOut = true;
     if (_controller.setFromLayout(next)) {
       owner.afterLayout(_controller.notifyAfterLayout);
     }

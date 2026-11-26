@@ -195,9 +195,120 @@ void main() {
     expect(Scrollable.rowOf(context), isNull);
   });
 
+  for (final size in const [Size(120, 40), Size(80, 24)]) {
+    testWidgets('a following controller starts at the top, End reaches the '
+        'end, and growth does not follow, at $size', (t) async {
+      final scroll = ScrollController(follow: Follow.bottom);
+      final rows = ValueNotifier(100);
+      await t.pumpWidget(
+        Actions(
+          bindings: scrollBindings(scroll),
+          child: Focus(
+            autofocus: true,
+            child: ListenableBuilder(
+              listenable: rows,
+              builder: (context) => SingleChildScrollView(
+                controller: scroll,
+                child: Column(
+                  children: [for (var i = 0; i < rows.value; i++) Text('$i')],
+                ),
+              ),
+            ),
+          ),
+        ),
+        size: size,
+      );
+      expect(scroll.offset, 0);
+      await t.press('end');
+      await t.pump();
+      expect(scroll.offset, 100 - size.height);
+      expect(t.screen.lines.last, '99');
+      rows.value = 120;
+      await t.pump();
+      expect(scroll.offset, 100 - size.height, reason: 'no following');
+      await t.press('end');
+      await t.pump();
+      expect(scroll.offset, 120 - size.height);
+    });
+
+    testWidgets('a key a focused widget without a cursor takes brings it '
+        'back; a key it leaves scrolls the page, at $size', (t) async {
+      final scroll = ScrollController();
+      final toggle = FocusNode();
+      await t.pumpWidget(
+        Actions(
+          bindings: scrollBindings(
+            scroll,
+            keys: const ScrollKeys(lineUp: ['up'], lineDown: ['down']),
+          ),
+          child: Focus(
+            autofocus: true,
+            child: SingleChildScrollView(
+              controller: scroll,
+              child: Column(
+                children: [
+                  for (var i = 0; i < 50; i++) Text('row $i'),
+                  _Toggle(toggle),
+                  for (var i = 50; i < 100; i++) Text('row $i'),
+                ],
+              ),
+            ),
+          ),
+        ),
+        size: size,
+      );
+      toggle.requestFocus();
+      await t.pump();
+      await t.pump();
+      expect(t.screen, shows('[ off ]'));
+      // Wheeled away, it stays focused and out of sight.
+      await t.mouse(
+        MouseEvent(
+          MouseEventKind.wheel,
+          position: const Offset(1, 1),
+          scrollDelta: const Offset(0, 45),
+        ),
+      );
+      await t.pump();
+      expect(t.screen, isNot(shows('[ off ]')));
+      final away = scroll.offset;
+      // A key the toggle leaves goes on to the page, which scrolls.
+      await t.press('down');
+      await t.pump();
+      expect(scroll.offset, away + 1);
+      // One it takes changes it, and brings it back.
+      await t.press('space');
+      await t.pump();
+      await t.pump();
+      expect(t.screen, shows('[ on ]'));
+    });
+  }
+
   testWidgets('a page never follows its end', (t) async {
     final scroll = ScrollController(follow: Follow.bottom);
     await t.pumpWidget(page(scroll), size: const Size(80, 24));
     expect(bare(t.screen.lines.first), 'row 0');
   });
+}
+
+/// A focusable toggle with no cursor: space flips its label.
+class _Toggle extends StatefulWidget {
+  const _Toggle(this.node);
+  final FocusNode node;
+  @override
+  State<_Toggle> createState() => _ToggleState();
+}
+
+class _ToggleState extends State<_Toggle> {
+  var _on = false;
+  @override
+  Widget build(BuildContext context) => Focus(
+    focusNode: widget.node,
+    onKey: (event) {
+      if (!event.matches('space')) return false;
+      setState(() => _on = !_on);
+      return true;
+    },
+    child: Text(_on ? '[ on ]' : '[ off ]'),
+  );
 }

@@ -49,6 +49,11 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
       widget.controller ?? (_own ??= ScrollController());
 
   RenderSingleChildScrollView? _render;
+
+  // A key reached a widget inside, and none below it left it unhandled for
+  // the page: the focused widget took it, and may have changed its look.
+  bool _keyInside = false;
+  bool _keyLeftUnhandled = false;
   FocusNode? _lastFocus;
   Offset? _lastCursor;
 
@@ -140,7 +145,9 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     }
     final inside = _cursorIn(box);
     final cursor = inside == null ? null : Offset(inside.x, top + inside.y);
-    if (!identical(focus, _lastFocus)) {
+    final took = _keyInside && !_keyLeftUnhandled;
+    _keyInside = _keyLeftUnhandled = false;
+    if (!identical(focus, _lastFocus) || took) {
       _show(top, box.size.height, cursor: cursor?.y);
     } else if (cursor != null && cursor != _lastCursor) {
       // The focused editor took a key: its cursor moved.
@@ -161,7 +168,21 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
         controller: _scroll,
         padding: widget.padding,
         state: this,
-        child: widget.child,
+        // Sees each key on its way down and, when nothing below took it, on
+        // its way back up to the page.
+        child: Focus(
+          canRequestFocus: false,
+          onKeyCapture: (_) {
+            _keyInside = true;
+            _keyLeftUnhandled = false;
+            return false;
+          },
+          onKey: (_) {
+            _keyLeftUnhandled = true;
+            return false;
+          },
+          child: widget.child,
+        ),
       ),
     ),
   );

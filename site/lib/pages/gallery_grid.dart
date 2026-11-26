@@ -7,8 +7,8 @@ import '../palette.dart';
 import '../router.dart';
 import '../site.dart' show narrowWidth;
 
-/// The gallery: a header, then the examples as cards, three to a row (one
-/// on a phone). The arrows move the selection, Enter runs it, a digit or a
+/// The gallery: a header, then the examples as cards, three to a row from
+/// 120 columns, two from 60, one on a phone. The arrows move the selection, Enter runs it, a digit or a
 /// tap runs that card.
 class GalleryPage extends StatefulWidget {
   /// [gallery]'s cards, running an example through [open].
@@ -57,7 +57,12 @@ class _GalleryPageState extends State<GalleryPage> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      _columns = constraints.maxWidth < narrowWidth ? 1 : 3;
+      // One card below 60 columns, two below 120, three from there.
+      _columns = constraints.maxWidth < narrowWidth
+          ? 1
+          : constraints.maxWidth < 120
+          ? 2
+          : 3;
       final theme = Theme.of(context);
       final entries = _entries;
       final rows = [

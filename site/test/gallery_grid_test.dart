@@ -36,8 +36,7 @@ MouseEvent at(MouseEventKind kind, int x, int y) =>
 void main() {
   for (final size in const [Size(171, 50), Size(120, 40), Size(80, 24)]) {
     group('at $size', () {
-      testWidgets('the header, then three cards to a row, the first '
-          'selected', (t) async {
+      testWidgets('the header, then the cards, the first selected', (t) async {
         await gallery(t, size);
         expect(t.screen, shows('Home › Gallery'));
         final (gx, gy) = find(t, 'GALLERY');
@@ -46,7 +45,8 @@ void main() {
         final (dx, dy) = find(t, '1  Demo');
         final (mx, my) = find(t, '2  Markdown');
         expect(my, dy, reason: 'one row');
-        expect(t.screen.lines[dy], contains('3  Picker'));
+        // Three to a row from 120 columns, two below.
+        expect(t.screen.lines[dy].contains('3  Picker'), size.width >= 120);
         expect(t.screen.lines[dy], contains('⏎ run'));
         // The selected card's frame and name are mint, the next one's not.
         expect(t.screen.styleAt(dx - 3, dy - 2), theme.accent);
@@ -61,9 +61,14 @@ void main() {
         await t.press('right');
         expect(t.screen.lines[find(t, '2  Markdown').$2], contains('⏎ run'));
         await t.press('down');
-        expect(find(t, '⏎ run').$2, find(t, '5  Text area').$2);
+        // Down from the second card: the fifth, three to a row; the fourth,
+        // two to a row.
+        final below = size.width >= 120 ? '5  Text area' : '4  Form';
+        expect(find(t, '⏎ run').$2, find(t, below).$2);
         await t.press('enter');
-        expect(host.pushed, ['/chord_tui/text_area']);
+        expect(host.pushed, [
+          size.width >= 120 ? '/chord_tui/text_area' : '/chord_tui/form',
+        ]);
       });
 
       testWidgets('a digit runs its card', (t) async {
@@ -74,12 +79,19 @@ void main() {
 
       testWidgets('a tap runs the card tapped', (t) async {
         final host = await gallery(t, size);
-        final (x, y) = find(t, '3  Picker');
+        final (x, y) = find(t, '2  Markdown');
         await t.mouse(at(MouseEventKind.press, x, y + 3));
-        expect(host.pushed, ['/chord_tui/picker']);
+        expect(host.pushed, ['/chord_tui/markdown']);
       });
     });
   }
+
+  testWidgets('two to a row at 80 columns', (t) async {
+    await gallery(t, const Size(80, 60));
+    final (_, y) = find(t, '1  Demo');
+    expect(t.screen.lines[y], contains('2  Markdown'));
+    expect(t.screen.lines[y], isNot(contains('3  Picker')));
+  });
 
   testWidgets('a card is 13 rows: frame, padding, name, preview, '
       'description', (t) async {
@@ -118,7 +130,7 @@ void main() {
     await t.press('down');
     await t.press('down');
     expect(t.screen, shows('⏎ run'));
-    expect(t.screen.lines[find(t, '⏎ run').$2], contains('7  Dialog'));
+    expect(t.screen.lines[find(t, '⏎ run').$2], contains('5  Text area'));
     await t.press('up');
     await t.press('up');
     expect(t.screen.lines[find(t, '⏎ run').$2], contains('1  Demo'));

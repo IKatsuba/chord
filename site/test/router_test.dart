@@ -65,14 +65,6 @@ void main() {
     expect(const NotFoundRoute('/x').title, 'not found · chord');
   });
 
-  test("no example of the site's is named as the gallery", () {
-    expect(siteRouter.examples, isNot(contains(SiteRouter.galleryName)));
-    expect(
-      siteRouter.parse('/chord_tui/${SiteRouter.galleryName}'),
-      const GalleryRoute(),
-    );
-  });
-
   test('paths are read under the base and written back under it', () {
     expect(
       pathUnderBase('/chord/chord_tui/markdown', '/chord/'),

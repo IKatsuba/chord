@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:chord_tui/chord_tui.dart';
 
+import 'gallery.dart';
 import 'host.dart';
 import 'key_row.dart';
+import 'pages/chord_tui.dart';
+import 'pages/gallery.dart';
 import 'pages/home.dart';
 import 'pages/not_found.dart';
 import 'pages/stub.dart';
@@ -29,20 +32,34 @@ const _repositoryId = '${panelOnly}repository';
 /// back as paths. Esc goes up a level, `?` lists every key, and Ctrl+Q or
 /// Ctrl+C go home: the site never ends.
 class Site extends StatefulWidget {
-  /// The site on [host], with the pages [router] knows.
-  const Site({super.key, required this.host, this.router = siteRouter});
+  /// The site on [host], running [gallery]'s examples and showing
+  /// [recordings] by name.
+  const Site({
+    super.key,
+    required this.host,
+    this.gallery,
+    this.recordings = const [],
+  });
 
   /// The page the site runs on.
   final SiteHost host;
 
-  /// The routes.
-  final SiteRouter router;
+  /// The framework's examples; none when null.
+  final Gallery? gallery;
+
+  /// The names of chord's recordings that have pages.
+  final List<String> recordings;
 
   @override
   State<Site> createState() => _SiteState();
 }
 
 class _SiteState extends State<Site> {
+  late final Gallery _gallery = widget.gallery ?? Gallery.none;
+  late final _router = SiteRouter(
+    recordings: widget.recordings,
+    examples: [for (final entry in _gallery.entries) entry.name],
+  );
   late SiteRoute _route;
   var _keysOpen = false;
   StreamSubscription<String>? _pops;
@@ -50,10 +67,10 @@ class _SiteState extends State<Site> {
   @override
   void initState() {
     super.initState();
-    _route = widget.router.parse(widget.host.initialPath);
+    _route = _router.parse(widget.host.initialPath);
     widget.host.show(_route);
     _pops = widget.host.pops.listen((path) {
-      final route = widget.router.parse(path);
+      final route = _router.parse(path);
       widget.host.show(route);
       setState(() {
         _route = route;
@@ -168,15 +185,12 @@ class _SiteState extends State<Site> {
     HomeRoute() => HomePage(_open),
     ChordRoute() => const StubPage('chord', 'What chord is, and its screens.'),
     RecordingRoute(:final name) => StubPage(name, 'A recording of chord.'),
-    ChordTuiRoute() => const StubPage(
-      'chord_tui',
-      "What chord_tui is, and README's example.",
+    ChordTuiRoute() => ChordTuiPage(_gallery.readme, _open),
+    GalleryRoute() => GalleryPage(_gallery, _open),
+    ExampleRoute(:final name) => ExamplePage(
+      _gallery[name]!,
+      () => _open(const HomeRoute()),
     ),
-    GalleryRoute() => const StubPage(
-      'Gallery',
-      "The framework's examples, running here.",
-    ),
-    ExampleRoute(:final name) => StubPage(name, 'One example, running.'),
     InstallRoute() => const StubPage('Install', 'Homebrew, npm, from source.'),
     NotFoundRoute(:final path) => NotFoundPage(
       path,

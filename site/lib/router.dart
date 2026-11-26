@@ -207,7 +207,3 @@ String pathnameOf(SiteRoute route, String basePath) {
   final base = basePath.endsWith('/') ? basePath : '$basePath/';
   return route is HomeRoute ? base : '$base${route.path.substring(1)}';
 }
-
-/// The site's own routes: S3 and S4 add the examples and recordings that
-/// have pages.
-const siteRouter = SiteRouter(recordings: [], examples: []);

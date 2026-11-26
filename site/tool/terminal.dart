@@ -8,6 +8,8 @@ import 'package:chord_site/router.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_tui/chord_tui.dart';
 
+import '../web/gallery.dart';
+
 class _MemoryHost extends SiteHost {
   _MemoryHost(this.initialPath) : _entries = [initialPath];
 
@@ -67,7 +69,7 @@ Future<void> main(List<String> args) async {
             id: '${panelOnly}leave',
           ),
         ],
-        child: Site(host: host),
+        child: Site(host: host, gallery: siteGallery),
       ),
     ),
     terminal: terminal,

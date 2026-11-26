@@ -36,6 +36,9 @@
     --term-font-size: 12.5px;
     --term-row-height: 16px;
     --term-line-height: 1.28;
+    /* JetBrains Mono advances 0.6 em, 7.5 px; half a pixel less makes a
+       7 px cell, so more columns fit each width (Q436). */
+    letter-spacing: -0.5px;
     --term-font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
     /* wterm turns ligatures off; this keeps JetBrains Mono's code ligatures,
        which it keeps in calt, off too: one glyph per cell. */

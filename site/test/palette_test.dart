@@ -58,11 +58,17 @@ void main() {
       expect(terminal, contains('box-shadow: none;'));
     });
 
-    test('one size at every width: 12.5 px on 16 px rows, no breakpoint', () {
+    test('one size at every width: 7 px cells on 16 px rows, no '
+        'breakpoint', () {
       expect(terminal, contains('--term-font-size: 12.5px;'));
       expect(terminal, contains('--term-row-height: 16px;'));
       expect(terminal, contains('--term-line-height: 1.28;'));
       expect(page, isNot(contains('@media')));
+      // JetBrains Mono advances 0.6 em; the spacing takes half a pixel off.
+      final spacing = double.parse(
+        RegExp(r'letter-spacing: (-?[\d.]+)px;').firstMatch(terminal)![1]!,
+      );
+      expect(12.5 * 0.6 + spacing, 7);
     });
   });
 }

@@ -15,6 +15,9 @@ class KeyRow extends StatelessWidget {
     ('down', '↓'),
     ('right', '→'),
     ('enter', 'enter'),
+    // The keys panel, which a phone has no other way to open on a page
+    // where ? is text.
+    ('f1', 'f1'),
   ];
 
   @override

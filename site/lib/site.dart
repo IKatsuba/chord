@@ -5,6 +5,7 @@ import 'package:chord_tui/chord_tui.dart';
 import 'gallery.dart';
 import 'host.dart';
 import 'key_row.dart';
+import 'keys_panel.dart';
 import 'pages/chord_tui.dart';
 import 'pages/gallery.dart';
 import 'pages/home.dart';
@@ -69,6 +70,11 @@ class _SiteState extends State<Site> {
   );
   late SiteRoute _route;
   var _keysOpen = false;
+  // The keys panel's scroll, and what clamps it: its entries, as it last
+  // drew them, and the page's rows.
+  var _panelOffset = 0;
+  var _panelEntries = 0;
+  var _pageRows = 0;
   StreamSubscription<String>? _pops;
 
   @override
@@ -107,6 +113,24 @@ class _SiteState extends State<Site> {
   static final _esc = KeyCombo.parse('esc');
   static final _question = KeyCombo.parse('?');
   static final _quits = {KeyCombo.parse('ctrl+q'), KeyCombo.parse('ctrl+c')};
+  static final _scrolls = {
+    for (final key in ['up', 'down', 'pageup', 'pagedown', 'home', 'end'])
+      KeyCombo.parse(key): key,
+  };
+
+  void _scrollPanel(String key) {
+    final most = panelMaxOffset(entries: _panelEntries, rows: _pageRows);
+    final page = (_pageRows - 3).clamp(1, _pageRows);
+    final to = switch (key) {
+      'up' => _panelOffset - 1,
+      'down' => _panelOffset + 1,
+      'pageup' => _panelOffset - page,
+      'pagedown' => _panelOffset + page,
+      'home' => 0,
+      _ => most,
+    };
+    setState(() => _panelOffset = to.clamp(0, most));
+  }
 
   // Above every page and before any example's own handlers: F1 opens the
   // panel anywhere, and the open panel decides every key.
@@ -114,7 +138,14 @@ class _SiteState extends State<Site> {
     final key = event.combo;
     if (!_keysOpen) {
       if (key != _f1) return false;
-      setState(() => _keysOpen = true);
+      setState(() {
+        _keysOpen = true;
+        _panelOffset = 0;
+      });
+      return true;
+    }
+    if (_scrolls[key] case final scroll?) {
+      _scrollPanel(scroll);
       return true;
     }
     if (key == _esc || key == _f1 || (!_embedding && key == _question)) {
@@ -144,6 +175,7 @@ class _SiteState extends State<Site> {
       final headerRows = width >= narrowWidth && width < wideWidth ? 3 : 2;
       final pageRows =
           constraints.maxHeight - headerRows - (narrow ? 1 : 0) - 1;
+      _pageRows = pageRows;
       final home = _route is HomeRoute;
       return Actions(
         bindings: [
@@ -193,31 +225,41 @@ class _SiteState extends State<Site> {
                 children: _header(context, width),
               ),
               Expanded(
-                child: Stack(
-                  children: [
-                    _page(),
-                    // The open panel sits at the bottom of the page, and stops
-                    // clicks and the wheel short of it.
-                    if (_keysOpen)
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: Listener(
-                          behavior: HitTestBehavior.opaque,
-                          absorbPointerSignal: true,
-                          onPointerDown: (_) {},
-                          onPointerSignal: (_) {},
-                          child: Column(
-                            children: [
-                              const Spacer(),
-                              _KeysPanel(width: width, rows: pageRows),
-                            ],
+                // The window's width, not the page's: the panel over it
+                // spans the window.
+                child: SizedBox(
+                  width: width,
+                  child: Stack(
+                    children: [
+                      _page(),
+                      // The open panel sits at the bottom of the page, and stops
+                      // clicks and the wheel short of it.
+                      if (_keysOpen)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Listener(
+                            behavior: HitTestBehavior.opaque,
+                            absorbPointerSignal: true,
+                            onPointerDown: (_) {},
+                            onPointerSignal: (_) {},
+                            child: Column(
+                              children: [
+                                const Spacer(),
+                                _KeysPanel(
+                                  width: width,
+                                  rows: pageRows,
+                                  offset: _panelOffset,
+                                  drawn: (entries) => _panelEntries = entries,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               if (narrow) const KeyRow(),
@@ -225,6 +267,7 @@ class _SiteState extends State<Site> {
                 narrow: narrow,
                 embedding: _embedding,
                 panelOpen: _keysOpen,
+                pageRows: pageRows,
               ),
             ],
           ),
@@ -301,11 +344,13 @@ class _HelpRow extends StatelessWidget {
     required this.narrow,
     required this.embedding,
     required this.panelOpen,
+    required this.pageRows,
   });
 
   final bool narrow;
   final bool embedding;
   final bool panelOpen;
+  final int pageRows;
 
   // What the open panel lets through, which its capture decides; a phone
   // has no F1 or Ctrl to show.
@@ -331,6 +376,14 @@ class _HelpRow extends StatelessWidget {
         for (final (keys, description)
             in narrow ? _whileOpen.take(1) : _whileOpen) {
           entry(keys, description);
+        }
+        final entries = panelEntries(bindings, [siteKeys, panelOnly]).length;
+        if (panelWindow(
+          entries: entries,
+          rows: pageRows,
+          offset: 0,
+        ).overflows) {
+          entry('up/down', 'scroll');
         }
         return Text.rich(
           TextSpan('', children: spans),
@@ -365,35 +418,41 @@ class _HelpRow extends StatelessWidget {
   );
 }
 
-/// Every key in scope, one action a row, the site's first, in at most
-/// [rows] rows: what does not fit is counted on the last.
+/// Every key in scope, one action a row, the site's first, in [rows] rows
+/// from [offset]: filled, so nothing of the page under it shows through.
 class _KeysPanel extends StatelessWidget {
-  const _KeysPanel({required this.width, required this.rows});
+  const _KeysPanel({
+    required this.width,
+    required this.rows,
+    required this.offset,
+    required this.drawn,
+  });
 
   final int width;
   final int rows;
+  final int offset;
+
+  /// Told how many entries there are, for the scroll keys to clamp to.
+  final void Function(int entries) drawn;
 
   @override
   Widget build(BuildContext context) => KeyHelp.builder(
     builder: (context, bindings, pending) {
       final theme = Theme.of(context);
-      // The site's own keys first, so a page with more keys than rows never
-      // hides the way out of the panel.
-      bool own(BindingGroup g) =>
-          (g.id ?? '').startsWith(siteKeys) ||
-          (g.id ?? '').startsWith(panelOnly);
-      final grouped = groupBindings(bindings);
-      final all = [...grouped.where(own), ...grouped.where((g) => !own(g))];
-      // The rule and the title take two rows; a count of the rest one more.
-      final room = rows - 2;
-      final groups = all.length <= room
-          ? all
-          : all.take(room < 1 ? 0 : room - 1).toList();
-      final keyWidth = groups.fold(
-        0,
-        (w, g) => g.chords.join('/').length > w ? g.chords.join('/').length : w,
+      final all = panelEntries(bindings, [siteKeys, panelOnly]);
+      drawn(all.length);
+      final window = panelWindow(
+        entries: all.length,
+        rows: rows,
+        offset: offset,
       );
-      // Filled, so nothing of the page under it shows through.
+      final shown = all.sublist(window.first, window.first + window.count);
+      String keys(BindingGroup g) =>
+          keysLabel([for (final chord in g.chords) chord.toString()]);
+      final keyWidth = shown.fold(
+        0,
+        (w, g) => keys(g).length > w ? keys(g).length : w,
+      );
       return Box(
         background: Style.plain,
         width: width,
@@ -401,15 +460,18 @@ class _KeysPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('─' * width, style: theme.dim),
+            if (window.rule)
+              Text('─' * width, style: theme.dim, softWrap: false),
             Text(' Keys', style: theme.text.merge(Style.bold)),
-            for (final group in groups)
+            if (window.above > 0)
+              Text('   ↑ +${window.above} more', style: theme.dim),
+            for (final group in shown)
               Text.rich(
                 TextSpan(
                   '',
                   children: [
                     TextSpan(
-                      '   ${group.chords.join('/').padRight(keyWidth)}  ',
+                      '   ${keys(group).padRight(keyWidth)}  ',
                       style: theme.text.merge(Style.bold),
                     ),
                     TextSpan(group.description, style: theme.dim),
@@ -417,11 +479,8 @@ class _KeysPanel extends StatelessWidget {
                 ),
                 softWrap: false,
               ),
-            if (groups.length < all.length && room >= 1)
-              Text(
-                '   … +${all.length - groups.length} more',
-                style: theme.dim,
-              ),
+            if (window.below > 0)
+              Text('   ↓ +${window.below} more', style: theme.dim),
           ],
         ),
       );

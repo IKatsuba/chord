@@ -150,6 +150,32 @@ void main() {
     expect(host.pushed, ['/chord']);
   });
 
+  testWidgets('the panel is one rule wide and writes digit runs as ranges', (
+    t,
+  ) async {
+    await t.pumpWidget(Site(host: FakeHost()), size: const Size(80, 24));
+    await t.press('f1');
+    final lines = t.screen.lines;
+    final rules = [
+      for (final l in lines)
+        if (l.startsWith('─')) l,
+    ];
+    expect(rules, ['─' * 80, '─' * 80]);
+    expect(lines, contains(matches(RegExp(r'^ +1–4 +jump$'))));
+    expect(lines.last, ' escape close  f1 close  ctrl+q home');
+  });
+
+  testWidgets('the phone key row has f1, which opens the panel', (t) async {
+    await t.pumpWidget(
+      Site(host: FakeHost('/install')),
+      size: const Size(43, 37),
+    );
+    final row = t.screen.lines[35];
+    expect(row, endsWith(' f1'));
+    await t.mouse(_tapAt(row.lastIndexOf('f1'), 35));
+    expect(t.screen, shows(' Keys'));
+  });
+
   testWidgets('g and a tap on the link open the repository', (t) async {
     final host = FakeHost();
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));

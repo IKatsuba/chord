@@ -66,16 +66,33 @@ void main() {
     final host = FakeHost('/chord_tui/text_area');
     await t.pumpWidget(
       Site(host: host, gallery: siteGallery),
-      size: const Size(120, 40),
+      size: const Size(80, 24),
     );
     await t.type('why?');
     expect(t.screen, isNot(shows(' Keys')));
     expect(t.screen, shows('why?'));
     await t.press('f1');
     expect(t.screen, shows(' Keys'));
-    expect(t.screen.lines.last, ' escape close  f1 close  ctrl+q home');
-    // More keys than rows: the panel counts the rest instead.
-    expect(t.screen, shows(RegExp(r'… \+\d+ more')));
+    // More keys than rows: the panel scrolls, and its row says how.
+    expect(
+      t.screen.lines.last,
+      ' escape close  f1 close  ctrl+q home  up/down scroll',
+    );
+    expect(t.screen, shows(RegExp(r'↓ \+\d+ more')));
+    expect(t.screen, isNot(shows('↑')));
+    // Reaching the top of the page, the panel draws no second rule.
+    final rules = [
+      for (var i = 0; i < t.screen.lines.length; i++)
+        if (t.screen.lines[i].startsWith('────')) i,
+    ];
+    expect(rules, [2]);
+    await t.press('down');
+    expect(t.screen, shows('↑ +1 more'));
+    await t.press('end');
+    expect(t.screen, isNot(shows('↓')));
+    expect(t.screen, shows(RegExp(r'↑ \+\d+ more')));
+    await t.press('home');
+    expect(t.screen, isNot(shows('↑')));
     // The open panel takes every key: nothing is typed under it.
     await t.type('abc');
     await t.press('enter');

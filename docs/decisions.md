@@ -4672,3 +4672,19 @@ package:brotli decodes only, and es_compression's brotli needs a native
 library through FFI. Asked about that, the owner dropped the budget: the
 site has no size budget, and `site/tool/build.dart` and CI measure,
 print and check no sizes.
+
+## CHD-638: chord_tui draws giant text from its own block-glyph table
+
+The site's hero and its 404 page draw text far larger than a cell, and the
+rule is a maintained package before our own code for what is not about the
+terminal. Two were tried. `oled_font_57` is a 5x7 bitmap font as a const
+Dart list, MIT and free of dependencies, which fits the shape; but it is a
+single 2021 release with no maintenance since, and it would become a
+dependency of the published chord_tui. `enough_ascii_art` is maintained
+and wasm-ready, with a FIGlet renderer; but FIGlet gives each font's fixed
+character art, not a bitmap the framework can scale to its sizes, its fonts
+sit outside its `lib/` and would have to be embedded by hand, and it pulls
+`package:image` into the framework. Asked, the owner chose our own table
+(Q434): chord_tui keeps its own 5x7 block-glyph table, and its
+`DisplayText` (unit F10) draws every piece of giant text with it, `CHORD.`
+included. The site no longer draws chord's wordmark.

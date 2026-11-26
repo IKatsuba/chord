@@ -36,6 +36,7 @@ export 'src/terminal/renderer.dart';
 export 'src/terminal/style.dart';
 export 'src/terminal/terminal.dart' hide terminalHungUp;
 export 'src/text/ansi.dart';
+export 'src/text/display_glyphs.dart' show DisplaySize;
 export 'src/text/diff.dart'
     show
         DiffModel,
@@ -58,6 +59,7 @@ export 'src/widgets/basic.dart';
 export 'src/widgets/button.dart';
 export 'src/widgets/code.dart';
 export 'src/widgets/diff.dart';
+export 'src/widgets/display_text.dart';
 export 'src/widgets/dialog.dart';
 export 'src/widgets/fold.dart';
 export 'src/widgets/form.dart';

@@ -1,0 +1,52 @@
+
+  CHORD / CHORD_TUI                            MENU m
+
+───────────────────────────────────────────────────────
+
+
+
+
+  01 / PERMISSION
+
+
+    ▀▄     chord v0.72.2
+    ▀▀▀▄   claude · Claude Opus 5.5
+    ▄▀▀▀   ~/src/app
+    ▀▀     ? for shortcuts · /help
+
+    › Write the release notes into notes.txt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    ››› Working… (0s · esc to interrupt)
+
+   ╭──────────────────────────────────────────────╮
+   │ ›                                            │
+   ╰──────────────────────────────────────────────╯
+     ? for shortcuts     Claude Opus 5.5 · medium
+
+
+                 ▶  0:02 / 0:03 · ENTER
+
+
+
+
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ escape up  ? keys

@@ -105,6 +105,8 @@ class _SiteState extends State<Site> {
   }
 
   void _open(SiteRoute route) {
+    // Home from the open menu, even home itself, closes it.
+    _closeMenu();
     if (route == _route) return;
     widget.host.push(route);
     setState(() {
@@ -115,17 +117,29 @@ class _SiteState extends State<Site> {
 
   bool get _embedding => _route is ExampleRoute || _route is ChordTuiRoute;
 
-  // The phone's menu: the four sections and GitHub, over the page.
+  // The phone's menu: the four sections and GitHub, over the page. It holds
+  // the focus while open, so its bindings are the ones in scope and the
+  // page's are out of reach; the shell's quits and F1 still work.
   var _menuOpen = false;
   var _menuSelected = 0;
+  FocusNode? _beforeMenu;
 
   void _openMenu() => setState(() {
+    _beforeMenu = context.owner.focusManager.primaryFocus;
     _menuOpen = true;
     _menuSelected = 0;
   });
 
-  void _menuChoose(int row) {
+  void _closeMenu() {
+    if (!_menuOpen) return;
     setState(() => _menuOpen = false);
+    final before = _beforeMenu;
+    _beforeMenu = null;
+    if (before != null && before.attached) before.requestFocus();
+  }
+
+  void _menuChoose(int row) {
+    _closeMenu();
     if (row < sections.length) {
       _open(sections[row].route);
     } else {
@@ -133,32 +147,20 @@ class _SiteState extends State<Site> {
     }
   }
 
-  static final _menuKeys = {
-    for (final key in ['esc', 'm', 'up', 'down', 'enter', 'g'])
-      KeyCombo.parse(key): key,
-    for (var n = 1; n <= 4; n++) KeyCombo.parse('$n'): '$n',
-  };
+  void _menuMove(int by) => setState(
+    () => _menuSelected = (_menuSelected + by).clamp(0, sections.length),
+  );
 
-  // While the menu is open it takes every key, as the keys panel does.
-  bool _captureMenu(KeyCombo key) {
-    final rows = sections.length + 1;
-    switch (_menuKeys[key]) {
-      case 'esc' || 'm':
-        setState(() => _menuOpen = false);
-      case 'up':
-        setState(() => _menuSelected = (_menuSelected - 1).clamp(0, rows - 1));
-      case 'down':
-        setState(() => _menuSelected = (_menuSelected + 1).clamp(0, rows - 1));
-      case 'enter':
-        _menuChoose(_menuSelected);
-      case 'g':
-        _menuChoose(sections.length);
-      case final String digit:
-        _menuChoose(int.parse(digit) - 1);
-      case null:
-    }
-    return true;
-  }
+  List<Binding> get _menuBindings => [
+    Binding('up', 'move', () => _menuMove(-1), id: 'menu:move'),
+    Binding('down', 'move', () => _menuMove(1), id: 'menu:move'),
+    Binding('enter', 'open', () => _menuChoose(_menuSelected)),
+    for (var n = 1; n <= sections.length; n++)
+      Binding('$n', 'section', () => _menuChoose(n - 1), id: 'menu:section'),
+    Binding('g', 'open GitHub', () => _menuChoose(sections.length)),
+    for (final key in ['esc', 'm'])
+      Binding(key, 'close', _closeMenu, id: 'menu:close'),
+  ];
 
   static final _f1 = KeyCombo.parse('f1');
   static final _esc = KeyCombo.parse('esc');
@@ -187,7 +189,6 @@ class _SiteState extends State<Site> {
   // panel anywhere, and the open panel decides every key.
   bool _capture(KeyEvent event) {
     final key = event.combo;
-    if (_menuOpen) return _captureMenu(key);
     if (!_keysOpen) {
       if (key != _f1) return false;
       setState(() {
@@ -223,7 +224,15 @@ class _SiteState extends State<Site> {
       final width = constraints.maxWidth;
       final narrow = width < narrowWidth;
       // A phone the window has grown out of has no menu.
-      if (!narrow && _menuOpen) _menuOpen = false;
+      if (!narrow && _menuOpen) {
+        _menuOpen = false;
+        final before = _beforeMenu;
+        _beforeMenu = null;
+        // Not during the build: the focus moves once it is done.
+        scheduleMicrotask(() {
+          if (before != null && before.attached) before.requestFocus();
+        });
+      }
       // The page's rows: the window less the nav, the key row and the help
       // row.
       final pageRows =
@@ -323,12 +332,18 @@ class _SiteState extends State<Site> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    NavMenu(
-                                      width: width,
-                                      route: _route,
-                                      selected: _menuSelected,
-                                      choose: _menuChoose,
-                                      githubAction: _repositoryId,
+                                    Actions(
+                                      bindings: _menuBindings,
+                                      child: Focus(
+                                        autofocus: true,
+                                        child: NavMenu(
+                                          width: width,
+                                          route: _route,
+                                          selected: _menuSelected,
+                                          choose: _menuChoose,
+                                          githubAction: _repositoryId,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),

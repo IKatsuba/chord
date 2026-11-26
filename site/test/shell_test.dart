@@ -114,6 +114,57 @@ void main() {
         expect(t.screen.lines.last, isNot(contains('? keys')));
       });
 
+      for (final quit in ['ctrl+q', 'ctrl+c']) {
+        testWidgets('$quit closes the open menu and goes home, home too', (
+          t,
+        ) async {
+          final host = FakeHost('/install');
+          await t.pumpWidget(Site(host: host), size: size);
+          await t.press('m');
+          await t.press(quit);
+          expect(host.pushed, ['/']);
+          expect(t.screen, isNot(shows('❯ 1 chord')));
+          await t.press('m');
+          await t.press(quit);
+          expect(host.pushed, ['/'], reason: 'already home');
+          expect(t.screen, isNot(shows('❯ 1 chord')));
+          expect(t.exitRequested, isFalse);
+        });
+      }
+
+      testWidgets('F1 over the open menu lists its keys, and Esc closes the '
+          'panel first', (t) async {
+        await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
+        await t.press('m');
+        await t.press('f1');
+        expect(t.screen, shows(' Keys'));
+        expect(t.screen, shows(RegExp(r'up/down\s+move')));
+        expect(t.screen, shows(RegExp(r'enter\s+open')));
+        expect(t.screen, shows(RegExp(r'1–4\s+section')));
+        expect(t.screen, shows(RegExp(r'escape/m\s+close')));
+        await t.press('esc');
+        expect(t.screen, isNot(shows(' Keys')));
+        expect(t.screen, shows('❯ 1 chord'));
+      });
+
+      testWidgets('the page'
+          's keys are out of reach while the menu is open, '
+          'and back after', (t) async {
+        await t.pumpWidget(
+          Site(host: FakeHost('/chord_tui/gallery'), gallery: siteGallery),
+          size: size,
+        );
+        String selected() =>
+            t.screen.lines.firstWhere((l) => l.contains('⏎ run'));
+        expect(selected(), contains('1  Demo'));
+        await t.press('m');
+        await t.press('right');
+        await t.press('esc');
+        expect(selected(), contains('1  Demo'));
+        await t.press('down');
+        expect(selected(), contains('2  Markdown'));
+      });
+
       testWidgets('m closes it again', (t) async {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
         await t.press('m');

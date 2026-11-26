@@ -7,7 +7,11 @@ import 'package:test/test.dart';
 import 'fake_host.dart';
 
 const _shots = ['start', 'edit', 'permission'];
-const _lengths = {'start': Duration(seconds: 9), 'edit': Duration(seconds: 75)};
+const _lengths = {
+  'start': Duration(seconds: 9),
+  'edit': Duration(seconds: 75),
+  'permission': Duration.zero,
+};
 
 /// A line without the scrollbar's column.
 String _bare(String line) => line.replaceAll('┃', '').trimRight();
@@ -329,5 +333,16 @@ void _burst() {
     await t.pump();
     expect(host.pushed, ['/']);
     expect(t.screen, shows('A TERMINAL WINDOW'));
+  });
+
+  testWidgets('a one-frame shot reads STILL, not 0:00', (t) async {
+    await _chord(t, const Size(205, 80));
+    await _seek(t, '03  PERMISSION');
+    for (var i = 0; i < 6; i++) {
+      await t.press('down');
+    }
+    final line = t.screen.lines[_row(t, '03  PERMISSION')];
+    expect(_bare(line), endsWith('STILL'));
+    expect(line, isNot(contains('0:00')));
   });
 }

@@ -350,7 +350,15 @@ class _ChordPageState extends State<ChordPage> {
       final length = widget.lengths[name];
       final end = selected
           ? Text('⏎ PLAY', style: theme.accent.merge(Style.bold))
-          : Text(length == null ? '' : clock(length), style: theme.dim);
+          : Text(
+              // A one-frame shot has no length to give: it is a still.
+              length == null
+                  ? ''
+                  : length == Duration.zero
+                  ? 'STILL'
+                  : clock(length),
+              style: theme.dim,
+            );
       final caption = screenCaptions[name] ?? '';
       final head = Row(
         crossAxisAlignment: CrossAxisAlignment.start,

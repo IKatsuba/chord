@@ -223,8 +223,11 @@ class _SiteState extends State<Site> {
     builder: (context, constraints) {
       final width = constraints.maxWidth;
       final narrow = width < narrowWidth;
-      // A phone the window has grown out of has no menu.
-      if (!narrow && _menuOpen) {
+      // Only a real version number reads with a V in front.
+      final version = chordVersion == 'dev' ? 'DEV' : 'V$chordVersion';
+      final folded = navFolds(width, version, narrow: narrow);
+      // A window grown wide enough for the sections has no menu.
+      if (!folded && _menuOpen) {
         _menuOpen = false;
         final before = _beforeMenu;
         _beforeMenu = null;
@@ -235,11 +238,7 @@ class _SiteState extends State<Site> {
       }
       // The page's rows: the window less the nav, the key row and the help
       // row.
-      final pageRows =
-          constraints.maxHeight -
-          navRows(narrow: narrow) -
-          (narrow ? 1 : 0) -
-          1;
+      final pageRows = constraints.maxHeight - navRows - (narrow ? 1 : 0) - 1;
       _pageRows = pageRows;
       final home = _route is HomeRoute;
       return Actions(
@@ -289,7 +288,7 @@ class _SiteState extends State<Site> {
             'm',
             'menu',
             _openMenu,
-            enabled: narrow && !_embedding,
+            enabled: folded && !_embedding,
             id: _menuId,
           ),
         ],
@@ -307,7 +306,7 @@ class _SiteState extends State<Site> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // The nav's rows; it is drawn over them, after the page.
-                  SizedBox(height: navRows(narrow: narrow)),
+                  SizedBox(height: navRows),
                   Expanded(
                     // The window's width, not the page's: the panel over it
                     // spans the window.
@@ -410,10 +409,9 @@ class _SiteState extends State<Site> {
                 child: SiteNav(
                   route: _route,
                   width: width,
-                  narrow: narrow,
-                  wide: width >= wideWidth,
-                  // Only a real version number reads with a v in front.
-                  version: chordVersion == 'dev' ? 'dev' : 'v$chordVersion',
+                  folded: folded,
+                  wide: navShowsGithub(width, version, wide: wideWidth),
+                  version: version,
                   open: _open,
                   menu: _openMenu,
                   githubAction: _repositoryId,

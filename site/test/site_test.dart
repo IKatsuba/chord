@@ -1,4 +1,3 @@
-import 'package:chord_site/palette.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_tui/chord_tui.dart';
 import 'package:chord_tui/testing.dart';
@@ -8,10 +7,9 @@ import 'fake_host.dart';
 
 const _sizes = [Size(120, 40), Size(80, 24), Size(43, 37)];
 
-/// The nav's current section, as the dark theme draws it.
-final current = ThemeData.dark().accent.merge(
-  Style(bold: true, underline: true, bg: SiteColors.bar),
-);
+/// Whether the nav draws [label] as the current section: ink on cream.
+bool current(WidgetTester t, String label) =>
+    t.screen.styleAt(t.screen.lines[1].indexOf(label), 1).isInverse;
 
 void main() {
   testWidgets('home at 120x40: nav, menu, the try-it box, keys', (t) async {
@@ -19,11 +17,12 @@ void main() {
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));
     final lines = t.screen.lines;
     expect(lines[0], '');
+    expect(lines[1], startsWith('  CHORD / CHORD_TUI'));
     expect(
       lines[1],
-      startsWith('  ◆ chord    1 chord   2 chord_tui   3 Gallery   4 Install'),
+      contains('01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL'),
     );
-    expect(lines[1], endsWith('GitHub ↗ g   dev'));
+    expect(lines[1], endsWith('GITHUB ↗ g    DEV'));
     expect(lines[2], '');
     expect(lines[3], '─' * 120);
     expect(t.screen, shows('❯ 1. chord'));
@@ -33,14 +32,11 @@ void main() {
     expect(host.titles, ['chord and chord_tui']);
   });
 
-  testWidgets('home at 80x24: no GitHub link under 100 columns', (t) async {
+  testWidgets('home at 80x24: the sections do not fit, so MENU m', (t) async {
     await t.pumpWidget(Site(host: FakeHost()), size: const Size(80, 24));
     final lines = t.screen.lines;
-    expect(
-      lines[1],
-      matches(RegExp(r'^  ◆ chord    1 chord .* 4 Install +dev$')),
-    );
-    expect(lines[1], isNot(contains('GitHub')));
+    expect(lines[1], matches(RegExp(r'^  CHORD / CHORD_TUI +MENU m$')));
+    expect(lines[1], isNot(contains('GITHUB')));
     expect(lines[3], '─' * 80);
     expect(t.screen, isNot(shows('Try it')));
     expect(t.screen, shows('2. chord_tui'));
@@ -53,11 +49,11 @@ void main() {
       size: const Size(43, 37),
     );
     final lines = t.screen.lines;
-    // Two columns in from each edge.
-    expect(lines[0], matches(RegExp(r'^  ◆ chord +☰ menu m$')));
-    expect(t.screen.charAt(40, 0), 'm');
-    expect(lines[0], isNot(contains('GitHub')));
-    expect(lines[1], '─' * 43);
+    // Two columns in from each edge, under a blank row, over a rule.
+    expect(lines[0], '');
+    expect(lines[1], matches(RegExp(r'^  CHORD / CHORD_TUI +MENU m$')));
+    expect(t.screen.charAt(40, 1), 'm');
+    expect(lines[3], '─' * 43);
     expect(lines[35], startsWith('  esc   tab   ←   ↑   ↓   →   enter'));
     expect(lines.last, ' escape up  ? keys');
   });
@@ -69,7 +65,7 @@ void main() {
     await t.press('down');
     await t.press('enter');
     expect(host.pushed, ['/chord_tui/gallery']);
-    expect(t.screen.styleAt(t.screen.lines[1].indexOf('Gallery'), 1), current);
+    expect(current(t, 'GALLERY'), isTrue);
     expect(host.titles.last, 'gallery · chord_tui');
     await t.press('esc');
     expect(host.pushed.last, '/chord_tui');
@@ -100,11 +96,8 @@ void main() {
 
   testWidgets('a deep link opens its page at once', (t) async {
     final host = FakeHost('/chord_tui');
-    await t.pumpWidget(Site(host: host), size: const Size(80, 24));
-    expect(
-      t.screen.styleAt(t.screen.lines[1].indexOf('chord_tui'), 1),
-      current,
-    );
+    await t.pumpWidget(Site(host: host), size: const Size(120, 40));
+    expect(current(t, 'FRAMEWORK'), isTrue);
     expect(host.titles, ['chord_tui']);
   });
 
@@ -120,7 +113,9 @@ void main() {
         t.screen.lines.last,
         size.width < 60
             ? ' escape home  ? keys'
-            : ' enter home  up/down scroll  escape home  ? keys',
+            : ' enter home  up/down scroll  escape home  ? keys'
+                  // Where the nav folds, m opens its menu.
+                  '${size.width < 100 ? '  m menu' : ''}',
       );
       await t.press('enter');
       expect(host.pushed, ['/']);
@@ -202,7 +197,7 @@ void main() {
     final host = FakeHost();
     await t.pumpWidget(Site(host: host), size: const Size(120, 40));
     await t.press('g');
-    final column = t.screen.lines[1].indexOf('GitHub');
+    final column = t.screen.lines[1].indexOf('GITHUB');
     await t.mouse(_tapAt(column, 1));
     await t.mouse(_releaseAt(column, 1));
     expect(host.opened, [

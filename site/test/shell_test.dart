@@ -20,27 +20,38 @@ Future<void> tap(WidgetTester t, int x, int y) async {
 String bare(String line) => line.replaceAll('┃', '').trimRight();
 
 void main() {
-  for (final size in const [Size(171, 50), Size(120, 40), Size(80, 24)]) {
+  for (final size in const [Size(192, 56), Size(120, 40)]) {
     group('desktop at $size', () {
-      testWidgets('the nav is three rows on the surface colour, then the '
-          'line-coloured rule', (t) async {
+      testWidgets('the top line: a blank row, the mark and the numbered '
+          'sections, a blank row, the rule', (t) async {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
-        for (final y in [0, 1, 2]) {
-          expect(t.screen.styleAt(size.width - 1, y).bg, SiteColors.bar);
-        }
-        expect(t.screen.styleAt(0, 3), ThemeData.dark().border);
+        final dark = ThemeData.dark();
+        expect(t.screen.lines[0], '');
+        expect(t.screen.lines[2], '');
+        expect(t.screen.lines[3], '─' * size.width);
+        expect(t.screen.styleAt(0, 3), dark.border);
         final nav = t.screen.lines[1];
-        expect(nav, contains('4 Install'));
-        final current = t.screen.styleAt(nav.indexOf('Install'), 1);
-        expect(current.isUnderline && current.isBold, isTrue);
+        expect(nav, startsWith('  CHORD / CHORD_TUI'));
+        expect(t.screen.styleAt(8, 1), dark.accent.merge(Style.bold));
         expect(
-          t.screen.styleAt(nav.indexOf('Gallery'), 1).isUnderline,
-          isFalse,
+          nav,
+          contains('01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL'),
         );
-        expect(nav.contains('GitHub ↗ g'), size.width >= 100);
+        expect(nav, endsWith('GITHUB ↗ g    DEV'));
+        // The current section is inverted: ink on cream.
+        expect(t.screen.styleAt(nav.indexOf('04'), 1).isInverse, isTrue);
+        expect(t.screen.styleAt(nav.indexOf('INSTALL'), 1).isInverse, isTrue);
+        expect(
+          t.screen.styleAt(nav.indexOf('GALLERY'), 1),
+          dark.text.merge(Style.bold),
+        );
+        expect(
+          t.screen.styleAt(nav.indexOf('03'), 1),
+          dark.accent.merge(Style.bold),
+        );
       });
 
-      testWidgets('the help row sits on the surface colour', (t) async {
+      testWidgets('the help row sits on the bar colour', (t) async {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
         expect(
           t.screen.styleAt(size.width - 1, size.height - 1).bg,
@@ -55,16 +66,16 @@ void main() {
         await t.press('1');
         expect(host.pushed, ['/chord']);
         final nav = t.screen.lines[1];
-        await tap(t, nav.indexOf('Gallery'), 1);
+        await tap(t, nav.indexOf('GALLERY'), 1);
         expect(host.pushed.last, '/chord_tui/gallery');
-        await tap(t, nav.indexOf('chord'), 1);
+        await tap(t, nav.indexOf('CHORD'), 1);
         expect(host.pushed.last, '/', reason: 'the mark goes home');
       });
 
-      testWidgets('m opens no menu on a desktop', (t) async {
+      testWidgets('m opens no menu where the sections fit', (t) async {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
         await t.press('m');
-        expect(t.screen, isNot(shows('❯ 1 chord')));
+        expect(t.screen, isNot(shows('❯ 01 APP')));
       });
 
       testWidgets('the panel lists the section digits; the help row does '
@@ -77,31 +88,36 @@ void main() {
     });
   }
 
-  for (final size in const [Size(54, 56), Size(43, 37)]) {
-    group('phone at $size', () {
+  // The nav folds its sections into MENU m on a phone, and wherever they
+  // do not fit: 80 columns too.
+  for (final size in const [Size(80, 24), Size(54, 56), Size(43, 37)]) {
+    group('folded at $size', () {
       testWidgets('m opens the menu over the page; esc closes it', (t) async {
         final host = FakeHost('/install');
         await t.pumpWidget(Site(host: host), size: size);
-        expect(t.screen.styleAt(0, 0).bg, SiteColors.bar);
+        expect(
+          t.screen.lines[1],
+          matches(RegExp(r'^  CHORD / CHORD_TUI +MENU m$')),
+        );
         await t.press('m');
         final lines = t.screen.lines;
-        expect(lines.sublist(2, 9), [
+        expect(lines.sublist(4, 11), [
           '',
-          ' ❯ 1 chord',
-          '   2 chord_tui',
-          '   3 Gallery',
-          '   4 Install',
-          '     GitHub ↗ g',
+          ' ❯ 01 APP',
+          '   02 FRAMEWORK',
+          '   03 GALLERY',
+          '   04 INSTALL',
+          '      GITHUB ↗ g',
           '',
         ]);
-        expect(t.screen.styleAt(5, 6).bg, SiteColors.bar);
         expect(lines.last, ' esc close');
         // Nothing reaches the page meanwhile.
         await t.paste('typed');
         await t.press('esc');
-        expect(t.screen, isNot(shows('❯ 1 chord')));
+        expect(t.screen, isNot(shows('❯ 01 APP')));
         expect(host.pushed, isEmpty);
-        expect(t.screen.lines.last, ' escape up  ? keys');
+        expect(t.screen.lines.last, contains('escape up'));
+        expect(t.screen.lines.last, isNot(contains('esc close')));
       });
 
       testWidgets('on an example page the help row ends with f1 keys, ? '
@@ -123,11 +139,11 @@ void main() {
           await t.press('m');
           await t.press(quit);
           expect(host.pushed, ['/']);
-          expect(t.screen, isNot(shows('❯ 1 chord')));
+          expect(t.screen, isNot(shows('❯ 01 APP')));
           await t.press('m');
           await t.press(quit);
           expect(host.pushed, ['/'], reason: 'already home');
-          expect(t.screen, isNot(shows('❯ 1 chord')));
+          expect(t.screen, isNot(shows('❯ 01 APP')));
           expect(t.exitRequested, isFalse);
         });
       }
@@ -144,7 +160,7 @@ void main() {
         expect(t.screen, shows(RegExp(r'escape/m\s+close')));
         await t.press('esc');
         expect(t.screen, isNot(shows(' Keys')));
-        expect(t.screen, shows('❯ 1 chord'));
+        expect(t.screen, shows('❯ 01 APP'));
       });
 
       testWidgets('the page'
@@ -162,14 +178,18 @@ void main() {
         await t.press('esc');
         expect(selected(), contains('1  Demo'));
         await t.press('down');
-        expect(selected(), contains('2  Markdown'));
+        // Down from Demo: Picker two to a row, Markdown one to a row.
+        expect(
+          selected(),
+          contains(size.width < 60 ? '2  Markdown' : '3  Picker'),
+        );
       });
 
       testWidgets('m closes it again', (t) async {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
         await t.press('m');
         await t.press('m');
-        expect(t.screen, isNot(shows('❯ 1 chord')));
+        expect(t.screen, isNot(shows('❯ 01 APP')));
       });
 
       testWidgets('↓ and Enter open the marked row', (t) async {
@@ -177,10 +197,10 @@ void main() {
         await t.pumpWidget(Site(host: host), size: size);
         await t.press('m');
         await t.press('down');
-        expect(t.screen, shows(' ❯ 2 chord_tui'));
+        expect(t.screen, shows(' ❯ 02 FRAMEWORK'));
         await t.press('enter');
         expect(host.pushed, ['/chord_tui']);
-        expect(t.screen, isNot(shows('❯ 1 chord')));
+        expect(t.screen, isNot(shows('❯ 01 APP')));
       });
 
       testWidgets('a digit opens its row, and g opens GitHub', (t) async {
@@ -199,12 +219,12 @@ void main() {
           'row', (t) async {
         final host = FakeHost('/install');
         await t.pumpWidget(Site(host: host), size: size);
-        await tap(t, t.screen.lines[0].indexOf('menu'), 0);
-        expect(t.screen, shows('❯ 1 chord'));
-        await tap(t, 5, t.screen.lines.indexOf('   4 Install'));
+        await tap(t, t.screen.lines[1].indexOf('MENU'), 1);
+        expect(t.screen, shows('❯ 01 APP'));
+        await tap(t, 5, t.screen.lines.indexOf('   04 INSTALL'));
         expect(host.pushed, isEmpty, reason: 'the page it is on');
-        await tap(t, t.screen.lines[0].indexOf('menu'), 0);
-        await tap(t, 5, t.screen.lines.indexOf('     GitHub ↗ g'));
+        await tap(t, t.screen.lines[1].indexOf('MENU'), 1);
+        await tap(t, 5, t.screen.lines.indexOf('      GITHUB ↗ g'));
         expect(host.opened, ['https://github.com/IKatsuba/chord']);
       });
 
@@ -214,9 +234,9 @@ void main() {
         await t.pumpWidget(Site(host: FakeHost('/install')), size: size);
         await t.press('m');
         await t.resize(const Size(120, 40));
-        expect(t.screen, isNot(shows('❯ 1 chord')));
+        expect(t.screen, isNot(shows('❯ 01 APP')));
         await t.resize(size);
-        expect(t.screen, isNot(shows('❯ 1 chord')));
+        expect(t.screen, isNot(shows('❯ 01 APP')));
       });
     });
   }

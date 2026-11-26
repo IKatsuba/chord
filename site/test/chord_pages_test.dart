@@ -93,8 +93,10 @@ void main() {
       // The whole row fits 80 columns.
       expect(
         t.screen.lines.last,
-        ' space Play/pause  right/l Next  left/h Previous  r Restart  '
-        'escape up  ? keys',
+        startsWith(
+          ' space Play/pause  right/l Next  left/h Previous  r Restart  '
+          'escape up  ? keys',
+        ),
       );
       await t.press('right');
       expect(t.screen.lines[4], startsWith('typed at'));
@@ -164,7 +166,7 @@ void main() {
       size: const Size(43, 37),
     );
     await t.pump();
-    final first = t.screen.lines[2];
+    final first = t.screen.lines[4];
     final row = t.screen.lines[35];
     await t.mouse(
       MouseEvent(
@@ -173,8 +175,8 @@ void main() {
         button: MouseButton.primary,
       ),
     );
-    expect(t.screen.lines[2], isNot(first));
-    expect(first.substring(1), startsWith(t.screen.lines[2].substring(0, 5)));
+    expect(t.screen.lines[4], isNot(first));
+    expect(first.substring(1), startsWith(t.screen.lines[4].substring(0, 5)));
   });
 
   testWidgets('a phone shows the small recording clipped', (t) async {
@@ -185,6 +187,6 @@ void main() {
     );
     await t.pump();
     expect(host.fetched, ['permission.80x20.rec.json']);
-    expect(t.screen.lines[2], endsWith('›'));
+    expect(t.screen.lines[4], endsWith('›'));
   });
 }

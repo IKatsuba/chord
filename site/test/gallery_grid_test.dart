@@ -23,7 +23,8 @@ Future<FakeHost> gallery(WidgetTester t, Size size) async {
 
 /// Where [text] starts on the screen.
 (int, int) find(WidgetTester t, String text) {
-  for (final (y, line) in t.screen.lines.indexed) {
+  // Below the nav's four rows, whose caps would match first.
+  for (final (y, line) in t.screen.lines.indexed.skip(4)) {
     final x = line.indexOf(text);
     if (x >= 0) return (x, y);
   }

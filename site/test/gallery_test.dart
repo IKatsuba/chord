@@ -179,7 +179,8 @@ void main() {
     );
     expect(
       t.screen.lines.last,
-      ' left/right/up/down move  enter run  1–9 open  escape up  ? keys',
+      ' left/right/up/down move  enter run  1–9 open  escape up  ? keys  '
+      'm menu',
     );
   });
 

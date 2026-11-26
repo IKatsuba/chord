@@ -3,8 +3,12 @@ import 'package:chord_tui/chord_tui.dart';
 /// The keys a phone has no keyboard for, as a row to tap: each tap is sent
 /// as that key press, through the focus the app has.
 class KeyRow extends StatelessWidget {
-  /// The row.
-  const KeyRow({super.key});
+  /// The row; with [panArrows], ← and → pan a clipped recording instead,
+  /// as Shift+arrows do, which a phone cannot type.
+  const KeyRow({super.key, this.panArrows = false});
+
+  /// Whether ← and → send shift+left and shift+right.
+  final bool panArrows;
 
   /// What each tap sends, and how it is drawn.
   static const keys = [
@@ -29,7 +33,12 @@ class KeyRow extends StatelessWidget {
           Text(' '),
           Listener(
             behavior: HitTestBehavior.opaque,
-            onPointerDown: (_) => press(context, key),
+            onPointerDown: (_) => press(
+              context,
+              panArrows && (key == 'left' || key == 'right')
+                  ? 'shift+$key'
+                  : key,
+            ),
             child: Text(' $label ', style: theme.text.merge(Style.inverse)),
           ),
         ],

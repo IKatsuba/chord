@@ -3,9 +3,17 @@ import 'dart:convert';
 import 'package:chord_tui/chord_tui.dart';
 
 import '../host.dart';
+import '../pacing.dart';
 
 /// The sizes recordings come in, largest first.
 const recordingSizes = [(cols: 120, rows: 36), (cols: 80, rows: 20)];
+
+/// Whether a page of [cols] by [rows], its bar's row included, shows its
+/// recording clipped.
+bool recordingClipped(int cols, int rows) {
+  final size = recordingSizeFor(cols, rows - 1);
+  return size.cols > cols || size.rows > rows - 1;
+}
 
 /// The recording size for a room of [cols] by [rows]: the largest that
 /// fits, else the smallest, shown clipped.
@@ -82,7 +90,7 @@ class _RecordingPageState extends State<RecordingPage> {
       _controller?.dispose();
       _controller = recording == null
           ? null
-          : (PlaybackController(recording)..play());
+          : (PlaybackController(paced(recording))..play());
       _failed = recording == null;
     });
   }
@@ -110,7 +118,11 @@ class _RecordingPageState extends State<RecordingPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: Playback(controller, autofocus: true)),
-        PlaybackBar(controller),
+        // In line with the help row under it.
+        Padding(
+          padding: const EdgeInsets.only(left: 1),
+          child: PlaybackBar(controller),
+        ),
       ],
     );
   }

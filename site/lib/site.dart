@@ -266,7 +266,12 @@ class _SiteState extends State<Site> {
                   ),
                 ),
               ),
-              if (narrow) const KeyRow(),
+              if (narrow)
+                KeyRow(
+                  panArrows:
+                      _route is RecordingRoute &&
+                      recordingClipped(width, pageRows),
+                ),
               _HelpRow(
                 narrow: narrow,
                 embedding: _embedding,

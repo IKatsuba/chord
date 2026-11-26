@@ -19,18 +19,17 @@ class InstallPage extends StatelessWidget {
             style: theme.text.merge(Style.bold),
           ),
           command('npm install -g @chorded/chord'),
+          Text(
+            'A small shim around a prebuilt binary for macOS and Linux, arm64 '
+            'and x64. chord upgrade updates it the way it was installed.',
+            style: theme.dim,
+          ),
           Text(''),
           Text(
             'Homebrew, for stable releases',
             style: theme.text.merge(Style.bold),
           ),
           command('brew install ikatsuba/tap/chord'),
-          Text(''),
-          Text(
-            'A small shim around a prebuilt binary for macOS and Linux, arm64 '
-            'and x64. chord upgrade updates it the way it was installed.',
-            style: theme.dim,
-          ),
           Text(''),
           Text(
             'From source, with Dart 3.12 or newer',

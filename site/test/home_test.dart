@@ -169,7 +169,15 @@ void main() {
         final width = (content - 4 * (perRow - 1) + perRow - 1) ~/ perRow;
         expect(line.indexOf(homeColumns[1].title), margin + width + 4);
       }
-      expect(t.screen, shows('→ PRESS 4'));
+      // The descriptions wrap to different heights; the PRESS lines of a
+      // row of columns still sit on one line.
+      final press = [
+        for (var n = 1; n <= homeColumns.length; n++) _row(t, '→ PRESS $n'),
+      ];
+      for (var i = 0; i < press.length; i++) {
+        expect(press[i], greaterThan(0));
+        expect(press[i], press[i - i % perRow], reason: 'PRESS ${i + 1}');
+      }
     });
   }
 

@@ -298,21 +298,30 @@ class _HomePageState extends State<HomePage> {
   Widget _columnsRow(ThemeData theme, int r, int perRow, int content) {
     const gap = 4;
     final room = content - gap * (perRow - 1);
+    final cells = [
+      for (var j = 0; j < perRow && r * perRow + j < homeColumns.length; j++)
+        (
+          i: r * perRow + j,
+          width: room ~/ perRow + (j < room % perRow ? 1 : 0),
+        ),
+    ];
+    // Every description in the row takes the tallest one's rows, so the
+    // PRESS lines sit on one line.
+    final textRows = cells.fold(0, (rows, c) {
+      final h = TextLayout.compute(
+        TextSpan(homeColumns[c.i].text),
+        maxWidth: c.width,
+      ).height;
+      return h > rows ? h : rows;
+    });
     return Row(
       spacing: gap,
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var j = 0; j < perRow && r * perRow + j < homeColumns.length; j++)
-          _column(
-            theme,
-            r * perRow + j,
-            room ~/ perRow + (j < room % perRow ? 1 : 0),
-          ),
-      ],
+      children: [for (final c in cells) _column(theme, c.i, c.width, textRows)],
     );
   }
 
-  Widget _column(ThemeData theme, int i, int width) {
+  Widget _column(ThemeData theme, int i, int width, int textRows) {
     final column = homeColumns[i];
     return Listener(
       behavior: HitTestBehavior.opaque,
@@ -335,7 +344,10 @@ class _HomePageState extends State<HomePage> {
             Text(''),
             Text(column.title, style: theme.text.merge(Style.bold)),
             Text('─' * width, style: theme.border, softWrap: false),
-            Text(column.text, style: theme.dim),
+            SizedBox(
+              height: textRows,
+              child: Text(column.text, style: theme.dim),
+            ),
             Text(''),
             Text.rich(
               TextSpan(

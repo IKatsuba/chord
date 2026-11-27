@@ -4,7 +4,8 @@
 ///     dart run tool/build.dart serve [--base=/] [--port=8080] [--out=DIR]
 ///
 /// `--out` puts the site in another folder than `site/build/`, so that runs
-/// side by side, such as the browser tests, never rewrite each other's.
+/// side by side, such as the browser tests, never rewrite each other's. It
+/// must be new or empty: only `site/build/` is replaced.
 ///
 /// `build` compiles `web/main.dart` to Wasm with chord's version and the
 /// recordings' names, writes `index.html` with `<base href>` from `--base`,
@@ -182,7 +183,14 @@ Future<void> _build(String base, String siteDir, String? out) async {
   final root = p.dirname(siteDir);
   final build = Directory(out ?? p.join(siteDir, 'build'));
   final cache = Directory(p.join(siteDir, '.dart_tool', 'site_cache'));
-  if (build.existsSync()) build.deleteSync(recursive: true);
+  if (out == null) {
+    if (build.existsSync()) build.deleteSync(recursive: true);
+  } else if (build.existsSync() && build.listSync().isNotEmpty) {
+    // Only site/build/ is ours to replace; a mistyped --out could name the
+    // checkout or a home folder.
+    stderr.writeln('build: --out=$out is not empty; give a new or empty one');
+    exit(64);
+  }
   build.createSync(recursive: true);
 
   final images = Directory(p.join(root, 'docs', 'images'));
@@ -303,10 +311,12 @@ Future<void> main(List<String> args) async {
   }
 
   String option(String name, String fallback) => given(name) ?? fallback;
-  final out = switch (given('out')) {
-    final dir? => p.absolute(dir),
-    null => null,
-  };
+  final outGiven = given('out');
+  if (outGiven == '') {
+    stderr.writeln('build: --out needs a folder');
+    exit(64);
+  }
+  final out = outGiven == null ? null : p.absolute(outGiven);
 
   final siteDir = p.dirname(
     p.dirname(p.absolute(Platform.script.toFilePath())),

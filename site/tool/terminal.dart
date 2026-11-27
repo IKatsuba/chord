@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:chord_site/host.dart';
+import 'package:chord_site/palette.dart';
 import 'package:chord_site/router.dart';
 import 'package:chord_site/site.dart';
 import 'package:chord_tui/chord_tui.dart';
@@ -54,9 +55,19 @@ class _MemoryHost extends SiteHost {
   }
 }
 
-Future<void> main(List<String> args) async {
-  final host = _MemoryHost(args.isEmpty ? '/' : args.first);
-  final terminal = StdioTerminal(mouse: true);
+Future<void> main(List<String> args) =>
+    runInTerminal(StdioTerminal(mouse: true), args.isEmpty ? '/' : args.first);
+
+/// The site at [path] on [terminal], in the site's own theme as the browser
+/// draws it; Ctrl+X ends the run.
+Future<void> runInTerminal(
+  Terminal terminal,
+  String path, {
+  bool exitProcess = true,
+  bool handleSignals = true,
+  Map<String, String>? environment,
+}) async {
+  final host = _MemoryHost(path);
   await runApp(
     Builder(
       builder: (context) => Actions(
@@ -86,6 +97,10 @@ Future<void> main(List<String> args) async {
       ),
     ),
     terminal: terminal,
+    theme: siteTheme(),
+    exitProcess: exitProcess,
+    handleSignals: handleSignals,
+    environment: environment,
   );
 }
 

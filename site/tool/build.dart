@@ -1,7 +1,10 @@
 /// Builds the site into `site/build/`, and serves it:
 ///
-///     dart run tool/build.dart build [--base=/]
-///     dart run tool/build.dart serve [--base=/] [--port=8080]
+///     dart run tool/build.dart build [--base=/] [--out=DIR]
+///     dart run tool/build.dart serve [--base=/] [--port=8080] [--out=DIR]
+///
+/// `--out` puts the site in another folder than `site/build/`, so that runs
+/// side by side, such as the browser tests, never rewrite each other's.
 ///
 /// `build` compiles `web/main.dart` to Wasm with chord's version and the
 /// recordings' names, writes `index.html` with `<base href>` from `--base`,
@@ -175,9 +178,9 @@ String chordVersionOf(String pubspec) {
   return match[1]!;
 }
 
-Future<void> _build(String base, String siteDir) async {
+Future<void> _build(String base, String siteDir, String? out) async {
   final root = p.dirname(siteDir);
-  final build = Directory(p.join(siteDir, 'build'));
+  final build = Directory(out ?? p.join(siteDir, 'build'));
   final cache = Directory(p.join(siteDir, '.dart_tool', 'site_cache'));
   if (build.existsSync()) build.deleteSync(recursive: true);
   build.createSync(recursive: true);
@@ -260,13 +263,14 @@ Future<void> _build(String base, String siteDir) async {
     ),
   );
 
-  stdout.writeln('build: site/build/, ${shots.length} recordings');
+  final where = out ?? 'site/build/';
+  stdout.writeln('build: $where, ${shots.length} recordings');
 }
 
-Future<void> _serve(String base, int port, String siteDir) async {
-  final build = Directory(p.join(siteDir, 'build'));
+Future<void> _serve(String base, int port, String siteDir, String? out) async {
+  final build = Directory(out ?? p.join(siteDir, 'build'));
   if (!build.existsSync()) {
-    stderr.writeln('serve: no site/build/; run build first');
+    stderr.writeln('serve: no ${out ?? 'site/build/'}; run build first');
     exit(1);
   }
   final files = {
@@ -291,12 +295,18 @@ Future<void> _serve(String base, int port, String siteDir) async {
 }
 
 Future<void> main(List<String> args) async {
-  String option(String name, String fallback) {
+  String? given(String name) {
     for (final arg in args) {
       if (arg.startsWith('--$name=')) return arg.substring(name.length + 3);
     }
-    return fallback;
+    return null;
   }
+
+  String option(String name, String fallback) => given(name) ?? fallback;
+  final out = switch (given('out')) {
+    final dir? => p.absolute(dir),
+    null => null,
+  };
 
   final siteDir = p.dirname(
     p.dirname(p.absolute(Platform.script.toFilePath())),
@@ -310,12 +320,13 @@ Future<void> main(List<String> args) async {
   }
   switch (args.isEmpty ? '' : args.first) {
     case 'build':
-      await _build(base, siteDir);
+      await _build(base, siteDir, out);
     case 'serve':
-      await _serve(base, int.parse(option('port', '8080')), siteDir);
+      await _serve(base, int.parse(option('port', '8080')), siteDir, out);
     default:
       stderr.writeln(
-        'usage: dart run tool/build.dart build|serve [--base=/] [--port=8080]',
+        'usage: dart run tool/build.dart build|serve [--base=/] [--port=8080] '
+        '[--out=DIR]',
       );
       exit(64);
   }

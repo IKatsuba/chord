@@ -5,6 +5,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:puppeteer/puppeteer.dart';
 import 'package:test/test.dart';
 
@@ -17,10 +18,15 @@ void main() {
     late HttpServer server;
 
     setUpAll(() async {
+      // Its own folder: site_browser_test.dart builds beside it, and a build
+      // replaces the folder it writes.
+      final out = Directory.systemTemp.createTempSync('chord_site_palette_');
+      addTearDown(() => out.deleteSync(recursive: true));
       final build = await Process.start(Platform.resolvedExecutable, [
         'run',
         'tool/build.dart',
         'build',
+        '--out=${out.path}',
       ]);
       var buildFinished = false;
       addTearDown(() async {
@@ -42,7 +48,7 @@ void main() {
       server.listen((request) async {
         final path = request.uri.path.substring(1);
         final served = serve(request.uri.path, '/', {
-          if (File('build/$path').existsSync()) path,
+          if (File(p.join(out.path, path)).existsSync()) path,
         });
         if (served is! ServedFile) {
           request.response.statusCode = HttpStatus.notFound;
@@ -52,7 +58,7 @@ void main() {
             contentTypeOf(served.file),
           );
           await request.response.addStream(
-            File('build/${served.file}').openRead(),
+            File(p.join(out.path, served.file)).openRead(),
           );
         }
         await request.response.close();
@@ -86,7 +92,8 @@ void main() {
             deviceScaleFactor: ratio,
           ),
         );
-        Future<void> grid(int cols, int rows) async {
+
+        Future<void> waitForGrid(int cols, int rows) async {
           await page.waitForFunction('''() => globalThis.chordTerminal &&
           chordTerminal.cols === $cols && chordTerminal.rows === $rows &&
           getComputedStyle(document.querySelector('#terminal'))
@@ -97,6 +104,29 @@ void main() {
             .getPropertyValue('--term-line-height') === '1.28' &&
           getComputedStyle(document.querySelector('#terminal'))
             .letterSpacing === '-0.5px' ''');
+        }
+
+        Future<void> grid(int cols, int rows) async {
+          try {
+            await waitForGrid(cols, rows);
+          } on TimeoutException {
+            // Say what the page measured instead, so a failure names it.
+            final seen = await page.evaluate<Object?>('''() => {
+              const t = document.querySelector("#terminal");
+              const css = getComputedStyle(t);
+              return {
+                viewport: [innerWidth, innerHeight, devicePixelRatio],
+                cells: globalThis.chordTerminal
+                  ? [chordTerminal.cols, chordTerminal.rows] : null,
+                font: css.getPropertyValue("--term-font-size"),
+                row: css.getPropertyValue("--term-row-height"),
+                line: css.getPropertyValue("--term-line-height"),
+                spacing: css.letterSpacing,
+                fonts: document.fonts.status,
+              };
+            }''');
+            fail('wanted ${cols}x$rows, the page has $seen');
+          }
         }
 
         for (final ratio in [1, 2, 3]) {

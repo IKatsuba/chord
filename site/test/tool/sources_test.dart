@@ -19,6 +19,20 @@ void main() {
     );
   });
 
+  test('an unchanged file is not written again', () {
+    // A build beside another must not truncate the file the other compiles.
+    final file = File('lib/sources.g.dart');
+    final was = file.lastModifiedSync();
+    final old = DateTime(2020);
+    file.setLastModifiedSync(old);
+    try {
+      writeSources(Directory.current.path);
+      expect(file.lastModifiedSync(), old);
+    } finally {
+      file.setLastModifiedSync(was);
+    }
+  });
+
   test('it holds README\'s example and every gallery example', () {
     expect(sourceExamples, [
       'main',

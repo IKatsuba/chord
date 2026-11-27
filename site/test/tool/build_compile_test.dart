@@ -79,4 +79,35 @@ void main() {
       }
     }
   });
+
+  test(
+    '--out builds into its own folder and leaves site/build/ alone',
+    () async {
+      final out = Directory.systemTemp.createTempSync('chord_site_out_');
+      addTearDown(() => out.deleteSync(recursive: true));
+      // A file only site/build/ has: another build there would remove it.
+      final mark = File(p.join('build', 'kept.txt'))..writeAsStringSync('');
+      addTearDown(() {
+        if (mark.existsSync()) mark.deleteSync();
+      });
+      final other = await Process.run(Platform.resolvedExecutable, [
+        'run',
+        'tool/build.dart',
+        'build',
+        '--out=${out.path}',
+      ]);
+      expect(other.exitCode, 0, reason: '${other.stdout}${other.stderr}');
+      expect(other.stdout, contains('build: ${out.path}, '));
+      expect(
+        File(p.join(out.path, 'index.html')).readAsStringSync(),
+        contains('<base href="/">'),
+      );
+      expect(File(p.join(out.path, 'main.wasm')).existsSync(), isTrue);
+      expect(mark.existsSync(), isTrue);
+      expect(
+        File('build/index.html').readAsStringSync(),
+        contains('<base href="/chord/">'),
+      );
+    },
+  );
 }

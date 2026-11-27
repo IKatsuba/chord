@@ -31,6 +31,27 @@ const clipboardStandIn = '''() => {
   globalThis.testCopied = () => copied;
 }''';
 
+/// A record of a recording bar's states in the order they first show, for
+/// pages opened with `marks` in the query; `testMarks()` reads it. A short
+/// recording can start and end between two looks at the screen, so its
+/// states are watched as the page draws them.
+const playbackMarks = '''() => {
+  const marks = [];
+  globalThis.testMarks = () => marks;
+  if (!new URLSearchParams(location.search).has("marks")) return;
+  const look = () => {
+    const text = [...document.querySelectorAll("#terminal .term-row")]
+      .map((row) => row.innerText).join("\\n");
+    const shows = [["playing", "▶"], ["ended", "ENDED · R RESTART"]];
+    for (const [mark, shown] of shows) {
+      if (text.includes(shown) && !marks.includes(mark)) marks.push(mark);
+    }
+  };
+  new MutationObserver(look).observe(document, {
+    subtree: true, childList: true, characterData: true,
+  });
+}''';
+
 /// `build.dart serve`, started and stopped by the test, its output kept.
 class _Server {
   _Server._(this._process, this.port, this._errors);
@@ -42,14 +63,17 @@ class _Server {
 
   final StringBuffer _errors;
 
-  /// Builds the site for [base] and serves it, failing at once if serve
-  /// ends before it says where it answers.
-  static Future<_Server> start(String base) async {
+  /// Builds the site for [base] into [out] and serves it, failing at once
+  /// if serve ends before it says where it answers. Each run has its own
+  /// [out]: a build replaces its folder, and another test's pages may be
+  /// loading from site/build/ meanwhile.
+  static Future<_Server> start(String base, String out) async {
     final build = await Process.run(Platform.resolvedExecutable, [
       'run',
       'tool/build.dart',
       'build',
       '--base=$base',
+      '--out=$out',
     ]);
     expect(build.exitCode, 0, reason: '${build.stdout}${build.stderr}');
     return launch(Platform.resolvedExecutable, [
@@ -58,6 +82,7 @@ class _Server {
       'serve',
       '--base=$base',
       '--port=0',
+      '--out=$out',
     ]);
   }
 
@@ -163,12 +188,16 @@ void main() {
       Page? opened;
       final errors = <String>[];
 
+      Directory? out;
+
       setUpAll(() async {
-        server = await _Server.start(base);
+        out = Directory.systemTemp.createTempSync('chord_site_browser_');
+        server = await _Server.start(base, out!.path);
         page = opened = await browser!.newPage();
         // Before every document, so before the app: the site's copy keys
         // reach a stand-in, never the person's own clipboard.
         await page.evaluateOnNewDocument(clipboardStandIn);
+        await page.evaluateOnNewDocument(playbackMarks);
         await page.setViewport(const DeviceViewport(width: 1200, height: 800));
         page.onConsole.listen((message) {
           if (message.type == ConsoleMessageType.error) {
@@ -182,7 +211,11 @@ void main() {
         try {
           await opened?.close();
         } finally {
-          await server?.stop();
+          try {
+            await server?.stop();
+          } finally {
+            out?.deleteSync(recursive: true);
+          }
         }
       });
 
@@ -326,10 +359,16 @@ void main() {
 
       test('a recording page fetches and plays its recording', () async {
         // 120x36 in its frame: the page has 42 rows under the nav.
-        await open('/chord/permission', size: 'cols=122&rows=47');
+        await open('/chord/permission', size: 'cols=122&rows=47&marks');
         await until('01 / THE APP / PERMISSION');
-        await until('Do you want to proceed?');
-        expect(await screen(), contains('▶'));
+        // The recording lasts about a second, so it is watched to its end:
+        // it played, reached its last frame and ended, in that order.
+        await until('ENDED · R RESTART');
+        expect(await screen(), contains('Do you want to proceed?'));
+        expect(await page.evaluate<List<dynamic>>('() => testMarks()'), [
+          'playing',
+          'ended',
+        ]);
       });
 
       group('tester: viewport and emulated touch', () {

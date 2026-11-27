@@ -90,9 +90,14 @@ String generateSources(String root) {
 String sourcesPath(String siteDir) => p.join(siteDir, 'lib', 'sources.g.dart');
 
 /// Writes the generated file for the site at [siteDir].
-void writeSources(String siteDir) => File(
-  sourcesPath(siteDir),
-).writeAsStringSync(generateSources(p.dirname(siteDir)));
+void writeSources(String siteDir) {
+  final file = File(sourcesPath(siteDir));
+  final text = generateSources(p.dirname(siteDir));
+  // Unchanged, it is left alone: a build beside this one may be compiling
+  // it, and a rewrite truncates it first.
+  if (file.existsSync() && file.readAsStringSync() == text) return;
+  file.writeAsStringSync(text);
+}
 
 void main() {
   final siteDir = p.dirname(

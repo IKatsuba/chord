@@ -360,6 +360,8 @@ dart compile exe benchmark/record_scan.dart -o build/record_scan
   # Use the same --base on build and serve for a subpath (default /):
   dart run tool/build.dart build --base=/chord/
   dart run tool/build.dart serve --base=/chord/ --port=8080
+  # --out=DIR builds into and serves another folder than site/build/:
+  dart run tool/build.dart build --out=/tmp/site
   dart test -t compile --run-skipped  # build output, files and imports
   dart test -t browser --run-skipped  # Chrome smoke at / and /chord/
   dart run tool/terminal.dart         # native shell fixture, no browser

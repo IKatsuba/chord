@@ -524,7 +524,7 @@ site/lib/article.dart      chord_tui pages: index, article, margin and pager
 site/lib/live_plate.dart   live frames with captioned entry and exit keys
 site/lib/live/            prompt, permission, plan and start screen fixtures
 site/lib/scroll_page.dart page scrolling over live widgets
-site/lib/band.dart         the orange slogan band
+site/lib/band.dart         the green slogan band
 site/lib/sources.g.dart    generated example code the pages show
 site/lib/key_row.dart      tappable keys for narrow windows
 site/lib/web/browser_host.dart browser history and recording fetches

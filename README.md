@@ -152,7 +152,7 @@ dart compile exe bin/chord.dart -o build/chord
 The binary needs no Dart runtime. [Development](docs/development.md) covers
 fixtures, benchmarks and release tooling. The [website source](site/) is a
 chord_tui app compiled to WebAssembly and drawn full-window by wterm, with
-an ink, cream and orange poster layout, live framework examples and chord
+an ink, cream and green poster layout, live framework examples and chord
 screens, and recorded flows. Build and preview it with:
 
 ```sh

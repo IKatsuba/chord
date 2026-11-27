@@ -4688,3 +4688,12 @@ sit outside its `lib/` and would have to be embedded by hand, and it pulls
 (Q434): chord_tui keeps its own 5x7 block-glyph table, and its
 `DisplayText` (unit F10) draws every piece of giant text with it, `CHORD.`
 included. The site no longer draws chord's wordmark.
+
+## CHD-638: the site's accent is chord's green
+
+Direction C drew its one loud colour in a signal orange, `#ff5a1f`. The
+owner changed it before the merge: the site's accent, links, focus, band,
+numerals, full stops, FIG. captions and buttons use chord's own dark
+accent, `#47e7a5` from `lib/ui/theme/theme.dart`, so the site reads as
+chord's. Ink, cream and the rest of direction C stay. A site test holds
+`SiteColors.accent` to chord's dark palette.

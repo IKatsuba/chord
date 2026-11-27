@@ -50,16 +50,20 @@ void main() {
       handleSignals: false,
       environment: const {},
     );
-    await terminal.drawn.timeout(const Duration(seconds: 10));
-    // Let the frame finish before reading it.
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-    final out = terminal.written.toString();
-    // Muted captions and rule-coloured frames are the site's own; chord_tui's
-    // default theme has neither.
-    expect(out, contains(_fg(SiteColors.muted)));
-    expect(out, contains(_fg(SiteColors.rule)));
-    terminal.keys.add('\x18');
-    await run.timeout(const Duration(seconds: 10));
-    await terminal.keys.close();
+    try {
+      await terminal.drawn.timeout(const Duration(seconds: 10));
+      // Let the frame finish before reading it.
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      final out = terminal.written.toString();
+      // Muted captions and rule-coloured frames are the site's own;
+      // chord_tui's default theme has neither.
+      expect(out, contains(_fg(SiteColors.muted)));
+      expect(out, contains(_fg(SiteColors.rule)));
+    } finally {
+      // Ctrl+X ends the run, even when a check above failed.
+      terminal.keys.add('\x18');
+      await run.timeout(const Duration(seconds: 10));
+      await terminal.keys.close();
+    }
   });
 }

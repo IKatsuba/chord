@@ -2,7 +2,7 @@ import 'package:chord_tui/chord_tui.dart';
 
 import '../page.dart';
 
-/// What a path no page has shows, in C: the giant `404` in orange, `PAGE NOT
+/// What a path no page has shows, in C: the giant `404` in green, `PAGE NOT
 /// FOUND.`, the path, and a button home on Enter (Esc too, the shell's). It
 /// does not go home by itself, so a mistyped link stays readable.
 class NotFoundPage extends StatelessWidget {

@@ -22,7 +22,7 @@ import 'package:chord_tui/chord_tui.dart';
   return (size: DisplaySize.half, lines: split);
 }
 
-/// A poster page's giant word, in cream with an orange full stop, at the
+/// A poster page's giant word, in cream with a green full stop, at the
 /// size its room allows.
 class GiantWord extends StatelessWidget {
   /// [word], without its stop.
@@ -65,7 +65,7 @@ class GiantWord extends StatelessWidget {
 }
 
 /// A poster page's kicker over its giant word: `03 / THE GALLERY`, in
-/// orange bold caps.
+/// green bold caps.
 class Kicker extends StatelessWidget {
   /// The kicker for section [number] (1–4), titled [title].
   const Kicker(this.number, this.title, {super.key});

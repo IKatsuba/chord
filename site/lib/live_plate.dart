@@ -190,7 +190,7 @@ class _LivePlateState extends State<LivePlate> {
     final palette = theme.extension<SitePalette>() ?? const SitePalette();
     final cream = theme.text.merge(const Style(inverse: true));
     final bold = cream.merge(Style.bold);
-    final orange = theme.accent.merge(const Style(bold: true, inverse: true));
+    final accent = theme.accent.merge(const Style(bold: true, inverse: true));
     final leaves = widget.ownsEscape ? 'CTRL+Q LEAVES' : 'ESC LEAVES';
     final focused = widget.focusNode?.hasPrimaryFocus ?? false;
     final tag = _entered ? leaves : (focused ? '⏎ ENTER' : null);
@@ -208,7 +208,7 @@ class _LivePlateState extends State<LivePlate> {
                   TextSpan(
                     '',
                     children: [
-                      // Orange on the cream: the colours swapped back by inverse.
+                      // Green on the cream: the colours swapped back by inverse.
                       TextSpan(
                         'FIG. ${widget.figure.toString().padLeft(widget.figureDigits, '0')} ',
                         style: Style(
@@ -231,7 +231,7 @@ class _LivePlateState extends State<LivePlate> {
                 ),
               ),
               // On the right of the caption row: how to leave, or Enter.
-              if (tag != null) Text(' $tag ', style: orange, softWrap: false),
+              if (tag != null) Text(' $tag ', style: accent, softWrap: false),
             ],
           ),
           Text('', style: cream),

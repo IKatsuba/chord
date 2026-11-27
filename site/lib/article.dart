@@ -413,7 +413,7 @@ class _ArticlePageState extends State<ArticlePage> {
   );
 
   Widget _article(ThemeData theme) {
-    final orange = theme.accent.merge(Style.bold);
+    final accent = theme.accent.merge(Style.bold);
     final names = widget.pages.names;
     final previous = widget.page - 1, next = widget.page + 1;
     String label(int i) => '${i.toString().padLeft(2, '0')} ${names[i]}';
@@ -435,7 +435,7 @@ class _ArticlePageState extends State<ArticlePage> {
                   children: [
                     TextSpan(
                       '${(i + 1).toString().padLeft(2, '0')}  ',
-                      style: orange,
+                      style: accent,
                     ),
                     TextSpan(
                       section.head.toUpperCase(),
@@ -465,13 +465,13 @@ class _ArticlePageState extends State<ArticlePage> {
             if (previous >= 0)
               _tap(
                 () => _go(previous),
-                Text('[  ← ${label(previous)}', style: orange, softWrap: false),
+                Text('[  ← ${label(previous)}', style: accent, softWrap: false),
               ),
             const Spacer(),
             if (next < names.length)
               _tap(
                 () => _go(next),
-                Text('${label(next)} →  ]', style: orange, softWrap: false),
+                Text('${label(next)} →  ]', style: accent, softWrap: false),
               ),
           ],
         ),

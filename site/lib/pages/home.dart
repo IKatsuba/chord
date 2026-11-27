@@ -46,7 +46,7 @@ const _slogans =
     'CLAUDE · CODEX · GEMINI · CURSOR  ✦  WRITTEN IN DART  ✦  ';
 
 /// Home, in C: the giant `CHORD.`, the statement, paragraph and buttons,
-/// the orange band, the four numbered columns, FIG. 1's recorded session
+/// the green band, the four numbered columns, FIG. 1's recorded session
 /// in a cream plate, and the footer. `i` installs, `w` plays the session,
 /// 1–4 go to the sections.
 class HomePage extends StatefulWidget {
@@ -172,7 +172,7 @@ class _HomePageState extends State<HomePage> {
       final content = constraints.maxWidth - 1 - 2 * margin;
       _load(content - 2);
       final bold = theme.text.merge(Style.bold);
-      final orange = theme.accent.merge(Style.bold);
+      final accent = theme.accent.merge(Style.bold);
       final statement = Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,7 +281,7 @@ class _HomePageState extends State<HomePage> {
             Text(''),
           ],
           Text(''),
-          Text('FIG. 1 / A REAL SESSION, RECORDED', style: orange),
+          Text('FIG. 1 / A REAL SESSION, RECORDED', style: accent),
           // A recording and its frame that do not fit in the margins take
           // the window's width up to the scrollbar; past that, the Playback
           // clips and pans.

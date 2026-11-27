@@ -58,8 +58,8 @@ void main() {
   }
 
   for (final size in const [Size(120, 40), Size(54, 56)]) {
-    testWidgets('the giant word is cream with an orange stop, and the '
-        'kicker orange caps, at $size', (t) async {
+    testWidgets('the giant word is cream with a green stop, and the '
+        'kicker green caps, at $size', (t) async {
       final theme = siteTheme();
       await t.pumpWidget(
         Theme(

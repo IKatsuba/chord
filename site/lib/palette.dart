@@ -1,6 +1,7 @@
-/// The site's palette, direction C of CHD-638: ink, cream and one signal
-/// orange, as chord_tui roles for the cells and as [SitePalette] for the
-/// site's own surfaces. index.html sets the same ink and cream on the page.
+/// The site's palette, direction C of CHD-638: ink, cream and one accent,
+/// chord's own dark green, as chord_tui roles for the cells and as
+/// [SitePalette] for the site's own surfaces. index.html sets the same ink
+/// and cream on the page.
 library;
 
 import 'package:chord_tui/chord_tui.dart';
@@ -13,8 +14,8 @@ abstract final class SiteColors {
   /// Text, the terminal's own foreground.
   static final cream = RgbColor.hex('#f2ead9');
 
-  /// Accent, links and focus: the one loud colour.
-  static final orange = RgbColor.hex('#ff5a1f');
+  /// Accent, links and focus: the one loud colour, chord's own dark accent.
+  static final accent = RgbColor.hex('#47e7a5');
 
   /// Descriptions, captions and key words.
   static final muted = RgbColor.hex('#8a8478');
@@ -58,12 +59,12 @@ class SitePalette extends ThemeExtension<SitePalette> {
 /// stays the terminal's own foreground, cream, which index.html sets.
 ThemeData siteTheme() {
   final dark = ThemeData.dark();
-  final orange = Style(fg: SiteColors.orange);
+  final accent = Style(fg: SiteColors.accent);
   return dark.copyWith(
     dim: Style(fg: SiteColors.muted),
-    accent: orange,
-    link: orange,
-    focus: orange,
+    accent: accent,
+    link: accent,
+    focus: accent,
     inlineCode: Style(bg: SiteColors.raised),
     success: Style(fg: SiteColors.green),
     warning: Style(fg: SiteColors.sand),
@@ -75,7 +76,7 @@ ThemeData siteTheme() {
     ),
     code: CodeTones(
       terminal: Tones(
-        keyword: orange,
+        keyword: accent,
         string: Style(fg: SiteColors.green),
         type: Style(fg: SiteColors.sand),
         comment: Style(fg: SiteColors.muted),

@@ -133,7 +133,7 @@ void main() {
       expect(t.screen.styleAt(left, top).isInverse, isTrue, reason: 'frame');
       expect(t.screen.styleAt(left + cols + 1, top + 1).isInverse, isTrue);
       expect(t.screen.lines[top + 1].indexOf('recorded at $rec'), left + 1);
-      // The bar under it after a blank, centred: the orange cell first.
+      // The bar under it after a blank, centred: the green cell first.
       final bar = top + int.parse(rec.split('x').last) + 3;
       expect(t.screen.lines[bar].trim(), startsWith('▶  0:00 / 0:'));
       final cell = t.screen.lines[bar].indexOf('▶') - 1;

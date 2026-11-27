@@ -125,7 +125,7 @@ void main() {
     });
   }
 
-  testWidgets('the caption sits on the cream, FIG. n in orange', (t) async {
+  testWidgets('the caption sits on the cream, FIG. n in green', (t) async {
     await t.pumpWidget(
       _Page(live: ValueNotifier(false)),
       size: const Size(80, 24),

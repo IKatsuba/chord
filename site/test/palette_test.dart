@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:chord/ui/theme/theme.dart' show palettes;
 import 'package:chord_site/palette.dart';
 import 'package:chord_tui/chord_tui.dart';
 import 'package:test/test.dart';
@@ -11,15 +12,19 @@ RgbColor hexIn(String css, String pattern) {
 }
 
 void main() {
+  test('the accent is chord\'s own dark accent', () {
+    expect(SiteColors.accent, RgbColor.hex(palettes['dark']!.accent!));
+  });
+
   test('the theme paints with direction C\'s roles', () {
     final theme = siteTheme();
-    final orange = Style(fg: SiteColors.orange);
+    final accent = Style(fg: SiteColors.accent);
     expect(theme.brightness, Brightness.dark);
     expect(theme.text, Style.plain, reason: 'the page sets cream');
     expect(theme.dim, Style(fg: SiteColors.muted));
-    expect(theme.accent, orange);
-    expect(theme.focus, orange);
-    expect(theme.link, orange);
+    expect(theme.accent, accent);
+    expect(theme.focus, accent);
+    expect(theme.link, accent);
     expect(theme.border, Style(fg: SiteColors.rule));
     expect(theme.warning, Style(fg: SiteColors.sand));
     expect(theme.success, Style(fg: SiteColors.green));
@@ -27,7 +32,7 @@ void main() {
     expect(theme.diff.added, Style(fg: SiteColors.green));
     expect(theme.diff.removed, Style(fg: SiteColors.red));
     final code = theme.code!.terminal;
-    expect(code.keyword, orange);
+    expect(code.keyword, accent);
     expect(code.string, Style(fg: SiteColors.green));
     expect(code.type, Style(fg: SiteColors.sand));
     expect(code.comment, Style(fg: SiteColors.muted));

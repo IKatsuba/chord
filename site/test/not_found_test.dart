@@ -37,7 +37,7 @@ void main() {
     (Size(52, 52), 7, 2),
     (Size(43, 37), 7, 2),
   ]) {
-    testWidgets('the giant 404 in orange, PAGE NOT FOUND., the path and '
+    testWidgets('the giant 404 in green, PAGE NOT FOUND., the path and '
         'HOME on Enter, at $size', (t) async {
       await missing(t, size);
       final lines = t.screen.lines;

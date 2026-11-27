@@ -70,7 +70,7 @@ void main() {
         expect(my, dy, reason: 'the same row');
         expect(t.screen.styleAt(mx, my), theme.text.merge(Style.bold));
         expect(t.screen.styleAt(mx, my + 1), theme.border);
-        // The orange numeral sits five rows over the name.
+        // The green numeral sits five rows over the name.
         expect(t.screen.lines[dy - 5].substring(dx, dx + 10), contains('▄'));
         expect(t.screen.styleAt(dx + 2, dy - 5), theme.accent);
       });

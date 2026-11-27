@@ -124,7 +124,7 @@ class SiteNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bold = theme.text.merge(Style.bold);
-    final orange = theme.accent.merge(Style.bold);
+    final accent = theme.accent.merge(Style.bold);
     final mark = _tap(
       () => open(const HomeRoute()),
       Text.rich(
@@ -132,7 +132,7 @@ class SiteNav extends StatelessWidget {
           '',
           children: [
             TextSpan('CHORD', style: bold),
-            TextSpan(' / ', style: orange),
+            TextSpan(' / ', style: accent),
             TextSpan('CHORD_TUI', style: bold),
           ],
         ),
@@ -150,7 +150,7 @@ class SiteNav extends StatelessWidget {
               '',
               children: [
                 TextSpan('MENU', style: bold),
-                if (key != null) TextSpan(' $key', style: orange),
+                if (key != null) TextSpan(' $key', style: accent),
               ],
             ),
             softWrap: false,
@@ -169,7 +169,7 @@ class SiteNav extends StatelessWidget {
                 // The current section is ink on cream.
                 style: s.holds(route) ? const Style(inverse: true) : null,
                 children: [
-                  TextSpan('0${i + 1} ', style: orange),
+                  TextSpan('0${i + 1} ', style: accent),
                   TextSpan(s.label, style: bold),
                 ],
               ),
@@ -215,7 +215,7 @@ class SiteNav extends StatelessWidget {
 }
 
 /// The menu, open under the nav: the four sections, numbered, and GitHub,
-/// in caps; [selected] is marked, the current section is orange, and a tap
+/// in caps; [selected] is marked, the current section is green, and a tap
 /// on a row chooses it.
 class NavMenu extends StatelessWidget {
   /// The menu for [route], [width] columns wide.
@@ -246,7 +246,7 @@ class NavMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final orange = theme.accent.merge(Style.bold);
+    final accent = theme.accent.merge(Style.bold);
     Widget row(int i, List<TextSpan> spans) => SiteNav._tap(
       () => choose(i),
       Text.rich(
@@ -276,7 +276,7 @@ class NavMenu extends StatelessWidget {
               Text(''),
               for (final (i, s) in sections.indexed)
                 row(i, [
-                  TextSpan('0${i + 1} ', style: orange),
+                  TextSpan('0${i + 1} ', style: accent),
                   TextSpan(
                     s.label,
                     style: s.holds(route)

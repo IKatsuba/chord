@@ -111,7 +111,7 @@ void main() {
           'source, at $size', (t) async {
         await _open(t, '/chord_tui/${entry.name}', size);
         final title = entry.title.toUpperCase();
-        // The title, alone on its row, over its orange rule.
+        // The title, alone on its row, over its green rule.
         String bare(int y) => t.screen.lines[y].replaceAll('┃', '').trim();
         var name = -1;
         for (var i = 0; i < 60 && name < 0; i++) {

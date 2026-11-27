@@ -154,7 +154,7 @@ void main() {
         }
       });
 
-      testWidgets('the band runs edge to edge, ink bold on orange', (t) async {
+      testWidgets('the band runs edge to edge, ink bold on green', (t) async {
         await _home(t, size);
         await _seek(t, 'THE TERMINAL IS THE PAGE');
         // The rows above and below the slogans too.

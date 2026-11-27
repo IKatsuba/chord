@@ -21,7 +21,7 @@ class DisplayText extends StatelessWidget {
   }) : span = TextSpan(text);
 
   /// [span]'s text at [size], each run in its own style over [style]: the
-  /// orange full stop after a word.
+  /// coloured full stop after a word.
   const DisplayText.rich(
     this.span, {
     super.key,

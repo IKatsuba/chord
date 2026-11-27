@@ -53,7 +53,7 @@ void main() {
         expect(line.indexOf('02 / FRAMEWORK'), 4);
         expect(line.indexOf('02 / FRAMEWORK / GALLERY'), 34);
         expect(t.screen, shows('[ ] PREVIOUS, NEXT'));
-        // The current page: its number orange, its name ink on cream.
+        // The current page: its number green, its name ink on cream.
         final current = _row(t, '02  MARKDOWN');
         expect(
           t.screen.styleAt(4, current),
@@ -131,7 +131,7 @@ void main() {
     expect(t.screen, isNot(shows('→  ]')));
   });
 
-  testWidgets('the pager names its neighbours in orange, and a tap opens '
+  testWidgets('the pager names its neighbours in green, and a tap opens '
       'one', (t) async {
     final host = await _open(t, '/chord_tui/markdown', const Size(120, 40));
     await t.press('end');

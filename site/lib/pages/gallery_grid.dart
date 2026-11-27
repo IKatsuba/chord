@@ -158,7 +158,7 @@ class _GalleryPageState extends State<GalleryPage> {
   );
 }
 
-/// One example's cell: an orange numeral, the caps name over a rule, the
+/// One example's cell: a green numeral, the caps name over a rule, the
 /// still preview on raised, and what it shows.
 class _Cell extends StatelessWidget {
   const _Cell({
@@ -180,7 +180,7 @@ class _Cell extends StatelessWidget {
     final theme = Theme.of(context);
     final raised =
         (theme.extension<SitePalette>() ?? const SitePalette()).raised;
-    final orange = theme.accent.merge(Style.bold);
+    final accent = theme.accent.merge(Style.bold);
     return Listener(
       behavior: HitTestBehavior.opaque,
       onPointerDown: (event) {
@@ -202,7 +202,7 @@ class _Cell extends StatelessWidget {
               children: [
                 Text(
                   entry.title.toUpperCase(),
-                  // Selected: ink on orange.
+                  // Selected: ink on green.
                   style: selected
                       ? theme.accent.merge(
                           const Style(bold: true, inverse: true),
@@ -211,7 +211,7 @@ class _Cell extends StatelessWidget {
                   softWrap: false,
                 ),
                 const Spacer(),
-                if (selected) Text('⏎ RUN', style: orange, softWrap: false),
+                if (selected) Text('⏎ RUN', style: accent, softWrap: false),
               ],
             ),
             Text(

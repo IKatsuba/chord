@@ -118,9 +118,9 @@ class _InstallPageState extends State<InstallPage> {
       );
       final theme = Theme.of(context);
       final palette = theme.extension<SitePalette>() ?? const SitePalette();
-      final orange = theme.accent.merge(Style.bold);
+      final accent = theme.accent.merge(Style.bold);
       final copy = _copied
-          ? Text('COPIED', style: orange, softWrap: false)
+          ? Text('COPIED', style: accent, softWrap: false)
           : Text.rich(
               TextSpan(
                 '',
@@ -195,7 +195,7 @@ class _InstallPageState extends State<InstallPage> {
             ),
             const SizedBox(height: 2),
           ],
-          Text('THEN / OPEN A SESSION', style: orange),
+          Text('THEN / OPEN A SESSION', style: accent),
           Box(
             background: palette.raised,
             padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
@@ -232,8 +232,8 @@ class _InstallPageState extends State<InstallPage> {
     },
   );
 
-  /// One way in: its orange numeral, the caps name over a rule (ink on
-  /// orange, with the copy hint, when selected), the command and the note.
+  /// One way in: its green numeral, the caps name over a rule (ink on
+  /// green, with the copy hint, when selected), the command and the note.
   Widget _cell(ThemeData theme, int i, int width, Widget copy) {
     final way = installWays[i];
     final selected = i == _selected;

@@ -132,7 +132,7 @@ class _RecordingPageState extends State<RecordingPage> {
     final theme = Theme.of(context);
     final narrow = widget.cols < narrowWidth;
     final margin = narrow ? 2 : 4;
-    final orange = theme.accent.merge(Style.bold);
+    final accent = theme.accent.merge(Style.bold);
     final name = widget.name.toUpperCase();
     if (controller == null) {
       return Padding(
@@ -167,7 +167,7 @@ class _RecordingPageState extends State<RecordingPage> {
               children: [
                 Text(
                   narrow ? '01 / $name' : '01 / THE APP / $name',
-                  style: orange,
+                  style: accent,
                   softWrap: false,
                 ),
                 const Spacer(),
@@ -216,7 +216,7 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 }
 
-/// C's bar under a recording: an orange cell for the state, the time, and
+/// C's bar under a recording: a green cell for the state, the time, and
 /// the step's label in muted caps.
 Widget recordingBar(ThemeData theme, PlaybackValue value) {
   final cell = theme.accent.merge(const Style(bold: true, inverse: true));

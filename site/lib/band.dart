@@ -1,6 +1,6 @@
 import 'package:chord_tui/chord_tui.dart';
 
-/// An orange band edge to edge: 3 rows, [slogans] in ink bold on orange on
+/// A green band edge to edge: 3 rows, [slogans] in ink bold on green on
 /// the middle one, 2 columns in, repeated to [width] and clipped there.
 class Band extends StatelessWidget {
   /// [slogans] across [width] columns.

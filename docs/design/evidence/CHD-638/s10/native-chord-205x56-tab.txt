@@ -1,0 +1,56 @@
+
+  CHORD / CHORD_TUI                                                                                                                 01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                                                                                                                            ┃
+    01 / THE APP                                                                                                                                                                                            ┃
+                                                                                                                                                                                                            ┃
+        ████████████        ████████████████        ████████████████                                                                                                                                        ┃
+        ████████████        ████████████████        ████████████████                                                                                                                                        ┃
+    ████            ████    ████            ████    ████            ████                                                                                                                                    ┃
+    ████            ████    ████            ████    ████            ████                                                                                                                                    ┃
+    ████            ████    ████            ████    ████            ████                                                                                                                                    ┃
+    ████            ████    ████            ████    ████            ████                                                                                                                                    ┃
+    ████████████████████    ████████████████        ████████████████                                                                                                                                        ┃
+    ████████████████████    ████████████████        ████████████████                                                                                                                                        ┃
+    ████            ████    ████                    ████                                                                                                                                                    ┃
+    ████            ████    ████                    ████                                                                                                                                                    ┃
+    ████            ████    ████                    ████                    ████████                                                                                                                        ┃
+    ████            ████    ████                    ████                    ████████                                                                                                                        ┃
+    ████            ████    ████                    ████                    ████████                                                                                                                        ┃
+    ████            ████    ████                    ████                    ████████                                                                                                                        ┃
+                                                                                                                                                                                                            ┃
+    One window, every agent you run, every action on a key. These are chord's own screens,                                                                                                                  ┃
+    running live in this page with no agent behind them; whole sessions further down are                                                                                                                    ┃
+    recordings.                                                                                                                                                                                             ┃
+
+
+  LIVE  ✦  NO AGENT BEHIND IT  ✦  TYPE, ANSWER, APPROVE  ✦  LIVE  ✦  NO AGENT BEHIND IT  ✦  TYPE, ANSWER, APPROVE  ✦  LIVE  ✦  NO AGENT BEHIND IT  ✦  TYPE, ANSWER, APPROVE  ✦  LIVE  ✦  NO AGENT BEHIND IT
+
+
+
+    01  THE PROMPT
+    ────────────────────────────────────────                                                                          FIG. 01 LIVE · PRESS P                                                  ⏎ ENTER
+    Write, edit, send. Multiline editing, history on the arrows, files with @ and commands with /.
+
+    → TRY IT  P                                                                                                       ╭──────────────────────────────────────────────────────────────────────────────╮
+                                                                                                                      │ ›                                                                            │
+                                                                                                                      ╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+
+    02  PERMISSIONS
+    ────────────────────────────────────────                                                                          FIG. 02 LIVE · PRESS A
+    Asked first, every time: the diff or the command in front of you. Allow once, always, or deny.
+
+    → TRY IT  A                                                                                                       ╭──────────────────────────────────────────────────────────────────────────────╮
+                                                                                                                      │ Write notes.txt                                             ↓ 13 lines below │
+                                                                                                                      │                                                                              │
+                                                                                                                      │                                                                              │
+                                                                                                                      │ Do you want to proceed?                                                      │
+                                                                                                                      │   1. Allow once                                                              │
+                                                                                                                      │   2. Always allow                                                            │
+                                                                                                                      │   3. Deny                                                                    │
+                                                                                                                      │                                                                              │
+                                                                                                                      │ Esc to reject                                                                │
+ p/a/l/s try  tab next  up/down scroll  escape up  ? keys

@@ -1,3 +1,5 @@
+import 'package:meta/meta.dart';
+
 import '../foundation/geometry.dart';
 import '../rendering/basic.dart';
 import '../rendering/box.dart';
@@ -43,6 +45,12 @@ class EditorCursor extends SingleChildRenderObjectWidget {
   }
 }
 
+/// Where the editor cursor [box] draws is, inside it; null when [box] draws
+/// none.
+@internal
+Offset? editorCursorIn(RenderBox box) =>
+    box is _RenderEditorCursor && box.enabled ? box.cursorAt : null;
+
 class _RenderEditorCursor extends RenderProxyBox {
   @override
   PaintCoverage describePaintCoverage(Rect localClip) =>
@@ -60,10 +68,8 @@ class _RenderEditorCursor extends RenderProxyBox {
   Offset? position;
   int? sourceOffset;
 
-  @override
-  void paint(Canvas canvas, Offset origin) {
-    super.paint(canvas, origin);
-    if (!enabled || size.width == 0 || size.height == 0) return;
+  /// Where the cursor is drawn inside this box; null with none.
+  Offset? get cursorAt {
     var at = position;
     final paragraph = child;
     if (sourceOffset != null && paragraph is RenderParagraph) {
@@ -79,6 +85,14 @@ class _RenderEditorCursor extends RenderProxyBox {
         }
       }
     }
+    return at;
+  }
+
+  @override
+  void paint(Canvas canvas, Offset origin) {
+    super.paint(canvas, origin);
+    if (!enabled || size.width == 0 || size.height == 0) return;
+    final at = cursorAt;
     if (at == null) return;
     canvas
         .clipped(Rect.fromOffsetSize(origin, size))

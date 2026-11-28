@@ -1,0 +1,40 @@
+ESC[48;2;22;23;29m
+  ESC[38;2;71;231;165m◆ ESC[1mESC[39mchordESC[0mESC[48;2;22;23;29m    ESC[2m1 ESC[0mESC[48;2;22;23;29mchord   ESC[2m2 ESC[0;1;4mESC[38;2;71;231;165mESC[48;2;22;23;29mchord_tuiESC[0mESC[48;2;22;23;29m   ESC[2m3 ESC[0mESC[48;2;22;23;29mGallery   ESC[2m4 ESC[0mESC[48;2;22;23;29mInstall                                            ESC[4mESC[38;2;140;200;255mGitHub ↗ESC[0;2mESC[48;2;22;23;29m gESC[0mESC[48;2;22;23;29m   ESC[2mdevESC[0mESC[48;2;22;23;29m
+
+ESC[38;5;244mESC[49m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ESC[39m ESC[2mMarkdown, and a streamed reply · esc back to the galleryESC[0m
+ ESC[38;5;244m┌ESC[2mESC[39m example/markdown.dart ESC[0mESC[38;5;244m─────────────────────────────────────────────────────────────────────────────────────────────┐ESC[39m
+ ESC[38;5;244m│ESC[38;2;71;231;165m Markdown  dark, 100%ESC[39m                                                                                               ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[1;4mESC[39mTerminal cellsESC[0m                                                                                                      ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39mA paragraph with ESC[3memphasisESC[0m, ESC[1mstrongESC[0m, ESC[9mstruckESC[0m, ESC[38;2;177;185;249minline codeESC[39m, a ESC[4mESC[38;2;140;200;255mlinkESC[0;2m (https://example.com)ESC[0m, ESC[4mESC[38;2;140;200;255mhttps://auto.exampleESC[0m and 日本 ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m語 that wraps in the width it receives, then continues at the same left edge. After a hard break.                   ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[1mESC[39mListsESC[0m                                                                                                               ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m- ESC[0mA first item                                                                                                      ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m- ESC[0mA second item that is long enough to wrap, so its text hangs under its own first word and not under the marker    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m  - ESC[0mA nested item                                                                                                   ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m[x] ESC[0mA done task                                                                                                     ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m[ ] ESC[0mAn open task                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m3. ESC[0mthree                                                                                                            ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m4. ESC[0mfour                                                                                                             ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m- ESC[0mloose one                                                                                                         ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m- ESC[0mloose two                                                                                                         ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m│ ESC[3mA quoted paragraph that is long enough to wrap, keeping its bar on every row it takes.ESC[0m                            ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[2mESC[39m│ │ ESC[3mA nested quote.ESC[0m                                                                                                 ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│┌─ dart ──────────────────────────────────────────────────────────────────────────────────────────────────┐ESC[39m         ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m││ESC[39m ESC[38;2;215;166;255mvoidESC[39m main() {                                                                                           ESC[38;5;244m│ESC[39m         ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m││ESC[39m   ESC[38;2;127;224;232mprintESC[39m(ESC[38;2;242;211;138m'A long message about terminal cells, 日本語, and keeping every grapheme together on screen.'ESC[39m); ESC[38;5;244m│ESC[39m         ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m││ESC[39m }                                                                                                       ESC[38;5;244m│ESC[39m         ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│└─────────────────────────────────────────────────────────────────────────────────────────────────────────┘ESC[39m         ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│┌────────────┐ESC[39m                                                                                                      ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m│ESC[39m                                                                                                                    ESC[38;5;244m│ESC[39m
+ ESC[38;5;244m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ESC[39m
+ESC[48;2;22;23;29m ESC[1mescapeESC[0;2mESC[48;2;22;23;29m upESC[0mESC[48;2;22;23;29m  ESC[1mctrl+qESC[0;2mESC[48;2;22;23;29m homeESC[0mESC[48;2;22;23;29m  ESC[1mf1ESC[0;2mESC[48;2;22;23;29m keysESC[0mESC[48;2;22;23;29m

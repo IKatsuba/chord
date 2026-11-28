@@ -1,6 +1,6 @@
-// The CI workflow (CTUI-146, CTUI-190): its jobs, their needs and runners, the
-// aggregate check's conditions, what each runs, and that every test file of
-// both packages is in exactly one of its shards.
+// The CI workflow (CTUI-146, CTUI-190, CHD-638): its jobs, their needs and
+// runners, the aggregate check's conditions, what each runs, and that every
+// test file of both packages is in exactly one of its shards.
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -56,13 +56,14 @@ void main() {
     });
   });
 
-  test('has its seven jobs, every one on ubuntu-latest', () {
+  test('has its eight jobs, every one on ubuntu-latest', () {
     expect(jobs.keys, [
       'static',
       'tests',
       'compile',
       'node',
       'release',
+      'site',
       'cursor-cloud-acp',
       'check',
     ]);
@@ -73,7 +74,14 @@ void main() {
 
   test('checks out without credentials and sets up the pinned SDK in every '
       'job that builds', () {
-    for (final job in ['static', 'tests', 'compile', 'node', 'release']) {
+    for (final job in [
+      'static',
+      'tests',
+      'compile',
+      'node',
+      'release',
+      'site',
+    ]) {
       final checkout = steps(job).first;
       expect(checkout['uses'], 'actions/checkout@v5', reason: job);
       expect((checkout['with'] as YamlMap)['persist-credentials'], isFalse);
@@ -88,6 +96,7 @@ void main() {
     expect(runs('static'), [
       'dart pub get @ packages/chord_tui',
       'dart pub get',
+      'dart pub get @ site',
       'dart analyze',
       'dart analyze @ packages/chord_tui',
       'dart format --output=none --set-exit-if-changed .',
@@ -130,7 +139,12 @@ void main() {
     });
   }
 
-  test("compile installs expect and runs both packages' compile tags", () {
+  test("compile installs expect and Node 22.13 and runs both packages' "
+      'compile tags', () {
+    final node = steps(
+      'compile',
+    ).firstWhere((step) => step['uses'] == 'actions/setup-node@v4');
+    expect((node['with'] as YamlMap)['node-version'], '22.13');
     expect(runs('compile'), [
       'sudo apt-get update && sudo apt-get install -y expect',
       'dart pub get @ packages/chord_tui',
@@ -164,6 +178,29 @@ void main() {
     },
   );
 
+  test("site checks, tests and builds the site, then runs its and the "
+      "framework's browser tags in the runner's Chrome", () {
+    expect((jobs['site'] as YamlMap)['env'], {
+      'CHROME': '/usr/bin/google-chrome',
+    });
+    expect(runs('site'), [
+      'dart pub get @ packages/chord_tui',
+      'dart pub get @ site',
+      'dart analyze @ site',
+      'dart format --output=none --set-exit-if-changed . @ site',
+      'dart test @ site',
+      'dart run tool/build.dart build @ site',
+      'dart test -t compile --run-skipped @ site',
+      'sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0',
+      'dart test -t browser --run-skipped @ site',
+      'dart test -t browser --run-skipped @ packages/chord_tui',
+    ]);
+    // Chrome keeps its sandbox: no test is told to drop it.
+    expect(text, isNot(contains('no-sandbox')));
+    // No size is measured or checked: the site has no budget.
+    expect(runs('site').join('\n'), isNot(contains(RegExp('size|budget'))));
+  });
+
   test('cursor-cloud-acp checks out without credentials, sets up Bun 1.4.4 '
       'and Node 22.13, and runs its quality and the tooling tests', () {
     final checkout = steps('cursor-cloud-acp').first;
@@ -190,6 +227,7 @@ void main() {
       'compile',
       'node',
       'release',
+      'site',
       'cursor-cloud-acp',
     ];
     final check = jobs['check'] as YamlMap;

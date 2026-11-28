@@ -1,0 +1,33 @@
+48x32, 94 frames; last frame:
+|   └───────────┴───────────┴────────────┘       |
+|                                                |
+|   ┌─ ts ──────────────────────────────[copy]─┐ |
+|   │ const session = await openSession({ agen │ |
+|   │ t: 'claude', cwd });                     │ |
+|   │ const turn = session.prompt('hello');    │ |
+|   │ await turn.result;                       │ |
+|   └──────────────────────────────────────────┘ |
+|                                                |
+|   That is the whole loop. To land a change:    |
+|                                                |
+|   1. Run the checks:                           |
+|      ┌─ sh ─[copy]─[run]─┐                     |
+|      │ bun quality       │                     |
+|      └───────────────────┘                     |
+|   2. Commit on main once every check has       |
+|      passed and the tree is clean, so whoever  |
+|      picks the work up next starts from a      |
+|      build that runs.                          |
+|                                                |
+|   Then build the binary with:                  |
+|                                                |
+|   ┌─ sh ────────────────────────[copy]─[run]─┐ |
+|   │ bun dev compile --all                    │ |
+|   │ for bin in dist/*/chord; do echo "built  │ |
+|   │ $bin"; done                              │ |
+|   └──────────────────────────────────────────┘ |
+|                                                |
+|╭──────────────────────────────────────────────╮|
+|│ ›                                            │|
+|╰──────────────────────────────────────────────╯|
+|  ? for shortcuts   Claude Opus 5.5 · ~1% used  |

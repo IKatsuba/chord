@@ -1,0 +1,10 @@
+~/project $ dart test
+00:02 +48: test/widgets_test.dart: layout
+
+
+
+
+
+⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄
+▶ 0:02 / 0:06 · step 2 of 3 · started the tests
+space Play or pause  right/l Next step  left/h Previous step  r Restart  shift+down/shift+up Pan  c…

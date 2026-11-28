@@ -1,0 +1,40 @@
+ chord › chord_tui › markdown                                                           github.com/IKatsuba/chord   dev
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Markdown, and a streamed reply · esc back to the gallery
+ ┌ example/markdown.dart ─────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ Markdown  dark, 100%                                                                                               │
+ │Terminal cells                                                                                                      │
+ │                                                                                                                    │
+ │A paragraph with emphasis, strong, struck, inline code, a link (https://example.com), https://auto.example and 日本 │
+ │語 that wraps in the width it receives, then continues at the same left edge. After a hard break.                   │
+ │                                                                                                                    │
+ │Lists                                                                                                               │
+ │                                                                                                                    │
+ │- A first item                                                                                                      │
+ │- A second item that is long enough to wrap, so its text hangs under its own first word and not under the marker    │
+ │  - A nested item                                                                                                   │
+ │[x] A done task                                                                                                     │
+ │[ ] An open task                                                                                                    │
+ │                                                                                                                    │
+ │3. three                                                                                                            │
+ │4. four                                                                                                             │
+ │ctrl+s Stream again  ctrl+t Theme  pageup Scroll up a page  pagedown Scroll down a page  up/shift+up Scroll up a li…│
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ Keys
+   ctrl+s           Stream again
+   ctrl+t           Theme
+   pageup           Scroll up a page
+   pagedown         Scroll down a page
+   up/shift+up      Scroll up a line
+   down/shift+down  Scroll down a line
+   home             Scroll to the top
+   end              Scroll to the bottom
+   escape           close
+   ctrl+q/ctrl+c    home
+   ?                keys
+   g                open GitHub
+   f2               back
+   f3               forward
+   ctrl+x           leave
+ escape close  ctrl+q home  ? keys

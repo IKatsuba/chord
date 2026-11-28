@@ -1,0 +1,52 @@
+
+  CHORD / CHORD_TUI                         MENU m
+
+────────────────────────────────────────────────────
+  Home › Install                                   ┃
+                                                   ┃
+  INSTALL                                          ┃
+  Three ways in.                                   ┃
+                                                   ┃
+  chord is one native binary for macOS and Linux,  ┃
+  arm64 and x64. Pick a way; c copies its          ┃
+  command.                                         ┃
+                                                   ┃
+  ╭─────────────────────────────────────────────╮  ┃
+  │                                             │  ┃
+  │  Homebrew                           copy c  │  ┃
+  │                                             │  ┃
+  │  $ brew install ikatsuba/tap/chord          │  ┃
+  │                                             │  ┃
+  │  macOS and Linux. brew upgrade keeps it     │  ┃
+  │  current.                                   │  ┃
+  │                                             │  ┃
+  ╰─────────────────────────────────────────────╯  ┃
+                                                   ┃
+  ╭─────────────────────────────────────────────╮  ┃
+  │                                             │  ┃
+  │  npm                                        │  ┃
+  │                                             │  ┃
+  │  $ npm i -g @chorded/chord                  │  ┃
+  │                                             │  ┃
+  │  Any machine with Node; the right binary    │  ┃
+  │  is picked for you.                         │  ┃
+  │                                             │  ┃
+  ╰─────────────────────────────────────────────╯  ┃
+                                                   ┃
+  ╭─────────────────────────────────────────────╮  ┃
+  │                                             │  ┃
+  │  From source                                │  ┃
+  │                                             │  ┃
+  │  $ dart compile exe bin/chord.dart          │  ┃
+  │                                             │  ┃
+  │  Dart 3.12 or later, from a checkout of     │  ┃
+  │  the repository.                            │  ┃
+  │                                             │  ┃
+  ╰─────────────────────────────────────────────╯  ┃
+                                                   ┃
+  THEN                                             ┃
+
+    shell
+
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ escape up  ? keys

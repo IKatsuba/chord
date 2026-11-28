@@ -1,7 +1,7 @@
 # The port's CI, modelled on the original's ci.yml, on ubuntu-latest alone
 # (Q380): the static checks, both suites in three shards, the compile tags,
-# the npm shim's node test, the release's Linux targets compiled, and
-# packages/cursor-cloud-acp's TypeScript checks on Bun. It
+# the npm shim's node test, the release's Linux targets compiled, the site,
+# and packages/cursor-cloud-acp's TypeScript checks on Bun. It
 # reads the repository and nothing else: no secret, no signing, no upload,
 # no release. darwin is built by the owner's local release.
 name: ci
@@ -27,6 +27,9 @@ jobs:
       - run: dart pub get
         working-directory: packages/chord_tui
       - run: dart pub get
+      # The root's analysis reaches site/, which resolves its own packages.
+      - run: dart pub get
+        working-directory: site
       - run: dart analyze
       - run: dart analyze
         working-directory: packages/chord_tui
@@ -66,7 +69,8 @@ jobs:
           --shard=${{ matrix.shard }}/3
           | (cd packages/chord_tui && xargs dart test)
 
-  # The compile tags of both packages, their pty cases driven by expect.
+  # The compile tags of both packages, their pty cases driven by expect,
+  # and the framework's Wasm build run under Node.
   compile:
     runs-on: ubuntu-latest
     steps:
@@ -76,6 +80,9 @@ jobs:
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: 3.13.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
       - run: sudo apt-get update && sudo apt-get install -y expect
       - run: dart pub get
         working-directory: packages/chord_tui
@@ -119,6 +126,43 @@ jobs:
       - run: dart run tool/ci.dart linux-x64
       - run: dart run tool/ci.dart linux-arm64
 
+  # The site: its static checks and VM tests, a build at the root base, its
+  # build and browser tags, and the framework's web terminal, in the
+  # runner's own Chrome.
+  site:
+    runs-on: ubuntu-latest
+    env:
+      CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.5
+      - run: dart pub get
+        working-directory: packages/chord_tui
+      - run: dart pub get
+        working-directory: site
+      - run: dart analyze
+        working-directory: site
+      - run: dart format --output=none --set-exit-if-changed .
+        working-directory: site
+      - run: dart test
+        working-directory: site
+      - run: dart run tool/build.dart build
+        working-directory: site
+      - run: dart test -t compile --run-skipped
+        working-directory: site
+      # Chrome keeps its sandbox: Ubuntu 23.10 and later refuse it the
+      # unprivileged user namespaces it needs unless this is lifted, as
+      # puppeteer's troubleshooting guide says.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: dart test -t browser --run-skipped
+        working-directory: site
+      - run: dart test -t browser --run-skipped
+        working-directory: packages/chord_tui
+
   # packages/cursor-cloud-acp, still TypeScript and on npm: its quality
   # checks, then the tests of the root tooling its release runs on.
   cursor-cloud-acp:
@@ -139,9 +183,9 @@ jobs:
 
   # The check branch protection requires by name: it passes only when the
   # static checks, every shard, the compile tags, the node test, the
-  # release's targets and cursor-cloud-acp's job did.
+  # release's targets, the site and cursor-cloud-acp's job did.
   check:
-    needs: [static, tests, compile, node, release, cursor-cloud-acp]
+    needs: [static, tests, compile, node, release, site, cursor-cloud-acp]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -151,4 +195,5 @@ jobs:
           test '${{ needs.compile.result }}' = success
           test '${{ needs.node.result }}' = success
           test '${{ needs.release.result }}' = success
+          test '${{ needs.site.result }}' = success
           test '${{ needs.cursor-cloud-acp.result }}' = success

@@ -16,6 +16,25 @@ class NoFocusRequests extends InheritedWidget {
   bool updateShouldNotify(NoFocusRequests oldWidget) => false;
 }
 
+/// The element of the [Focus] that holds [node], at or under [root]; null
+/// when it is elsewhere, for a scroll view to bring its focus into sight.
+@internal
+Element? focusElementFor(Element root, FocusNode node) {
+  Element? found;
+  void visit(Element e) {
+    if (found != null) return;
+    final w = e.widget;
+    if (w is _FocusMarker && identical(w.node, node)) {
+      found = e;
+      return;
+    }
+    e.visitChildren(visit);
+  }
+
+  visit(root);
+  return found;
+}
+
 class _FocusMarker extends InheritedWidget {
   const _FocusMarker({required this.node, required super.child});
 
@@ -330,8 +349,58 @@ class Actions extends StatefulWidget {
   /// [FocusNode.ignoreLayoutReadings]: an editing widget's own keys.
   final bool ignoreLayoutReadings;
 
+  /// The binding with [id] in the nearest [Actions] above [context] that
+  /// holds one, with the [Keymap] above that [Actions] applied, so its
+  /// [Binding.chord] is the key that works now; null when none holds it.
+  /// [context] rebuilds when it changes.
+  static Binding? maybeBindingOf(BuildContext context, String id) =>
+      context.dependOnInheritedWidgetOfExactType<_ActionsScope>()?.bound[id];
+
   @override
   State<Actions> createState() => _ActionsState();
+}
+
+/// Whether an [Actions] above [context] declares a binding with [id],
+/// though its [Keymap] may have taken every key from it.
+@internal
+bool actionDeclared(BuildContext context, String id) =>
+    context
+        .dependOnInheritedWidgetOfExactType<_ActionsScope>()
+        ?.declared
+        .contains(id) ??
+    false;
+
+/// The bindings of every [Actions] from here up, by id, the nearest first.
+class _ActionsScope extends InheritedWidget {
+  const _ActionsScope({
+    required this.bound,
+    required this.declared,
+    required super.child,
+  });
+
+  final Map<String, Binding> bound;
+  final Set<String> declared;
+
+  @override
+  bool updateShouldNotify(_ActionsScope oldWidget) =>
+      !_sameBindings(bound, oldWidget.bound) ||
+      declared.length != oldWidget.declared.length ||
+      !declared.containsAll(oldWidget.declared);
+}
+
+bool _sameBindings(Map<String, Binding> a, Map<String, Binding> b) {
+  if (a.length != b.length) return false;
+  for (final MapEntry(:key, :value) in a.entries) {
+    final other = b[key];
+    if (other == null ||
+        other.chord != value.chord ||
+        other.enabled != value.enabled ||
+        other.description != value.description ||
+        !identical(other.onInvoke, value.onInvoke)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 class _ActionsState extends State<Actions> {
@@ -341,6 +410,8 @@ class _ActionsState extends State<Actions> {
   );
 
   KeymapData _keymap = const KeymapData();
+  List<Binding> _bound = const [];
+  _ActionsScope? _above;
 
   /// Where a focused node's detach waits for the frame's layout.
   BuildOwner? _owner;
@@ -356,6 +427,7 @@ class _ActionsState extends State<Actions> {
     _owner = context.owner;
     _node.attach(_parentNode(context));
     _holders[_node] = this;
+    _above = context.dependOnInheritedWidgetOfExactType<_ActionsScope>();
     final keymap = Keymap.of(context);
     if (keymap != _keymap) {
       _keymap = keymap;
@@ -374,6 +446,7 @@ class _ActionsState extends State<Actions> {
   void _register() {
     final bindings = _keymap.apply(widget.bindings).bindings;
     checkBindings(bindings);
+    _bound = bindings;
     _node
       ..bindings = bindings
       ..ignoreLayoutReadings = widget.ignoreLayoutReadings;
@@ -386,8 +459,21 @@ class _ActionsState extends State<Actions> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      _FocusMarker(node: _node, child: widget.child);
+  Widget build(BuildContext context) {
+    final above = _above;
+    final own = {for (final b in widget.bindings) ?b.id};
+    return _ActionsScope(
+      // An id this Actions declares is its own even when the keymap took
+      // every key from it: an outer binding of that id does not show through.
+      bound: {
+        for (final MapEntry(:key, :value) in (above?.bound ?? const {}).entries)
+          if (!own.contains(key)) key: value,
+        for (final b in _bound.reversed) ?b.id: b,
+      },
+      declared: {...?above?.declared, ...own},
+      child: _FocusMarker(node: _node, child: widget.child),
+    );
+  }
 }
 
 /// Shorthand: the key this event would match in a binding.

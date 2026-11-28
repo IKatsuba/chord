@@ -1,0 +1,52 @@
+
+  CHORD / CHORD_TUI                            MENU m
+
+───────────────────────────────────────────────────────
+
+  02 / MARKDOWN                             PAGES ▾ p
+──────────────────────────────────────────────────────
+                                                      ┃
+                                                      ┃
+  02 / FRAMEWORK / GALLERY                            ┃
+                                                      ┃
+  MARKDOWN                                            ┃
+  ━━━━━━━━                                            ┃
+                                                      ┃
+  A reply with every block Markdown draws, streamed   ┃
+  in chunk by chunk: headings, lists, quotes, code,
+  tables and links, wrapped to the width they get.
+
+
+  01  THE EXAMPLE
+  ──────────────────────────────────────────────────
+
+
+    FIG. 1 EXAMPLE/MARKDOWN.DART · TAB TO ENTER
+
+     Markdown  dark, 100%
+    Terminal cells
+
+    A paragraph with emphasis, strong, struck,
+    inline code, a link (https://example.com),
+    https://auto.example and 日本語 that wraps in
+    the width it receives, then continues at the
+    same left edge. After a hard break.
+
+    Lists
+
+    - A first item
+    - A second item that is long enough to wrap,
+      so its text hangs under its own first word
+      and not under the marker
+      - A nested item
+    [x] A done task
+    [ ] An open task
+
+
+
+
+
+  02  KEYS
+  ──────────────────────────────────────────────────
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ escape up  ? keys

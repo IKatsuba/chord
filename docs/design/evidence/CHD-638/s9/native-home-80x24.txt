@@ -1,0 +1,24 @@
+
+  CHORD / CHORD_TUI                                                     MENU m
+
+────────────────────────────────────────────────────────────────────────────────
+                                                                               ┃
+                                                                               ┃
+      ████████  ██      ██    ██████    ████████    ████████                   ┃
+    ██          ██      ██  ██      ██  ██      ██  ██      ██                 ┃
+    ██          ██      ██  ██      ██  ██      ██  ██      ██
+    ██          ██████████  ██      ██  ████████    ██      ██
+    ██          ██      ██  ██      ██  ██  ██      ██      ██
+    ██          ██      ██  ██      ██  ██    ██    ██      ██  ████
+      ████████  ██      ██    ██████    ██      ██  ████████    ████
+
+    A TERMINAL WINDOW
+    FOR CODING AGENTS.
+
+    Claude, Codex, Gemini and Cursor side by side, every action on a key.
+    And the Dart framework that draws it, and draws this page, cell by
+    cell.
+
+     INSTALL  i     WATCH IT RUN  w
+
+ i install  w watch  1–4 go  up/down scroll  ? keys  m menu

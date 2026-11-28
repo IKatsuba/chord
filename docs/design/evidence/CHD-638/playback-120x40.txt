@@ -1,0 +1,40 @@
+~/project $ dart test
+00:01 +12: loading test/widgets_test.dart
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+▶ 0:02 / 0:06 · step 2 of 3 · started the tests
+space Play or pause  right/l Next step  left/h Previous step  r Restart  ctrl+q Quit

@@ -1,0 +1,24 @@
+ chord › chord_tui › text_area                                              dev
+ github.com/IKatsuba/chord
+────────────────────────────────────────────────────────────────────────────────
+ Keys
+   escape                                   close
+   ctrl+q/ctrl+c                            home
+   f1                                       keys
+   g                                        open GitHub
+   f2                                       back
+   f3                                       forward
+   ctrl+x                                   leave
+   enter                                    Submit
+   shift+enter/alt+enter/ctrl+enter/ctrl+j  Insert newline
+   left/ctrl+b                              Move cursor left
+   right/ctrl+f                             Move cursor right
+   alt+b/alt+left/ctrl+left                 Move cursor back a word
+   alt+f/alt+right/ctrl+right               Move cursor forward a word
+   backspace/shift+backspace                Delete character before cursor
+   delete/ctrl+d/shift+delete               Delete character after cursor
+   ctrl+w/alt+backspace/ctrl+backspace      Delete word before cursor
+   alt+d/alt+delete/ctrl+delete             Delete word after cursor
+   ctrl+u                                   Delete to line start
+   ↓ +21 more
+ escape close  f1 close  ctrl+q home  up/down scroll

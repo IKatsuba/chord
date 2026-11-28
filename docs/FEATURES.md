@@ -98,3 +98,4 @@ the tester.
 | --------------------------------------------- | --------- | ----- |
 | Pre-swap preparation (CTUI-191) (done)         | app and tools | Adapted guide and developer docs, independent tests, fake screenshots and shared version |
 | Repository swap (CTUI-190) (planned)           | repository | Land the prepared Dart app and retained adapter in IKatsuba/chord; keep TypeScript history at `ts-final` |
+| Terminal website (CHD-638) (done)             | framework and site | Wasm poster site, live chord screens, framework articles and examples, three recording sizes |

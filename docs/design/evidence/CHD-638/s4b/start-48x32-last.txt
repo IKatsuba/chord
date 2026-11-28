@@ -1,0 +1,33 @@
+48x32, 1 frames; last frame:
+|            ▀▄                                  |
+|            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄           |
+|            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀           |
+|            ▀▀                                  |
+|              v0.72.2 · ~/src/app               |
+|                                                |
+|  Select agent                                  |
+|                                                |
+|      1.  agoragentic-acp · Agoragentic         |
+|      2.  auggie · Auggie CLI                   |
+|      3.  bob · Bob                             |
+|  ❯   4.  claude · Claude Agent                 |
+|      5.  cline · Cline                         |
+|      6.  codebuddy-code · Codebuddy Code       |
+|      7.  codex · Codex                         |
+|      8.  cursor-cloud · Cursor Cloud Agents    |
+|      9.  deepagents · DeepAgents               |
+|      10. dimcode · DimCode                     |
+|      11. dirac · Dirac                         |
+|      12. factory-droid · Factory Droid         |
+|      13. fast-agent                            |
+|      14. gemini · Gemini CLI                   |
+|      15. github-copilot-cli · GitHub Copilot   |
+|      16. glm-acp-agent · GLM Agent             |
+|      17. grok-build · Grok Build               |
+|      18. kilo · Kilo                           |
+|    ↓ 19. kimi · Kimi Code                      |
+|      … +7 more                                 |
+|                                                |
+|  ↑↓ or j/k to move · Enter or 1–9 to select ·  |
+|  Esc to cancel                                 |
+|                                                |

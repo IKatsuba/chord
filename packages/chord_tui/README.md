@@ -1,8 +1,8 @@
 # chord_tui
 
-The Flutter way, for the terminal: a Dart framework for rich terminal interfaces, compiled to one native binary.
+The Flutter way, for the terminal: a Dart framework for rich terminal interfaces, compiled to a native binary or WebAssembly.
 
-Widgets, state, layout in cells, rich text and keyboard actions, with a headless tester. Written from scratch, with no dependency on another terminal UI framework. Supports macOS and Linux.
+Widgets, state, layout in cells, rich text and keyboard actions, with a headless tester. Written from scratch, with no dependency on another terminal UI framework. Supports macOS, Linux and browsers.
 
 ## Install
 
@@ -55,10 +55,10 @@ Ctrl+O opens or closes the fold; Ctrl+Q quits. The same app is in [example/main.
 ## What the framework gives
 
 - **Widgets and state:** `StatelessWidget`, `StatefulWidget`, `setState`, `InheritedWidget` and `ErrorBoundary`.
-- **Layout in cells:** flex rows and columns, constraints, stacks, anchored overlays and focus scopes. Focus survives eligible moves within a tree; crossing scopes cancels pending chords.
-- **Text measured in cells:** graphemes, emoji, CJK and ANSI styles, wrapping and truncation without splitting graphemes.
-- **Keys and actions:** bindings, chords, grouped help and runtime rebinding; kitty keyboard support with legacy input.
-- **Rich widgets:** Markdown, highlighted code, numbered diffs, virtualised lists with bottom following, multiline editing with selection and movement by logical lines and displayed rows, fuzzy pickers, folds, tables, dialogs and validated forms.
+- **Layout in cells:** flex rows and columns, constraints, stacks, anchored overlays, focus scopes and scroll views. Focus survives eligible moves within a tree; crossing scopes cancels pending chords.
+- **Text measured in cells:** block-glyph display text, graphemes, emoji, CJK and ANSI styles, wrapping and truncation without splitting graphemes.
+- **Keys and actions:** bindings, chords, grouped help, `KeyHelpBoundary` for embedded widgets and runtime rebinding; kitty keyboard support with legacy input.
+- **Rich widgets:** Markdown, highlighted code, numbered diffs, virtualised lists with bottom following, multiline editing with selection and movement by logical lines and displayed rows, fuzzy pickers, folds, tables, dialogs, buttons, links, scrollbars, validated forms and recorded terminal playback.
 - **Terminal services:** themes, cursors, clipboard copy, external editing, notifications, terminal user variables, system link opening (PowerShell on Windows and supported WSL setups; only failure to start the opener is reported), captured mouse drags and semantic text selection.
 - **Rendering and tests:** changed cells are written per frame; widgets can be rendered and driven without a terminal.
 
@@ -70,6 +70,60 @@ Super/Command+Left/Right and Alt+A/Alt+E move to the displayed row's start/end. 
 
 `Terminal.setUserVariable(name, value)` sets an OSC 1337 user variable; `StdioTerminal` forwards it through tmux. Names must be nonempty and contain only ASCII letters, digits and underscores. `userVariableBytes` builds the sequence with a base64 UTF-8 value; `tmuxPassthrough` wraps bytes for tmux with `allow-passthrough` enabled.
 
+`FilledButton` and `OutlinedButton` take an `action` id from an ancestor `Actions`; `Actions.maybeBindingOf(context, id)` reads its current binding. Buttons show the rebound shortcut; `dense: true` puts it inside a one-row face. `Link` opens a URI or invokes an action. Set `canRequestFocus: false` on buttons and links when their containing list owns focus. `Box` and `DecoratedBox` accept `titleStyle` separately from their border style.
+
+`SingleChildScrollView` scrolls a live widget tree with a `ScrollController`; `Scrollbar` draws its position. `Scrollable.ensureVisible(context)` reveals a descendant, and `Scrollable.rowOf(context)` gives its content row. `scrollsOnWheel` defaults to true on the scroll view and false on `ListView`.
+
+`DisplayText` draws scalable text from a built-in 5x7 block-glyph table. `DisplayText.rich` colours individual runs; `DisplayText.measure` gives the cell dimensions for a `DisplaySize`.
+
+## Browser apps
+
+Import `package:chord_tui/web.dart` for `WebTerminal`. The page supplies `globalThis.chordTerminal`: its current columns and rows, a write function, and callbacks for input and resizing. For wterm (`@wterm/dom`), set up the host before starting the compiled Dart app:
+
+```js
+import { WTerm } from '@wterm/dom';
+
+const listeners = { data: [], resize: [] };
+const term = new WTerm(document.getElementById('terminal'), {
+  autoResize: true,
+  onData: (data) => listeners.data.forEach((f) => f(data)),
+  onResize: (cols, rows) => listeners.resize.forEach((f) => f(cols, rows)),
+});
+await term.init();
+globalThis.chordTerminal = {
+  get cols() { return term.cols; },
+  get rows() { return term.rows; },
+  write: (data) => term.write(data),
+  onData: (f) => listeners.data.push(f),
+  onResize: (f) => listeners.resize.push(f),
+};
+const { compileStreaming } = await import('./main.mjs');
+const app = await (await compileStreaming(fetch('main.wasm'))).instantiate({});
+app.invokeMain();
+term.focus();
+```
+
+Use this as a module script. The page needs a sized `terminal` element, wterm's stylesheet and module imports; [the site's host page](../../site/web/index.html) shows the complete setup. Save the Dart example above as `main.dart`, add `import 'package:chord_tui/web.dart';` and replace its `main` with:
+
+```dart
+final terminal = WebTerminal(mouse: true);
+
+Future<void> main() => runApp(
+  const App(),
+  terminal: terminal,
+  exitProcess: false,
+  handleSignals: false,
+);
+```
+
+Compile with `dart compile wasm main.dart -o main.wasm` and serve the output with the host page. Reuse one `WebTerminal` for the page's lifetime across `runApp` calls. It copies through `navigator.clipboard`, opens links in a new tab and sets the page title. `HostTerminal`, also in `web.dart`, accepts plain Dart write and size callbacks with input and resize streams for other hosts. Neither terminal can suspend for a process or run an external editor. Under Wasm, `runApp` returns on quit and completes with an error on failure.
+
+## Recorded terminals and embedded help
+
+`TerminalRecording` holds a terminal's size and timed `TerminalRecordingFrame` rows with ANSI styles and optional step labels; `TerminalRecording.fromJson` reads version 1 recordings. `PlaybackController` plays, pauses, seeks and steps through them. `Playback` draws the current frame, and `PlaybackBar` shows its time and step. While focused, Space plays or pauses, Left/Right or H/L step, R restarts and Shift+arrows pan a clipped recording. Dispose the controller when finished; [example/playback.dart](example/playback.dart) is a complete app.
+
+Wrap an embedded widget in `KeyHelpBoundary` to keep its `KeyHelp` limited to its own active bindings. Its `taken` set hides bindings whose first key the host captures. The boundary changes help listings only; the host still handles those keys. `ExitScope(onExit: callback, child: widget)` intercepts `exitApp(context)` within an embedded widget.
+
 ## Examples
 
 From this package's folder in the [repository](https://github.com/IKatsuba/chord), run `dart pub get`, then `dart run` with a path below:
@@ -79,6 +133,8 @@ From this package's folder in the [repository](https://github.com/IKatsuba/chord
 - Editing: [text area](example/text_area.dart), [viewport and gutter](example/text_area_viewport.dart), [styled spans](example/text_area_spans.dart) and [key delegation](example/text_area_key_filter.dart).
 - Keys, services and mouse: [key help](example/key_help.dart) (`--rebound`), [terminal services](example/terminal_services.dart) (`--scripted-editor`), [mouse](example/mouse.dart) and [selection](example/selection.dart).
 - Layers and choices: [layers](example/layers.dart), [overlay visibility](example/overlay_visibility.dart) (`--passive`), [picker](example/picker.dart), [picker preview](example/picker_preview.dart), [fold and table](example/fold.dart), [dialog](example/dialog.dart) and [form](example/form.dart) (`--narrow --long-list`).
+- Pages and controls: [scroll view](example/scroll_view.dart), [scrollbar](example/scrollbar.dart), [buttons](example/button.dart), [links](example/link.dart) and [display text](example/display_text.dart).
+- Recorded terminals: [playback](example/playback.dart).
 - Failure recovery: [error boundary](example/error_boundary.dart).
 
 ## Testing

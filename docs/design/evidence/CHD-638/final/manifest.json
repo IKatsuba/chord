@@ -1,0 +1,1212 @@
+{
+  "productionCommit": "0a5323b0ae4953e25789cc00be76dcb7d3bc3889",
+  "testedHead": "ac37dbe913de12969ac4a2d7f261c486b26e7ea7",
+  "captureState": "initial ready frame",
+  "fontSize": "12.5px",
+  "cellWidth": "7px",
+  "rowHeight": "16px",
+  "letterSpacing": "-0.5px",
+  "browserErrors": [],
+  "captures": [
+    {
+      "file": "home-desktop.png",
+      "path": "/",
+      "title": "chord and chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "chord-desktop.png",
+      "path": "/chord",
+      "title": "chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "framework-desktop.png",
+      "path": "/chord_tui",
+      "title": "chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "gallery-desktop.png",
+      "path": "/chord_tui/gallery",
+      "title": "gallery \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "install-desktop.png",
+      "path": "/install",
+      "title": "install \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "not-found-desktop.png",
+      "path": "/final-qa-missing",
+      "title": "not found \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-demo-desktop.png",
+      "path": "/chord_tui/demo",
+      "title": "demo \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-markdown-desktop.png",
+      "path": "/chord_tui/markdown",
+      "title": "markdown \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-picker-desktop.png",
+      "path": "/chord_tui/picker",
+      "title": "picker \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-form-desktop.png",
+      "path": "/chord_tui/form",
+      "title": "form \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-text_area-desktop.png",
+      "path": "/chord_tui/text_area",
+      "title": "text_area \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-diff-desktop.png",
+      "path": "/chord_tui/diff",
+      "title": "diff \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-dialog-desktop.png",
+      "path": "/chord_tui/dialog",
+      "title": "dialog \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-layers-desktop.png",
+      "path": "/chord_tui/layers",
+      "title": "layers \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-mouse-desktop.png",
+      "path": "/chord_tui/mouse",
+      "title": "mouse \u00b7 chord_tui",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-start-desktop.png",
+      "path": "/chord/start",
+      "title": "start \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-team-desktop.png",
+      "path": "/chord/team",
+      "title": "team \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-proposal-desktop.png",
+      "path": "/chord/proposal",
+      "title": "proposal \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-edit-desktop.png",
+      "path": "/chord/edit",
+      "title": "edit \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-permission-desktop.png",
+      "path": "/chord/permission",
+      "title": "permission \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-subagents-desktop.png",
+      "path": "/chord/subagents",
+      "title": "subagents \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-agents-desktop.png",
+      "path": "/chord/agents",
+      "title": "agents \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-resume-desktop.png",
+      "path": "/chord/resume",
+      "title": "resume \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-codeblocks-desktop.png",
+      "path": "/chord/codeblocks",
+      "title": "codeblocks \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-fork-desktop.png",
+      "path": "/chord/fork",
+      "title": "fork \u00b7 chord",
+      "viewport": [
+        1440,
+        900
+      ],
+      "devicePixelRatio": 2,
+      "cells": [
+        205,
+        56
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "home-phone.png",
+      "path": "/",
+      "title": "chord and chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "chord-phone.png",
+      "path": "/chord",
+      "title": "chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "framework-phone.png",
+      "path": "/chord_tui",
+      "title": "chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "gallery-phone.png",
+      "path": "/chord_tui/gallery",
+      "title": "gallery \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "install-phone.png",
+      "path": "/install",
+      "title": "install \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "not-found-phone.png",
+      "path": "/final-qa-missing",
+      "title": "not found \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-demo-phone.png",
+      "path": "/chord_tui/demo",
+      "title": "demo \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-markdown-phone.png",
+      "path": "/chord_tui/markdown",
+      "title": "markdown \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-picker-phone.png",
+      "path": "/chord_tui/picker",
+      "title": "picker \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-form-phone.png",
+      "path": "/chord_tui/form",
+      "title": "form \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-text_area-phone.png",
+      "path": "/chord_tui/text_area",
+      "title": "text_area \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-diff-phone.png",
+      "path": "/chord_tui/diff",
+      "title": "diff \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-dialog-phone.png",
+      "path": "/chord_tui/dialog",
+      "title": "dialog \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-layers-phone.png",
+      "path": "/chord_tui/layers",
+      "title": "layers \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-mouse-phone.png",
+      "path": "/chord_tui/mouse",
+      "title": "mouse \u00b7 chord_tui",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-start-phone.png",
+      "path": "/chord/start",
+      "title": "start \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-team-phone.png",
+      "path": "/chord/team",
+      "title": "team \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-proposal-phone.png",
+      "path": "/chord/proposal",
+      "title": "proposal \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-edit-phone.png",
+      "path": "/chord/edit",
+      "title": "edit \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-permission-phone.png",
+      "path": "/chord/permission",
+      "title": "permission \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-subagents-phone.png",
+      "path": "/chord/subagents",
+      "title": "subagents \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-agents-phone.png",
+      "path": "/chord/agents",
+      "title": "agents \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-resume-phone.png",
+      "path": "/chord/resume",
+      "title": "resume \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-codeblocks-phone.png",
+      "path": "/chord/codeblocks",
+      "title": "codeblocks \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-fork-phone.png",
+      "path": "/chord/fork",
+      "title": "fork \u00b7 chord",
+      "viewport": [
+        390,
+        844
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        55,
+        52
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "home-360.png",
+      "path": "/",
+      "title": "chord and chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "chord-360.png",
+      "path": "/chord",
+      "title": "chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "framework-360.png",
+      "path": "/chord_tui",
+      "title": "chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "gallery-360.png",
+      "path": "/chord_tui/gallery",
+      "title": "gallery \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "install-360.png",
+      "path": "/install",
+      "title": "install \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "not-found-360.png",
+      "path": "/final-qa-missing",
+      "title": "not found \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-demo-360.png",
+      "path": "/chord_tui/demo",
+      "title": "demo \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-markdown-360.png",
+      "path": "/chord_tui/markdown",
+      "title": "markdown \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-picker-360.png",
+      "path": "/chord_tui/picker",
+      "title": "picker \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-form-360.png",
+      "path": "/chord_tui/form",
+      "title": "form \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-text_area-360.png",
+      "path": "/chord_tui/text_area",
+      "title": "text_area \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-diff-360.png",
+      "path": "/chord_tui/diff",
+      "title": "diff \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-dialog-360.png",
+      "path": "/chord_tui/dialog",
+      "title": "dialog \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-layers-360.png",
+      "path": "/chord_tui/layers",
+      "title": "layers \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "example-mouse-360.png",
+      "path": "/chord_tui/mouse",
+      "title": "mouse \u00b7 chord_tui",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-start-360.png",
+      "path": "/chord/start",
+      "title": "start \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-team-360.png",
+      "path": "/chord/team",
+      "title": "team \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-proposal-360.png",
+      "path": "/chord/proposal",
+      "title": "proposal \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-edit-360.png",
+      "path": "/chord/edit",
+      "title": "edit \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-permission-360.png",
+      "path": "/chord/permission",
+      "title": "permission \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-subagents-360.png",
+      "path": "/chord/subagents",
+      "title": "subagents \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-agents-360.png",
+      "path": "/chord/agents",
+      "title": "agents \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-resume-360.png",
+      "path": "/chord/resume",
+      "title": "resume \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-codeblocks-360.png",
+      "path": "/chord/codeblocks",
+      "title": "codeblocks \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    },
+    {
+      "file": "recording-fork-360.png",
+      "path": "/chord/fork",
+      "title": "fork \u00b7 chord",
+      "viewport": [
+        360,
+        640
+      ],
+      "devicePixelRatio": 3,
+      "cells": [
+        51,
+        40
+      ],
+      "clipboardStandIn": true,
+      "clipboardWrites": 0
+    }
+  ]
+}

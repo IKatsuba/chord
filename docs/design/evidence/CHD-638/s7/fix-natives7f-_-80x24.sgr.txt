@@ -1,0 +1,24 @@
+ESC[48;2;22;23;29m
+  ESC[38;2;71;231;165m◆ ESC[1mESC[39mchordESC[0mESC[48;2;22;23;29m    ESC[2m1 ESC[0mESC[48;2;22;23;29mchord   ESC[2m2 ESC[0mESC[48;2;22;23;29mchord_tui   ESC[2m3 ESC[0mESC[48;2;22;23;29mGallery   ESC[2m4 ESC[0mESC[48;2;22;23;29mInstall                 ESC[2mdevESC[0mESC[48;2;22;23;29m
+
+ESC[38;5;244mESC[49m────────────────────────────────────────────────────────────────────────────────
+ESC[39m
+  A terminal window for coding agents, and the framework it is built on.
+
+  ESC[38;2;71;231;165m❯ ESC[1mESC[39m1. chord    ESC[0;2m    the appESC[0m
+  ESC[38;2;71;231;165m  ESC[39m2. chord_tuiESC[2m    the frameworkESC[0m
+  ESC[38;2;71;231;165m  ESC[39m3. Gallery  ESC[2m    examples, running hereESC[0m
+  ESC[38;2;71;231;165m  ESC[39m4. Install  ESC[2m    Homebrew, npm, sourceESC[0m
+
+
+
+
+
+
+
+
+
+
+
+
+ESC[48;2;22;23;29m ESC[1mup/downESC[0;2mESC[48;2;22;23;29m moveESC[0mESC[48;2;22;23;29m  ESC[1menterESC[0;2mESC[48;2;22;23;29m openESC[0mESC[48;2;22;23;29m  ESC[1m1–4ESC[0;2mESC[48;2;22;23;29m jumpESC[0mESC[48;2;22;23;29m  ESC[1m?ESC[0;2mESC[48;2;22;23;29m keysESC[0mESC[48;2;22;23;29m

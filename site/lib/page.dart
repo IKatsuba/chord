@@ -1,0 +1,155 @@
+import 'package:chord_tui/chord_tui.dart';
+
+import 'site.dart' show narrowWidth, panelOnly;
+
+/// The measure of home and install, in columns.
+const narrowMeasure = 124;
+
+/// The measure of chord and the gallery, in columns.
+const wideMeasure = 136;
+
+/// The columns a [SitePage] in a window [width] columns wide gives its
+/// sections: the window less the scrollbar and a gutter each side (4, or 2
+/// on a phone), at most [measure].
+int pageContentWidth(int width, {int measure = narrowMeasure}) =>
+    (width - 1 - 2 * (width < narrowWidth ? 2 : 4)).clamp(1, measure);
+
+/// Scrolls [scroll] the least that shows the whole of list item [item], or
+/// its top when it is taller than the view.
+void revealItem(ScrollController scroll, int item) {
+  if (scroll.viewRows <= 0) return;
+  final top = scroll.itemTop(item);
+  final bottom = top + scroll.itemRows(item);
+  final offset = scroll.offset;
+  if (top < offset || bottom - top > scroll.viewRows) {
+    scroll.jumpTo(top);
+  } else if (bottom > offset + scroll.viewRows) {
+    scroll.jumpTo(bottom - scroll.viewRows);
+  }
+}
+
+/// A page of sections in one scrolling list beside a [Scrollbar], centred
+/// in at most [measure] columns with a gutter each side (4, or 2 on a
+/// phone); below the measure it runs edge to edge. ↑↓, PgUp/PgDn,
+/// Home/End and the wheel scroll it.
+class SitePage extends StatefulWidget {
+  /// A page of [sections].
+  const SitePage({
+    super.key,
+    required this.sections,
+    this.measure = narrowMeasure,
+    this.controller,
+    this.bindings = const [],
+  });
+
+  /// The page's parts, top to bottom, each as wide as the measure.
+  final List<Widget> sections;
+
+  /// The widest the content gets.
+  final int measure;
+
+  /// The page's scroll, for a page that moves it itself; one of its own
+  /// when null.
+  final ScrollController? controller;
+
+  /// The page's own keys, which win over its scroll keys: a grid's arrows.
+  final List<Binding> bindings;
+
+  @override
+  State<SitePage> createState() => _SitePageState();
+}
+
+class _SitePageState extends State<SitePage> {
+  ScrollController? _own;
+  ScrollController get _scroll =>
+      widget.controller ?? (_own ??= ScrollController());
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final width = constraints.maxWidth - 1; // the scrollbar's column
+      final content = pageContentWidth(
+        constraints.maxWidth,
+        measure: widget.measure,
+      );
+      final left = (width - content) ~/ 2;
+      final sections = widget.sections;
+      return Actions(
+        bindings: [
+          // ↑↓ are the help row's; the page and end keys the panel's.
+          for (final b in scrollBindings(
+            _scroll,
+            keys: const ScrollKeys(lineUp: ['up'], lineDown: ['down']),
+          ))
+            b.id == 'scroll:lineUp' || b.id == 'scroll:lineDown'
+                ? Binding('${b.chord}', 'scroll', b.onInvoke, id: 'page:scroll')
+                : Binding(
+                    '${b.chord}',
+                    b.description,
+                    b.onInvoke,
+                    id: '$panelOnly${b.id}',
+                  ),
+        ],
+        child: Actions(
+          bindings: widget.bindings,
+          child: Focus(
+            autofocus: true,
+            child: Scrollbar(
+              controller: _scroll,
+              // C draws the thumb muted, not in the rule colour.
+              thumbStyle: Theme.of(context).dim,
+              child: ListView.builder(
+                controller: _scroll,
+                scrollsOnWheel: true,
+                itemCount: sections.length,
+                itemBuilder: (context, i) => Padding(
+                  // Padding both sides: a list's items are as wide as the
+                  // list, so a SizedBox alone would not hold the measure.
+                  padding: EdgeInsets.only(
+                    left: left,
+                    right: width - left - content,
+                  ),
+                  child: sections[i],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// The measure of C's poster pages: home, chord, a recording, the gallery,
+/// install and not found run the full width inside their margins.
+const posterMeasure = 1 << 20;
+
+/// The widest a running paragraph on a poster page gets, in columns.
+const paragraphMeasure = 90;
+
+/// A running paragraph on a poster page: [text] in [style], wrapping at
+/// [paragraphMeasure] columns or its room, whichever is narrower.
+class Paragraph extends StatelessWidget {
+  /// A paragraph of [text].
+  const Paragraph(this.text, {super.key, this.style});
+
+  /// What it says.
+  final String text;
+
+  /// Its style; the text's when null.
+  final Style? style;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    // Loosened first: a list item's tight width would override the box.
+    builder: (context, constraints) => Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: constraints.maxWidth < paragraphMeasure
+            ? constraints.maxWidth
+            : paragraphMeasure,
+        child: Text(text, style: style),
+      ),
+    ),
+  );
+}

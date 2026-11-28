@@ -1,0 +1,40 @@
+
+  CHORD / CHORD_TUI                            01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                                       ┃
+                                                                                                                       ┃
+      ████████  ██      ██    ██████    ████████    ████████                                                           ┃
+    ██          ██      ██  ██      ██  ██      ██  ██      ██                                                         ┃
+    ██          ██      ██  ██      ██  ██      ██  ██      ██                                                         ┃
+    ██          ██████████  ██      ██  ████████    ██      ██                                                         ┃
+    ██          ██      ██  ██      ██  ██  ██      ██      ██                                                         ┃
+    ██          ██      ██  ██      ██  ██    ██    ██      ██  ████                                                   ┃
+      ████████  ██      ██    ██████    ██      ██  ████████    ████                                                   ┃
+                                                                                                                       ┃
+    A TERMINAL WINDOW                                 Claude, Codex, Gemini and Cursor side by side, every action      ┃
+    FOR CODING AGENTS.                                on a key. And the Dart framework that draws it, and draws        ┃
+                                                      this page, cell by cell.                                         ┃
+                                                                                                                       ┃
+                                                       INSTALL  i     WATCH IT RUN  w                                  ┃
+                                                                                                                       ┃
+                                                                                                                       ┃
+  THE TERMINAL IS THE PAGE  ✦  EVERY ACTION HAS A KEY  ✦  CLAUDE · CODEX · GEMINI · CURSOR  ✦  WRITTEN IN DART  ✦  THE ┃
+                                                                                                                       ┃
+
+    ▄▄▀▀▀▀▀▀▄▄    ▄▄██           ▄▄▀▀▀▀▀▀▄▄  ▄▄▀▀▀▀▀▀▄▄       ▄▄▀▀▀▀▀▀▄▄  ▀▀▀▀▀▀▀▀▄▄       ▄▄▀▀▀▀▀▀▄▄      ▄▄██
+    ██      ██      ██           ██      ██        ▄▄▀▀       ██      ██    ▄▄▄▄▄▄▀▀       ██      ██  ▄▄▀▀  ██
+    ██      ██      ██           ██      ██    ▄▄▀▀           ██      ██          ██       ██      ██  ▀▀▀▀▀▀██▀▀
+      ▀▀▀▀▀▀      ▀▀▀▀▀▀           ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀         ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀           ▀▀▀▀▀▀          ▀▀
+
+    THE APP                      THE FRAMEWORK                THE GALLERY                  INSTALL
+    ─────────────────────────    ─────────────────────────    ─────────────────────────    ────────────────────────
+    Sessions, agents, teams,     Flutter-shaped widgets       Nine of the framework's      Homebrew, npm, or from
+    permissions and plans, in    for the terminal, in         examples, running on this    source.
+    one window.                  Dart, from scratch.          page.
+                                                                                           → PRESS 4
+    → PRESS 1                    → PRESS 2                    → PRESS 3
+
+
+    FIG. 1 / A REAL SESSION, RECORDED
+ i install  w watch  1–4 go  up/down scroll  ? keys

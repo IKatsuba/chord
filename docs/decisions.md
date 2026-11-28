@@ -4662,3 +4662,49 @@ copy would fail the same way. One that runs but says another version, or
 none, is damaged; it is replaced by a fresh download, and the release says
 so. A fresh download that fails either check is refused and nothing of it
 is kept.
+
+## CHD-638: the site has no size budget
+
+The design held the site's first load (the page, the app's Wasm and
+loader, wterm and the font) to 1.5 MB brotli, checked in its build
+(question 9). No maintained Dart brotli encoder fits under `dart run`:
+package:brotli decodes only, and es_compression's brotli needs a native
+library through FFI. Asked about that, the owner dropped the budget: the
+site has no size budget, and `site/tool/build.dart` and CI measure,
+print and check no sizes.
+
+## CHD-638: chord_tui draws giant text from its own block-glyph table
+
+The site's hero and its 404 page draw text far larger than a cell, and the
+rule is a maintained package before our own code for what is not about the
+terminal. Two were tried. `oled_font_57` is a 5x7 bitmap font as a const
+Dart list, MIT and free of dependencies, which fits the shape; but it is a
+single 2021 release with no maintenance since, and it would become a
+dependency of the published chord_tui. `enough_ascii_art` is maintained
+and wasm-ready, with a FIGlet renderer; but FIGlet gives each font's fixed
+character art, not a bitmap the framework can scale to its sizes, its fonts
+sit outside its `lib/` and would have to be embedded by hand, and it pulls
+`package:image` into the framework. Asked, the owner chose our own table
+(Q434): chord_tui keeps its own 5x7 block-glyph table, and its
+`DisplayText` (unit F10) draws every piece of giant text with it, `CHORD.`
+included. The site no longer draws chord's wordmark.
+
+## CHD-638: the site's accent is chord's green
+
+Direction C drew its one loud colour in a signal orange, `#ff5a1f`. The
+owner changed it before the merge: the site's accent, links, focus, band,
+numerals, full stops, FIG. captions and buttons use chord's own dark
+accent, `#47e7a5` from `lib/ui/theme/theme.dart`, so the site reads as
+chord's. Ink, cream and the rest of direction C stay. A site test holds
+`SiteColors.accent` to chord's dark palette.
+
+## CHD-638: the site's cell is 7 px within 1/64
+
+The site promises a 7 px cell (Q436), and Chrome on macOS measures exactly
+that. Chrome on Linux rounds JetBrains Mono's 7.5 px advance at 12.5 px up
+to 7.515625, so with -0.5 px spacing wterm measures 7.015625 and an 820 px
+window gets 116 columns, not 117. The owner accepted the Linux cell (Q438,
+option 1) over snapping the spacing per machine or a wterm issue: the
+browser test checks the cell wterm measures is 7 px within 1/64 and
+expects the columns that cell gives. Linux shows no box-line or glyph
+seams at DPR 1 and 2.

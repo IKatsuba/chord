@@ -25,6 +25,13 @@
 /// scenario each shot plays comes from `CHORD_FAKE_SCENARIO`, so the prompt
 /// typed can be a person's words.
 ///
+/// Beside each picture but the logos it writes the shot as three
+/// recordings, `docs/images/<name>.120x36.rec.json`, `<name>.80x20.rec.json`
+/// and `<name>.48x32.rec.json` for phones (`tool/recordings.dart`): the shot
+/// played again at each size, a frame
+/// after every step and every 100 ms while it waits, for the site's
+/// Playback.
+///
 /// `logo` takes the README's two logos the same way: the title page in each
 /// theme, kept to its art, with no window and a transparent background.
 ///
@@ -45,6 +52,7 @@ import 'package:puppeteer/puppeteer.dart' as browsers;
 
 import '../test/fixtures/fake.dart';
 import 'dev.dart' show fakeRuntimesDefine, fixtureDefine, shellWord;
+import 'recordings.dart';
 
 /// What a shot does to the window before it is taken.
 sealed class Step {
@@ -69,13 +77,20 @@ final class SendKeys extends Step {
   final List<String> keys;
 }
 
-/// A wait until the screen shows [text].
+/// A wait until the screen shows [text], or [narrow] in a pane narrower
+/// than the pictures', where chord words it differently.
 final class UntilShown extends Step {
-  /// Waits for [text].
-  const UntilShown(this.text);
+  /// Waits for [text], or [narrow] when given in a narrow pane.
+  const UntilShown(this.text, {this.narrow});
 
   /// What the screen comes to show.
   final String text;
+
+  /// What a narrower pane shows instead; [text] when null.
+  final String? narrow;
+
+  /// What a pane [cols] wide is waited on for.
+  String shownAt(int cols) => cols < columns ? narrow ?? text : text;
 }
 
 /// A wait of [ms] milliseconds.
@@ -177,7 +192,8 @@ final List<Shot> shots = [
     scenario: 'team',
     steps: [
       ...prompt('Hand issue 214 to the bugfix team'),
-      const UntilShown('● permission'),
+      // A narrow status line says who asks instead.
+      const UntilShown('● permission', narrow: 'needs your permission'),
     ],
   ),
   Shot(
@@ -261,8 +277,10 @@ final List<Shot> shots = [
     scenario: 'markdown',
     steps: [
       ...prompt('Walk me through landing a change'),
-      const UntilShown(r'built $bin'),
-      const UntilShown('context used'),
+      // Narrower, the command's line wraps before its echo.
+      const UntilShown(r'built $bin', narrow: 'dist/*/chord'),
+      // A phone's status says only "N% used".
+      const UntilShown('context used', narrow: 'used'),
     ],
   ),
   // The conversation so far goes on in a fork, picked at once, its row in
@@ -272,7 +290,7 @@ final List<Shot> shots = [
     scenario: 'edit',
     steps: [
       ...prompt('Greet people by name with a template literal'),
-      const UntilShown('context used'),
+      const UntilShown('context used', narrow: 'used'),
       ...prompt('/fork arrow-function'),
       const UntilShown('forked from main'),
     ],
@@ -730,7 +748,11 @@ String _tmux(List<String> argv) {
 
 String _screen() => _tmux(['capture-pane', '-p', '-t', 'shot']);
 
-Future<void> _waitFor(bool Function() done, String what) async {
+Future<void> _waitFor(
+  bool Function() done,
+  String what, {
+  void Function()? each,
+}) async {
   // chord from source compiles first, which a cold cache takes a while for.
   final end = DateTime.now().add(const Duration(seconds: 90));
   while (!done()) {
@@ -738,11 +760,140 @@ Future<void> _waitFor(bool Function() done, String what) async {
       throw StateError('$what\n${_screen()}');
     }
     await Future<void>.delayed(const Duration(milliseconds: 100));
+    each?.call();
   }
 }
 
-/// The shot's screen as chord drew it, with its colours.
-Future<String> capture(Shot shot, String portDir) async {
+/// How a recording labels a key tmux names, in chord_tui's spelling:
+/// `Enter` is `enter`, `C-o` is `ctrl+o`, `BTab` is `shift+tab`.
+String keyLabel(String tmux) {
+  const named = {
+    'Enter': 'enter',
+    'Escape': 'escape',
+    'Tab': 'tab',
+    'BTab': 'shift+tab',
+    'BSpace': 'backspace',
+    'Space': 'space',
+    'Up': 'up',
+    'Down': 'down',
+    'Left': 'left',
+    'Right': 'right',
+    'PageUp': 'pageup',
+    'PageDown': 'pagedown',
+    'Home': 'home',
+    'End': 'end',
+  };
+  if (named[tmux] case final name?) return name;
+  for (final (prefix, modifier) in const [
+    ('C-', 'ctrl+'),
+    ('M-', 'alt+'),
+    ('S-', 'shift+'),
+  ]) {
+    if (tmux.startsWith(prefix) && tmux.length > prefix.length) {
+      return '$modifier${keyLabel(tmux.substring(prefix.length))}';
+    }
+  }
+  return tmux.toLowerCase();
+}
+
+/// What a recording calls [step]; null for waits, which add frames only.
+String? stepLabel(Step step) => switch (step) {
+  TypeText(:final text) => cutLabel('typed $text'),
+  SendKeys(:final keys) => keys.map(keyLabel).join(' '),
+  Respawn() => 'started again',
+  Exited() => 'left',
+  UntilShown() || Pause() || Aged() => null,
+};
+
+/// What playing a shot does to its pane, as [playSteps] drives it.
+class ShotPane {
+  /// A pane driven by these.
+  const ShotPane({
+    required this.type,
+    required this.send,
+    required this.until,
+    required this.exited,
+    required this.age,
+    required this.respawn,
+    required this.idle,
+    required this.sample,
+    required this.label,
+  });
+
+  /// Types text as it is.
+  final void Function(String text) type;
+
+  /// Sends tmux key names.
+  final void Function(List<String> keys) send;
+
+  /// Waits for the screen to show text, sampling as it waits.
+  final Future<void> Function(String text) until;
+
+  /// Waits for chord to leave, sampling as it waits.
+  final Future<void> Function() exited;
+
+  /// Ages the records.
+  final void Function(List<int> hours) age;
+
+  /// Starts chord again.
+  final void Function(List<String> args) respawn;
+
+  /// Waits, sampling every 100 ms.
+  final Future<void> Function(Duration time) idle;
+
+  /// Takes the screen as a recording's frame.
+  final void Function() sample;
+
+  /// Marks the next frame with a step's label.
+  final void Function(String label) label;
+}
+
+/// Plays [steps] on [pane], [cols] wide: the screen taken before the
+/// first, after every step, and while each one waits, each step labelled
+/// before it acts.
+Future<void> playSteps(
+  List<Step> steps,
+  ShotPane pane, {
+  int cols = columns,
+}) async {
+  pane.sample();
+  for (final step in steps) {
+    if (stepLabel(step) case final label?) pane.label(label);
+    switch (step) {
+      case TypeText(:final text):
+        pane.type(text);
+        await pane.idle(const Duration(milliseconds: 300));
+      case SendKeys(:final keys):
+        pane.send(keys);
+        await pane.idle(const Duration(milliseconds: 300));
+      case UntilShown():
+        await pane.until(step.shownAt(cols));
+      case Exited():
+        await pane.exited();
+      case Aged(:final hours):
+        pane.age(hours);
+      case Respawn(:final args):
+        pane.respawn(args);
+      case Pause(:final ms):
+        await pane.idle(Duration(milliseconds: ms));
+    }
+    // A wait already met, or a step with no wait, still leaves its frame
+    // before the next step changes the screen.
+    pane.sample();
+  }
+  // What the last keys set off drawn, and the spinner's frame with it.
+  await pane.idle(const Duration(milliseconds: 400));
+}
+
+/// The shot's screen as chord drew it, with its colours, in a [cols] by
+/// [rows] pane; with [recording], every frame it went through on the way.
+Future<String> capture(
+  Shot shot,
+  String portDir, {
+  int cols = columns,
+  int rows = rows,
+  RecordingWriter? recording,
+}) async {
   final dir = shotDir(shot.name);
   if (Directory(dir).existsSync()) Directory(dir).deleteSync(recursive: true);
   final home = p.join(dir, 'home');
@@ -778,7 +929,7 @@ Future<String> capture(Shot shot, String portDir) async {
       '-s',
       'shot',
       '-x',
-      '$columns',
+      '$cols',
       '-y',
       '$rows',
       '-c',
@@ -794,38 +945,51 @@ Future<String> capture(Shot shot, String portDir) async {
       '${shot.name}: "${shot.first}" never came.',
     );
 
-    for (final step in shot.steps) {
-      switch (step) {
-        case TypeText(:final text):
-          _tmux(['send-keys', '-t', 'shot', '-l', text]);
-          await Future<void>.delayed(const Duration(milliseconds: 300));
-        case SendKeys(:final keys):
-          _tmux(['send-keys', '-t', 'shot', ...keys]);
-          await Future<void>.delayed(const Duration(milliseconds: 300));
-        case UntilShown(:final text):
-          await _waitFor(
-            () => _screen().contains(text),
-            '${shot.name}: "$text" never came.',
-          );
-        case Exited():
-          await _waitFor(
-            () =>
-                _tmux(['display', '-p', '-t', 'shot', '#{pane_dead}']).trim() ==
-                '1',
-            '${shot.name}: chord never left.',
-          );
-        case Aged(:final hours):
-          age(p.join(dir, 'state', 'chord', 'records'), hours);
-        case Respawn(:final args):
-          _tmux(['respawn-pane', '-k', '-t', 'shot', chord(args)]);
-        case Pause(:final ms):
-          await Future<void>.delayed(Duration(milliseconds: ms));
+    // The recording's clock starts at chord's first screen, after the
+    // build from source a person would not watch.
+    final clock = Stopwatch()..start();
+    String colours() => _tmux(['capture-pane', '-p', '-e', '-t', 'shot']);
+    void sample() => recording?.add(clock.elapsed, colours());
+    Future<void> idle(Duration time) async {
+      final end = clock.elapsed + time;
+      while (clock.elapsed < end) {
+        final left = end - clock.elapsed;
+        await Future<void>.delayed(
+          left < const Duration(milliseconds: 100)
+              ? left
+              : const Duration(milliseconds: 100),
+        );
+        sample();
       }
     }
 
-    // What the last keys set off drawn, and the spinner's frame with it.
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    return _tmux(['capture-pane', '-p', '-e', '-t', 'shot']);
+    await playSteps(
+      shot.steps,
+      ShotPane(
+        type: (text) => _tmux(['send-keys', '-t', 'shot', '-l', text]),
+        send: (keys) => _tmux(['send-keys', '-t', 'shot', ...keys]),
+        until: (text) => _waitFor(
+          () => _screen().contains(text),
+          '${shot.name}: "$text" never came.',
+          each: sample,
+        ),
+        exited: () => _waitFor(
+          () =>
+              _tmux(['display', '-p', '-t', 'shot', '#{pane_dead}']).trim() ==
+              '1',
+          '${shot.name}: chord never left.',
+          each: sample,
+        ),
+        age: (hours) => age(p.join(dir, 'state', 'chord', 'records'), hours),
+        respawn: (args) =>
+            _tmux(['respawn-pane', '-k', '-t', 'shot', chord(args)]),
+        idle: idle,
+        sample: sample,
+        label: (label) => recording?.step(label),
+      ),
+      cols: cols,
+    );
+    return colours();
   } finally {
     Process.runSync('tmux', ['-L', _socket, 'kill-server']);
     if (Directory(dir).existsSync()) Directory(dir).deleteSync(recursive: true);
@@ -851,6 +1015,7 @@ Future<void> main(List<String> names) async {
   final images = Directory(p.join(portDir, 'docs', 'images'))
     ..createSync(recursive: true);
   final browser = await browsers.puppeteer.launch(executablePath: chrome);
+  final failed = <String>[];
   try {
     final tab = await browser.newPage();
     await tab.setViewport(
@@ -876,8 +1041,34 @@ Future<void> main(List<String> names) async {
       );
       File(p.join(images.path, '${shot.name}.png')).writeAsBytesSync(png);
       stdout.writeln('docs/images/${shot.name}.png');
+      if (shot.group == 'logo') continue;
+      // Played again at each size the site shows a recording at. A size
+      // that fails is said at the end, and the rest still recorded.
+      for (final size in recordingSizes) {
+        final name = recordingName(shot.name, size);
+        final recording = RecordingWriter(size.cols, size.rows);
+        try {
+          await capture(
+            shot,
+            portDir,
+            cols: size.cols,
+            rows: size.rows,
+            recording: recording,
+          );
+        } on StateError catch (error) {
+          failed.add('$name: ${error.message.split('\n').first}');
+          continue;
+        }
+        File(p.join(images.path, name)).writeAsStringSync(recording.toJson());
+        stdout.writeln('docs/images/$name');
+      }
     }
   } finally {
     await browser.close();
+  }
+  if (failed.isNotEmpty) {
+    stderr.writeln('screenshots: recordings that failed:');
+    failed.forEach(stderr.writeln);
+    exit(1);
   }
 }

@@ -517,6 +517,13 @@ class FocusManager extends ChangeNotifier {
     return false;
   }
 
+  bool _hasEligibleBelow(FocusNode node) {
+    for (final c in node._children) {
+      if (_eligible(c) || _hasEligibleBelow(c)) return true;
+    }
+    return false;
+  }
+
   bool _eligible(FocusNode? n) {
     if (n == null || n._manager != this || n.isDisposed) return false;
     if (!n.canRequestFocus) return false;
@@ -547,6 +554,14 @@ class FocusManager extends ChangeNotifier {
     _setPrimary(target);
   }
 
+  /// The nearest scope above [node], not [node] itself, that is off.
+  FocusScopeNode? _offAbove(FocusNode node) {
+    for (FocusNode? p = node._parent; p != null; p = p._parent) {
+      if (p is FocusScopeNode && !p._active) return p;
+    }
+    return null;
+  }
+
   // A node in an inactive scope waits for the scope to be shown.
   void _request(FocusNode n) {
     for (FocusNode? p = n._parent; p != null; p = p._parent) {
@@ -568,6 +583,12 @@ class FocusManager extends ChangeNotifier {
   /// [takeFocus], it remembers the focused node and takes focus: to the
   /// node under it that last had it or asked for it, else to itself. With
   /// [autofocus] only, a node under it that asked for focus gets it.
+  ///
+  /// Under a scope that is off, neither moves the focus: the node that
+  /// would have taken it (the one that asked, else [scope] for
+  /// [takeFocus]) becomes that scope's request instead, as a request made
+  /// there would, replacing an earlier one. It takes the focus when that
+  /// scope is turned on with [takeFocus] or [autofocus].
   void setScopeActive(
     FocusScopeNode scope,
     bool active, {
@@ -582,6 +603,15 @@ class FocusManager extends ChangeNotifier {
     }
     final asked = scope._autofocus;
     scope._autofocus = null;
+    if (_offAbove(scope) case final off?) {
+      final wanted = takeFocus
+          ? (asked ?? scope)
+          : autofocus
+          ? asked
+          : null;
+      if (wanted != null) off._autofocus = wanted;
+      return;
+    }
     if (takeFocus) {
       if (!_within(_primary, scope)) scope._saved = _primary;
       FocusNode? last;
@@ -639,10 +669,18 @@ class FocusManager extends ChangeNotifier {
 
   /// The node key presses start from: the focused one, or the deepest
   /// first descendant of the root when nothing is focused.
+  ///
+  /// A scope that holds the focus itself, with no descendant that could take
+  /// it, starts presses from its own deepest first descendant, the same
+  /// fallback, so bindings under it with no focusable widget of their own
+  /// still get their keys. A scope with a focusable descendant starts them
+  /// from itself, as any focused node does.
   FocusNode get effectiveFocus {
     final p = _primary;
-    if (p != null) return p;
-    var n = root;
+    if (p != null && (p is! FocusScopeNode || _hasEligibleBelow(p))) {
+      return p;
+    }
+    var n = p ?? root;
     while (true) {
       // Keys never reach into an excluded subtree, as a closed fold.
       if (!n._descendantsAreFocusable) return n;

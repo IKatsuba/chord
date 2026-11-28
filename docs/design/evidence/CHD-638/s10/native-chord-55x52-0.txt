@@ -1,0 +1,52 @@
+
+  CHORD / CHORD_TUI                            MENU m
+
+───────────────────────────────────────────────────────
+                                                      ┃
+  01 / THE APP                                        ┃
+                                                      ┃
+    ██████    ████████    ████████                    ┃
+  ██      ██  ██      ██  ██      ██                  ┃
+  ██      ██  ██      ██  ██      ██                  ┃
+  ██████████  ████████    ████████                    ┃
+  ██      ██  ██          ██                          ┃
+  ██      ██  ██          ██          ████            ┃
+  ██      ██  ██          ██          ████            ┃
+                                                      ┃
+  One window, every agent you run, every action on a  ┃
+  key. These are chord's own screens, running live    ┃
+  in this page with no agent behind them; whole
+  sessions further down are recordings.
+
+
+  LIVE  ✦  NO AGENT BEHIND IT  ✦  TYPE, ANSWER, APPROV
+
+
+
+  01  THE PROMPT
+  ────────────────────────────────────────
+  Write, edit, send. Multiline editing, history on
+  the arrows, files with @ and commands with /.
+
+  → TRY IT  P
+
+
+    FIG. 01 LIVE · PRESS P
+
+
+    ╭────────────────────────────────────────────╮
+    │ ›                                          │
+    ╰────────────────────────────────────────────╯
+
+
+
+  02  PERMISSIONS
+  ────────────────────────────────────────
+  Asked first, every time: the diff or the command
+  in front of you. Allow once, always, or deny.
+
+  → TRY IT  A
+
+
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ escape up  ? keys

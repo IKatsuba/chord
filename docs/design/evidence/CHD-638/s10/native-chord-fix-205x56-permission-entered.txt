@@ -1,0 +1,56 @@
+
+  CHORD / CHORD_TUI                                                                                                                 01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    ████            ████    ████                    ████                    ████████
+    ████            ████    ████                    ████                    ████████
+    ████            ████    ████                    ████                    ████████
+
+    One window, every agent you run, every action on a key. These are chord's own screens,
+    running live in this page with no agent behind them; whole sessions further down are                                                                                                                    ┃
+    recordings.                                                                                                                                                                                             ┃
+                                                                                                                                                                                                            ┃
+                                                                                                                                                                                                            ┃
+  LIVE  ✦  NO AGENT BEHIND IT  ✦  TYPE, ANSWER, APPROVE  ✦  LIVE  ✦  NO AGENT BEHIND IT  ✦  TYPE, ANSWER, APPROVE  ✦  LIVE  ✦  NO AGENT BEHIND IT  ✦  TYPE, ANSWER, APPROVE  ✦  LIVE  ✦  NO AGENT BEHIND IT ┃
+                                                                                                                                                                                                            ┃
+                                                                                                                                                                                                            ┃
+                                                                                                                                                                                                            ┃
+    01  THE PROMPT                                                                                                                                                                                          ┃
+    ────────────────────────────────────────                                                                          FIG. 01 LIVE · PRESS P                                                                ┃
+    Write, edit, send. Multiline editing, history on the arrows, files with @ and commands with /.                                                                                                          ┃
+                                                                                                                                                                                                            ┃
+    → TRY IT  P                                                                                                       ╭──────────────────────────────────────────────────────────────────────────────╮      ┃
+                                                                                                                      │ ›                                                                            │      ┃
+                                                                                                                      ╰──────────────────────────────────────────────────────────────────────────────╯      ┃
+                                                                                                                                                                                                            ┃
+                                                                                                                                                                                                            ┃
+                                                                                                                                                                                                            ┃
+    02  PERMISSIONS                                                                                                                                                                                         ┃
+    ────────────────────────────────────────                                                                          FIG. 02 LIVE · PERMISSION                                         CTRL+Q LEAVES
+    Asked first, every time: the diff or the command in front of you. Allow once, always, or deny.
+
+    → TRY IT  A
+
+
+                                                                                                                      ╭──────────────────────────────────────────────────────────────────────────────╮
+                                                                                                                      │ Write notes.txt                                                              │
+                                                                                                                      │                                                                              │
+                                                                                                                      │    1 - old                                                                   │
+                                                                                                                      │    1 + proposed line 1                                                       │
+                                                                                                                      │    2 + proposed line 2                                                       │
+                                                                                                                      │    3 + proposed line 3                                                       │
+                                                                                                                      │    4 + proposed line 4                                                       │
+                                                                                                                      │    5 + proposed line 5                                                       │
+                                                                                                                      │    6 + proposed line 6                                                       │
+                                                                                                                      │    7 + proposed line 7                                                       │
+                                                                                                                      │    8 + proposed line 8                                                       │
+                                                                                                                      │    9 + proposed line 9                                                       │
+                                                                                                                      │   10 + proposed line 10                                                      │
+                                                                                                                      │   11 + proposed line 11                                                      │
+                                                                                                                      │   12 + proposed line 12                                                      │
+                                                                                                                      │                                                                              │
+                                                                                                                      │ Do you want to proceed?                                                      │
+                                                                                                                      │ ❯ 1. Allow once                                                              │
+                                                                                                                      │   2. Always allow                                                            │
+                                                                                                                      │   3. Deny                                                                    │
+ ctrl+q/ctrl+c leave  f1 keys

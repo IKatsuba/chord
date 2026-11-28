@@ -1,12 +1,13 @@
 import '../foundation/selection_delegate.dart';
 import 'framework.dart';
 import 'list_viewport.dart';
+import 'listener.dart';
 import 'scroll_controller.dart';
 
 /// A list that builds only the items it shows.
 ///
 /// It binds no keys and takes no focus: the app binds a controller's steps
-/// with [scrollBindings].
+/// with [scrollBindings]. With [scrollsOnWheel] the wheel scrolls it.
 class ListView extends StatefulWidget {
   /// A list of [itemCount] items built by [itemBuilder]; a controller is
   /// made and owned when [controller] is absent.
@@ -19,10 +20,15 @@ class ListView extends StatefulWidget {
     this.itemExtentBuilder,
     this.itemExtentVersion,
     this.selectionDelegate,
+    this.scrollsOnWheel = false,
   });
 
   /// Where the view is, and the steps that move it.
   final ScrollController? controller;
+
+  /// Whether the wheel scrolls it, a row a step; off by default, for a list
+  /// whose app handles the wheel itself.
+  final bool scrollsOnWheel;
 
   /// How many items the list has.
   final int itemCount;
@@ -79,13 +85,20 @@ class _ListViewState extends State<ListView> {
   }
 
   @override
-  Widget build(BuildContext context) => ListViewport(
-    controller: _controller,
-    itemCount: widget.itemCount,
-    itemBuilder: widget.itemBuilder,
-    itemVersion: widget.itemVersion,
-    itemExtentBuilder: widget.itemExtentBuilder,
-    itemExtentVersion: widget.itemExtentVersion,
-    selectionDelegate: widget.selectionDelegate,
-  );
+  Widget build(BuildContext context) {
+    final list = ListViewport(
+      controller: _controller,
+      itemCount: widget.itemCount,
+      itemBuilder: widget.itemBuilder,
+      itemVersion: widget.itemVersion,
+      itemExtentBuilder: widget.itemExtentBuilder,
+      itemExtentVersion: widget.itemExtentVersion,
+      selectionDelegate: widget.selectionDelegate,
+    );
+    if (!widget.scrollsOnWheel) return list;
+    return Listener(
+      onPointerSignal: (event) => scrollByWheel(_controller, event),
+      child: list,
+    );
+  }
 }

@@ -1,0 +1,24 @@
+  Paragraph 11 of the page above the note.
+  Paragraph 12 of the page above the note.
+  Paragraph 13 of the page above the note.
+  Paragraph 14 of the page above the note.
+  Paragraph 15 of the page above the note.                                     ┃
+  Paragraph 16 of the page above the note.                                     ┃
+  Paragraph 17 of the page above the note.                                     ┃
+  Paragraph 18 of the page above the note.                                     ┃
+  Paragraph 19 of the page above the note.                                     ┃
+  Paragraph 20 of the page above the note.                                     ┃
+  Paragraph 21 of the page above the note.                                     ┃
+  Paragraph 22 of the page above the note.                                     ┃
+  Paragraph 23 of the page above the note.
+  Paragraph 24 of the page above the note.
+  Paragraph 25 of the page above the note.
+  Paragraph 26 of the page above the note.
+  Paragraph 27 of the page above the note.
+  Paragraph 28 of the page above the note.
+  Paragraph 29 of the page above the note.
+  Paragraph 30 of the page above the note.
+
+  ┌ Note ───────────────────────────────────────────────────────────────────┐
+  │hello!                                                                   │
+enter Submit  shift+enter/alt+enter/ctrl+enter/ctrl+j Insert newline  left/ctrl…

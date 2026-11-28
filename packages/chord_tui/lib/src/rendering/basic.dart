@@ -394,13 +394,21 @@ class Border {
 /// A background, a border and a title around a child.
 class RenderDecoratedBox extends RenderBox with RenderWithChild {
   /// A box with an optional [border], [title] and [background].
-  RenderDecoratedBox({this.border, this.title, this.background});
+  RenderDecoratedBox({
+    this.border,
+    this.title,
+    this.titleStyle,
+    this.background,
+  });
 
   /// The border around the child; null for none.
   Border? border;
 
   /// The title set into the top border; null for none.
   String? title;
+
+  /// The title's style; bold in the border's style when null.
+  Style? titleStyle;
 
   /// The style filling the box; null leaves the cells as they are.
   Style? background;
@@ -479,7 +487,7 @@ class RenderDecoratedBox extends RenderBox with RenderWithChild {
       final t = title;
       if (t != null && t.isNotEmpty && size.width > 4) {
         final inner = canvas.clipped(Rect(x0 + 1, y0, size.width - 2, 1));
-        inner.drawText(x0 + 1, y0, ' $t ', st.merge(Style.bold));
+        inner.drawText(x0 + 1, y0, ' $t ', titleStyle ?? st.merge(Style.bold));
       }
     }
     paintChildren(canvas, origin);

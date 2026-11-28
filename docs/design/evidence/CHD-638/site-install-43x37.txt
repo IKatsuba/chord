@@ -1,0 +1,37 @@
+ chord › install                       dev
+───────────────────────────────────────────
+
+  Install
+  Homebrew, npm, from source.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ escape up  ? keys

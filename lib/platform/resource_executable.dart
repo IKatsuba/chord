@@ -7,12 +7,13 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ffi' show Abi;
 import 'dart:io';
 
 import 'package:cancellation_token/cancellation_token.dart';
 import 'package:process_run/which.dart';
 
+import 'resource_arch_ffi.dart'
+    if (dart.library.js_interop) 'resource_arch_web.dart';
 import 'resource_process.dart';
 import 'resources.dart'
     show ExecutableFound, ExecutableUnavailable, ResourceExecutable;
@@ -106,12 +107,6 @@ Future<String> readVersion(
   },
 );
 
-String _nodeArch() => switch (Abi.current()) {
-  Abi.macosArm64 || Abi.linuxArm64 => 'arm64',
-  Abi.macosX64 || Abi.linuxX64 => 'x64',
-  final abi => '$abi',
-};
-
 final class _Machine implements ExecutableInspection {
   const _Machine();
 
@@ -122,7 +117,7 @@ final class _Machine implements ExecutableInspection {
   };
 
   @override
-  String get arch => _nodeArch();
+  String get arch => nodeArch();
 
   @override
   Future<String?> lookup(String name) async {

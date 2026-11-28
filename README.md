@@ -150,7 +150,27 @@ dart compile exe bin/chord.dart -o build/chord
 ```
 
 The binary needs no Dart runtime. [Development](docs/development.md) covers
-fixtures, benchmarks and release tooling.
+fixtures, benchmarks and release tooling. The [website source](site/) is a
+chord_tui app compiled to WebAssembly and drawn full-window by wterm, with
+an ink, cream and green poster layout, live framework examples and chord
+screens, and recorded flows. Build and preview it with:
+
+```sh
+cd site
+dart pub get
+dart run tool/build.dart build
+dart run tool/build.dart serve
+```
+
+Open `http://127.0.0.1:8080/`. F1 lists keys. Outside live frames, Ctrl+Q
+and Ctrl+C return home. On the chord page, Tab selects a plate and Enter
+enters it; on framework articles, Tab enters directly. Follow the plate's
+caption to leave: Esc, or Ctrl+Q where the example owns Esc. Ctrl+C follows
+Ctrl+Q. Framework articles include source and live examples; phones have
+a tappable key row. The build writes `site/build/`; `--base=/chord/` on both
+commands previews a subpath. A static host must serve `.wasm` as
+`application/wasm` and return `index.html` for page paths so direct links
+and browser Back work.
 
 ## Use
 
@@ -221,8 +241,9 @@ See [SECURITY.md](SECURITY.md).
 
 The screenshots show chord itself, captured with
 `dart run tool/screenshots.dart` using fixture settings and sessions and
-the scripted Dart agent. [Development](docs/development.md#screenshots)
-has the capture commands.
+the scripted Dart agent. It also saves terminal recordings at 120x36,
+80x20 and 48x32 in `docs/images/<shot>.<size>.rec.json` for the website.
+[Development](docs/development.md#screenshots) has the capture commands.
 
 ## Licence
 

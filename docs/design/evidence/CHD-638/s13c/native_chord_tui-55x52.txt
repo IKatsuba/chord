@@ -1,0 +1,52 @@
+
+  CHORD / CHORD_TUI                            MENU m
+
+───────────────────────────────────────────────────────
+
+  02 / OVERVIEW                             PAGES ▾ p
+──────────────────────────────────────────────────────
+                                                      ┃
+                                                      ┃
+  ██████████  ██      ██  ██████████                  ┃
+      ██      ██      ██      ██                      ┃
+      ██      ██      ██      ██                      ┃
+      ██      ██      ██      ██                      ┃
+      ██      ██      ██      ██                      ┃
+      ██      ██      ██      ██      ████            ┃
+      ██        ██████    ██████████  ████            ┃
+                                                      ┃
+  The Flutter way, for the terminal: a Dart           ┃
+  framework for rich terminal interfaces, compiled
+  to a native binary or WebAssembly.
+
+
+  01  WHAT IT IS
+  ──────────────────────────────────────────────────
+
+  Widgets, state, layout in cells, rich text and
+  keyboard actions, with a headless tester. Written
+  from scratch, with no dependency on another
+  terminal UI framework.
+
+  If you know Flutter you know the names:
+  StatelessWidget, StatefulWidget, setState, Row,
+  Column, Expanded, Theme.of. It runs on macOS,
+  Linux and in browsers. This page is a chord_tui
+  app, compiled to WebAssembly.
+
+
+  02  THE EXAMPLE
+  ──────────────────────────────────────────────────
+
+  README's example, running: a tool call's output
+  under a fold. Tab enters it, ctrl+o opens and
+  closes the fold, Esc leaves.
+
+
+    FIG. 1 README'S EXAMPLE · TAB TO ENTER
+
+    ▸ Run checks
+
+
+  esc   tab   ←   ↑   ↓   →   enter   f1
+ escape up  ? keys

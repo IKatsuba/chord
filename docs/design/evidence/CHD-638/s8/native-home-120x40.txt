@@ -1,0 +1,40 @@
+
+  ◆ chord    1 chord   2 chord_tui   3 Gallery   4 Install                                            GitHub ↗ g   dev
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+  A terminal window for coding agents, and the Flutter-shaped Dart framework it is built on.
+  This page is that framework, compiled to WebAssembly.
+
+  ❯ 1. chord        the app: sessions, agents, teams, permissions, plans
+    2. chord_tui    the framework: widgets, layout, text, keys, the tester
+    3. Gallery      the framework's examples, running here
+    4. Install      Homebrew, npm, from source
+
+  ┌ Try it ──────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │ Every action has a key. Press ? for all of them, Esc to go up a level.                                           │
+  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ up/down move  enter open  1–4 jump  ? keys

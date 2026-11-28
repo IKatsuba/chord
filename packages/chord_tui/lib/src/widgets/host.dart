@@ -3,7 +3,9 @@ import '../input/keys.dart';
 import '../rendering/box.dart';
 import '../rendering/listener.dart';
 import '../terminal/buffer.dart';
+import '../terminal/terminal.dart';
 import 'focus_manager.dart';
+import 'exit_scope.dart';
 import 'framework.dart';
 
 /// Owns a widget tree and turns it into frames; knows nothing of terminals.
@@ -11,19 +13,22 @@ import 'framework.dart';
 /// [runApp] drives one with a real terminal, the tester with a fake one.
 class AppHost {
   /// An app host whose pending chord wait is [chordTimeout], reading a
-  /// press that does nothing through [layoutFallback].
+  /// press that does nothing through [layoutFallback], in [terminal],
+  /// which `TerminalScope.of` gives its widgets.
   AppHost(
     Widget app, {
     void Function()? onNeedsFrame,
     void Function()? onExit,
     Duration chordTimeout = defaultChordTimeout,
     KeyLayoutFallback? layoutFallback,
+    Terminal? terminal,
   }) : owner = BuildOwner(
          onNeedsFrame: onNeedsFrame,
          onExit: onExit,
          chordTimeout: chordTimeout,
          layoutFallback: layoutFallback,
        ) {
+    owner.terminal = terminal;
     owner.synchronizeInputGeometry = (maxPasses) =>
         _ensureCurrentGeometry(maxPasses: maxPasses);
     owner.inputRenderRoot = () =>
@@ -290,8 +295,13 @@ class AppHost {
   }
 }
 
-/// Asks the app that [context] belongs to to quit.
-void exitApp(BuildContext context) => context.owner.requestExit();
+/// Asks the app that [context] belongs to to quit, or the nearest
+/// [ExitScope] above [context] to take the exit instead.
+void exitApp(BuildContext context) {
+  final scope = context.getInheritedWidgetOfExactType<ExitScope>();
+  if (scope != null) return scope.onExit();
+  context.owner.requestExit();
+}
 
 // Reentrant geometry queries share the remaining work of their input operation.
 // A real nested input supersedes the old operation and has its own epoch.

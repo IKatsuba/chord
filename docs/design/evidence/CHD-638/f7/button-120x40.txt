@@ -1,0 +1,40 @@
+
+
+                          ╭──────────────────╮
+      Install chord       │   Watch it run   │
+                          ╰──────────────────╯
+         press i                press w
+
+                 ╭──────────────╮
+      Save       │   Disabled   │
+                 ╰──────────────╯
+
+  Pressed: nothing yet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  i Install chord  w Watch it run  ctrl+q Quit
+
+

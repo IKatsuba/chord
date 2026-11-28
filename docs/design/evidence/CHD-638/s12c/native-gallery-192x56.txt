@@ -1,0 +1,56 @@
+
+  CHORD / CHORD_TUI                                                                                                    01 APP    02 FRAMEWORK    03 GALLERY    04 INSTALL    GITHUB ↗ g    DEV
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                                                                                                                                                                                               ┃
+    03 / THE GALLERY                                                                                                                                                                           ┃
+      ████████    ██████    ██          ██          ██████████  ████████    ██      ██                                                                                                         ┃
+    ██          ██      ██  ██          ██          ██          ██      ██  ██      ██                                                                                                         ┃
+    ██          ██      ██  ██          ██          ██          ██      ██    ██  ██                                                                                                           ┃
+    ██  ██████  ██████████  ██          ██          ████████    ████████        ██                                                                                                             ┃
+    ██      ██  ██      ██  ██          ██          ██          ██  ██          ██                                                                                                             ┃
+    ██      ██  ██      ██  ██          ██          ██          ██    ██        ██      ████                                                                                                   ┃
+      ████████  ██      ██  ██████████  ██████████  ██████████  ██      ██      ██      ████                                                                                                   ┃
+                                                                                                                                                                                               ┃
+    Nine of chord_tui's examples, compiled to WebAssembly with this page. Pick one with the                                                                                                    ┃
+    arrows or its number; Enter runs it, Esc comes back.                                                                                                                                       ┃
+                                                                                                                                                                                               ┃
+    ▄▄▀▀▀▀▀▀▄▄    ▄▄██                                             ▄▄▀▀▀▀▀▀▄▄  ▄▄▀▀▀▀▀▀▄▄                                         ▄▄▀▀▀▀▀▀▄▄  ▀▀▀▀▀▀▀▀▄▄                                       ┃
+    ██      ██      ██                                             ██      ██        ▄▄▀▀                                         ██      ██    ▄▄▄▄▄▄▀▀                                       ┃
+    ██      ██      ██                                             ██      ██    ▄▄▀▀                                             ██      ██          ██                                       ┃
+      ▀▀▀▀▀▀      ▀▀▀▀▀▀                                             ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀▀▀                                           ▀▀▀▀▀▀    ▀▀▀▀▀▀▀▀                                         ┃
+                                                                                                                                                                                               ┃
+    DEMO                                                ⏎ RUN      MARKDOWN                                                       PICKER                                                       ┃
+    ─────────────────────────────────────────────────────────      ─────────────────────────────────────────────────────────      ─────────────────────────────────────────────────────────    ┃
+     ┌ left ─┐┌ right ──┐                                           # Release notes                                                › clau                                                      ┃
+     │ one   ││ focused  │                                                                                                                                                                     ┃
+     │ two   ││ ❯ three  │                                          - **Plans** you can edit                                       › 1 claude    opus                                          ┃
+     └───────┘└──────────┘                                          - Faster `resume`                                                2 claude    sonnet                                        ┃
+                                                                                                                                                                                               ┃
+    The framework tour: layout, focus and keys.                    Headings, lists, tables and code, streamed as it arrives.      Numbered choices with a fuzzy filter as you type.            ┃
+                                                                                                                                                                                               ┃
+                                                                                                                                                                                               ┃
+                                                                                                                                                                                               ┃
+    ▄▄▀▀▀▀▀▀▄▄      ▄▄██                                           ▄▄▀▀▀▀▀▀▄▄  ██▀▀▀▀▀▀▀▀                                         ▄▄▀▀▀▀▀▀▄▄    ▄▄▀▀▀▀                                         ┃
+    ██      ██  ▄▄▀▀  ██                                           ██      ██  ▀▀▀▀▀▀▀▀▄▄                                         ██      ██  ██▄▄▄▄▄▄                                         ┃
+    ██      ██  ▀▀▀▀▀▀██▀▀                                         ██      ██  ▄▄      ██                                         ██      ██  ██      ██                                       ┃
+      ▀▀▀▀▀▀          ▀▀                                             ▀▀▀▀▀▀      ▀▀▀▀▀▀                                             ▀▀▀▀▀▀      ▀▀▀▀▀▀                                         ┃
+                                                                                                                                                                                               ┃
+    FORM                                                           TEXT AREA                                                      DIFF                                                         ┃
+    ─────────────────────────────────────────────────────────      ─────────────────────────────────────────────────────────      ─────────────────────────────────────────────────────────    ┃
+     Name   chord                                                   The quick brown fox                                            12  - store = Store();                                      ┃
+     Agent  (•) claude                                              jumps over the lazy                                            12  + store = Records();                                    ┃
+                                                                                                                                   13    store.open(dir);                                      ┃
+     [ Save ]  [ Cancel ]                                           3:20  wrapped                                                                                                              ┃
+                                                                                                                                                                                               ┃
+    Validated fields, choices and buttons.                         Multiline editing with wrapping and scrolling.                 Numbered, highlighted, wrapped unified diffs.                ┃
+                                                                                                                                                                                               ┃
+
+
+    ▄▄▀▀▀▀▀▀▄▄  ▀▀▀▀▀▀▀▀██                                         ▄▄▀▀▀▀▀▀▄▄  ▄▄▀▀▀▀▀▀▄▄                                         ▄▄▀▀▀▀▀▀▄▄  ▄▄▀▀▀▀▀▀▄▄
+    ██      ██      ▄▄▀▀                                           ██      ██  ▀▀▄▄▄▄▄▄▀▀                                         ██      ██  ▀▀▄▄▄▄▄▄██
+    ██      ██    ██                                               ██      ██  ██      ██                                         ██      ██        ▄▄▀▀
+      ▀▀▀▀▀▀      ▀▀                                                 ▀▀▀▀▀▀      ▀▀▀▀▀▀                                             ▀▀▀▀▀▀      ▀▀▀▀
+
+    DIALOG                                                         LAYERS                                                         MOUSE
+ left/right/up/down move  enter run  1–9 open  escape up  ? keys

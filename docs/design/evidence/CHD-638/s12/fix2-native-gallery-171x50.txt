@@ -1,0 +1,50 @@
+
+  ◆ chord    1 chord   2 chord_tui   3 Gallery   4 Install                                                                                               GitHub ↗ g   dev
+
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+                 Home › Gallery                                                                                                                                           ┃
+                                                                                                                                                                          ┃
+                 GALLERY                                                                                                                                                  ┃
+                 The framework, running in your browser.                                                                                                                  ┃
+                                                                                                                                                                          ┃
+                 Nine of chord_tui's examples, compiled to WebAssembly with this page. Pick one with the arrows or its number; Enter runs it, Esc comes                   ┃
+                 back.                                                                                                                                                    ┃
+                                                                                                                                                                          ┃
+                 ╭──────────────────────────────────────────╮  ╭──────────────────────────────────────────╮  ╭──────────────────────────────────────────╮                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │  1  Demo                          ⏎ run  │  │  2  Markdown                             │  │  3  Picker                               │                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │   ┌ left ─┐┌ right ──┐                   │  │   # Release notes                        │  │   › clau                                 │                 ┃
+                 │   │ one   ││ focused  │                  │  │                                          │  │                                          │                 ┃
+                 │   │ two   ││ ❯ three  │                  │  │   - **Plans** you can edit               │  │   › 1 claude    opus                     │                 ┃
+                 │   └───────┘└──────────┘                  │  │   - Faster `resume`                      │  │     2 claude    sonnet                   │                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │  The framework tour: layout, focus and   │  │  Headings, lists, tables and code,       │  │  Numbered choices with a fuzzy filter    │                 ┃
+                 │  keys.                                   │  │  streamed as it arrives.                 │  │  as you type.                            │                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 ╰──────────────────────────────────────────╯  ╰──────────────────────────────────────────╯  ╰──────────────────────────────────────────╯                 ┃
+                                                                                                                                                                          ┃
+                 ╭──────────────────────────────────────────╮  ╭──────────────────────────────────────────╮  ╭──────────────────────────────────────────╮                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │  4  Form                                 │  │  5  Text area                            │  │  6  Diff                                 │                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │   Name   chord                           │  │   The quick brown fox                    │  │   12  - store = Store();                 │                 ┃
+                 │   Agent  (•) claude                      │  │   jumps over the lazy                    │  │   12  + store = Records();               │                 ┃
+                 │                                          │  │                                          │  │   13    store.open(dir);                 │                 ┃
+                 │   [ Save ]  [ Cancel ]                   │  │   3:20  wrapped                          │  │                                          │                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │  Validated fields, choices and buttons.  │  │  Multiline editing with wrapping and     │  │  Numbered, highlighted, wrapped unified  │                 ┃
+                 │                                          │  │  scrolling.                              │  │  diffs.                                  │                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 ╰──────────────────────────────────────────╯  ╰──────────────────────────────────────────╯  ╰──────────────────────────────────────────╯                 ┃
+                                                                                                                                                                          ┃
+                 ╭──────────────────────────────────────────╮  ╭──────────────────────────────────────────╮  ╭──────────────────────────────────────────╮                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │  7  Dialog                               │  │  8  Layers                               │  │  9  Mouse                                │                 ┃
+                 │                                          │  │                                          │  │                                          │                 ┃
+                 │   ┌ Delete session? ──┐                  │  │   row 18  streaming…                     │  │   press  12,4  left                      │                 ┃
+                 │   │ It cannot return. │                  │  │   row 19  ┌ hint ─────                   │  │   drag   14,5                            │
+                 │   │ › Yes    No       │                  │  │   row 20  │ Tab: more                    │  │   wheel  down                            │
+                 │   └───────────────────┘                  │  │   row 21  └───────────                   │  │   release 14,5                           │
+                 │                                          │  │                                          │  │                                          │
+ left/right/up/down move  enter run  1–9 open  escape up  ? keys

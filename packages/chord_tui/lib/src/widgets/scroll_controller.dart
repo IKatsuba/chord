@@ -3,6 +3,7 @@ import 'package:meta/meta.dart';
 import '../foundation/item_extents.dart';
 import '../foundation/notifier.dart';
 import '../foundation/scroll_state.dart';
+import '../input/keys.dart';
 
 /// What a list gives the controller attached to it: where its items are.
 abstract interface class ScrollClient {
@@ -17,6 +18,16 @@ abstract interface class ScrollClient {
 
   /// A step moved the view: the list needs a new frame.
   void scrollChanged();
+}
+
+/// Moves [controller] a row for each step of the wheel report [event]: up
+/// for a negative vertical delta, down for a positive one.
+@internal
+void scrollByWheel(ScrollController controller, MouseEvent event) {
+  final steps = event.scrollDelta.y;
+  for (var i = 0; i < steps.abs(); i++) {
+    steps < 0 ? controller.lineUp() : controller.lineDown();
+  }
 }
 
 /// Where a scrolling list is, and the steps that move it.

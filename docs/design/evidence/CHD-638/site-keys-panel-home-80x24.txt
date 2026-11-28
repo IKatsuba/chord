@@ -1,0 +1,24 @@
+ chord                                                                      dev
+ github.com/IKatsuba/chord
+────────────────────────────────────────────────────────────────────────────────
+
+  A terminal window for coding agents, and the framework it is built on.
+
+  ❯ 1. chord        the app
+    2. chord_tui    the framework
+    3. Gallery      examples, running here
+    4. Install      Homebrew, npm, source
+
+────────────────────────────────────────────────────────────────────────────────
+ Keys
+   escape         close
+   ctrl+q/ctrl+c  home
+   ?/f1           keys
+   g              open GitHub
+   f2             back
+   f3             forward
+   ctrl+x         leave
+   up/down        move
+   enter          open
+   1–4            jump
+ escape close  f1 close  ctrl+q home

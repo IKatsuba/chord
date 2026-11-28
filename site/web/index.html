@@ -1,0 +1,99 @@
+<!doctype html>
+<!-- The site: one chord_tui app compiled to Wasm, drawn full-window by
+     wterm. Every URL here is relative, resolved against <base href>, which
+     site/tool/build.dart writes from --base. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<base href="/">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<title>chord and chord_tui</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="wterm/dom/src/terminal.css">
+<style>
+  @font-face {
+    font-family: "JetBrains Mono";
+    font-weight: 400;
+    src: url("fonts/regular.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "JetBrains Mono";
+    font-weight: 700;
+    src: url("fonts/bold.woff2") format("woff2");
+  }
+  /* The palette's background and text, as site/lib/palette.dart has them,
+     so the strip a partial cell leaves matches the cells. */
+  html, body { margin: 0; height: 100%; background: #0c0c0c; overflow: hidden; }
+  #terminal {
+    position: fixed;
+    inset: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    --term-bg: #0c0c0c;
+    --term-fg: #f2ead9;
+    /* One size at every width (Q432): the layout adapts by cells alone. */
+    --term-font-size: 12.5px;
+    --term-row-height: 16px;
+    --term-line-height: 1.28;
+    /* JetBrains Mono advances 0.6 em, 7.5 px; half a pixel less makes a
+       7 px cell, so more columns fit each width (Q436). */
+    letter-spacing: -0.5px;
+    --term-font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    /* wterm turns ligatures off; this keeps JetBrains Mono's code ligatures,
+       which it keeps in calt, off too: one glyph per cell. */
+    font-feature-settings: "calt" 0, "liga" 0;
+  }
+  /* A fixed grid, for captures: the element is the grid's size, so nothing
+     of the page shows around it. */
+  #terminal.fixed { right: auto; bottom: auto; width: max-content; height: max-content; }
+  noscript { display: block; padding: 1em; color: #f2ead9; font: 16px system-ui; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "@wterm/core": "./wterm/core/dist/index.js",
+  "@wterm/dom": "./wterm/dom/dist/index.js"
+} }
+</script>
+</head>
+<body>
+<noscript>This site is a terminal, and needs JavaScript and WebAssembly. chord is at <a href="https://github.com/IKatsuba/chord">github.com/IKatsuba/chord</a>.</noscript>
+<div id="terminal" aria-label="chord and chord_tui, a terminal: every action has a key, F1 lists them"></div>
+<script type="module">
+  import { WTerm } from "@wterm/dom";
+
+  // ?cols=&rows= fix the grid, for captures; otherwise it follows the window.
+  const params = new URLSearchParams(location.search);
+  const fixed = params.has("cols") && params.has("rows");
+  await Promise.all([
+    document.fonts.load('400 14px "JetBrains Mono"'),
+    document.fonts.load('700 14px "JetBrains Mono"'),
+  ]);
+  const listeners = { data: [], resize: [] };
+  const element = document.getElementById("terminal");
+  if (fixed) element.classList.add("fixed");
+  const term = new WTerm(element, {
+    renderer: "webgl",
+    autoResize: !fixed,
+    ...(fixed ? { cols: Number(params.get("cols")), rows: Number(params.get("rows")) } : {}),
+    onData: (data) => listeners.data.forEach((f) => f(data)),
+    onResize: (cols, rows) => listeners.resize.forEach((f) => f(cols, rows)),
+  });
+  await term.init();
+  // The page's terminal, as package:chord_tui/web.dart's WebTerminal reads it.
+  globalThis.chordTerminal = {
+    get cols() { return term.cols; },
+    get rows() { return term.rows; },
+    write: (data) => term.write(data),
+    onData: (f) => listeners.data.push(f),
+    onResize: (f) => listeners.resize.push(f),
+  };
+  const started = performance.now();
+  const { compileStreaming } = await import("./main.mjs");
+  const app = await (await compileStreaming(fetch("main.wasm"))).instantiate({});
+  globalThis.chordStart = performance.now() - started;
+  app.invokeMain();
+  term.focus();
+</script>
+</body>
+</html>

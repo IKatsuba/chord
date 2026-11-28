@@ -1,0 +1,8 @@
+tags:
+  compile:
+    # Builds the site: slow, so run on its own with `dart test -t compile`.
+    skip: "run with: dart test -t compile --run-skipped"
+  browser:
+    # Builds the site and drives the system's Chrome: run on its own with
+    # `dart test -t browser --run-skipped`.
+    skip: "run with: dart test -t browser --run-skipped"

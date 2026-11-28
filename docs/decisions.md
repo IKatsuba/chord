@@ -4697,3 +4697,14 @@ numerals, full stops, FIG. captions and buttons use chord's own dark
 accent, `#47e7a5` from `lib/ui/theme/theme.dart`, so the site reads as
 chord's. Ink, cream and the rest of direction C stay. A site test holds
 `SiteColors.accent` to chord's dark palette.
+
+## CHD-638: the site's cell is 7 px within 1/64
+
+The site promises a 7 px cell (Q436), and Chrome on macOS measures exactly
+that. Chrome on Linux rounds JetBrains Mono's 7.5 px advance at 12.5 px up
+to 7.515625, so with -0.5 px spacing wterm measures 7.015625 and an 820 px
+window gets 116 columns, not 117. The owner accepted the Linux cell (Q438,
+option 1) over snapping the spacing per machine or a wterm issue: the
+browser test checks the cell wterm measures is 7 px within 1/64 and
+expects the columns that cell gives. Linux shows no box-line or glyph
+seams at DPR 1 and 2.

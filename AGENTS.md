@@ -892,14 +892,17 @@ The app lives under `lib/`, with snake_case file names;
   generated source drift and all three recording sizes.
   Its `compile` tag builds the static folder; its `browser` tag drives
   system Chrome through the built site at `/` and `/chord/`, including
-  history, mouse, kitty keys, resize, touch and fixed 7 px cells. The
+  history, mouse, kitty keys, resize, touch and 7 px cells. The
   framework's `browser` tag checks WebTerminal; its Wasm compile tests use Node.
   These tags are skipped by default. CI's required `site` job runs the
   site's static, VM, build and browser checks and the framework browser
   checks. The site uses 12.5 px type on 16 px rows with -0.5 px letter
   spacing at every width: 205x56 cells at 1440x900, 55x52 at 390x844 and
-  51x40 at 360x640. Box-line seams at fractional DPR 1.25 and 1.5 are
-  accepted; the wterm report is drafted, not posted. Build output has no
+  51x40 at 360x640. Chrome on Linux measures the cell 1/64 px wider, so
+  some widths get a column fewer (116 at 820 px, not 117); the test expects
+  the columns the measured cell gives. Box-line seams at fractional DPR
+  1.25 and 1.5 are accepted; the wterm report is drafted, not posted. Build
+  output has no
   size budget; deployment is separate work.
 - A unit without a test that would fail without it is not finished.
 - Check the screen at 120x40 and at 80x24. For terminal cursor changes,

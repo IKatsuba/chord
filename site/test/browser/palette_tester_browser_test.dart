@@ -129,6 +129,27 @@ void main() {
           }
         }
 
+        // wterm's own measure of the cell: a "W" in a hidden term row.
+        // Chrome on macOS gives 7 px; on Linux it rounds the glyph's 7.5 px
+        // advance up to the next 1/64 before the -0.5 px spacing (Q438).
+        Future<double> cell() async {
+          final width = await page.evaluate<num>('''() => {
+            const row = document.createElement("div");
+            row.className = "term-row";
+            row.style.visibility = "hidden";
+            row.style.position = "absolute";
+            const probe = document.createElement("span");
+            probe.style.width = "auto";
+            probe.textContent = "W";
+            row.appendChild(probe);
+            document.querySelector("#terminal").appendChild(row);
+            const width = probe.getBoundingClientRect().width;
+            row.remove();
+            return width;
+          }''');
+          return width.toDouble();
+        }
+
         for (final ratio in [1, 2, 3]) {
           await size(1440, 900, ratio);
           // The gallery exercises the same grid without home's recording
@@ -144,22 +165,30 @@ void main() {
             isTrue,
           );
           await grid(205, 56);
+          // Measured once the page's fonts are in.
+          final w = await cell();
+          expect(w, inInclusiveRange(7, 7 + 1 / 64), reason: 'cell width');
+          // Columns are whole cells across the window, as wterm counts them.
+          int cols(int width) => (width / w).floor();
           await size(390, 844, ratio);
           await grid(55, 52);
           await size(360, 640, ratio);
           await grid(51, 40);
           await size(820, 1180, ratio);
-          await grid(117, 73);
+          // 117 at 7 px, 116 at Linux's 7 + 1/64.
+          await grid(cols(820), 73);
           await size(1440, 900, ratio);
           await grid(205, 56);
           await size(599, 600, ratio);
           await grid(85, 37);
           await size(600, 600, ratio);
           await grid(85, 37);
-          // No density breakpoint: only a whole new 7 px cell adds a column.
-          await size(601, 600, ratio);
+          // No density breakpoint: only a whole new cell adds a column,
+          // at 602 px for 7 px cells and 604 px on Linux.
+          final next = (86 * w).ceil();
+          await size(next - 1, 600, ratio);
           await grid(85, 37);
-          await size(602, 600, ratio);
+          await size(next, 600, ratio);
           await grid(86, 37);
         }
         expect(errors, isEmpty);
